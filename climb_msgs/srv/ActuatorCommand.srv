@@ -1,0 +1,13 @@
+# Command a set of actuators or joints to enter a specific state
+#
+# Either id or joint can be provided but not both. If neither is provided, 
+# the command will be applied to all actuators.
+#
+# Enabling an actuator clears any previous error status.
+
+std_msgs/Header header          # Header with timestamp (frame_id is not used)
+uint8[] id                      # The unique id of each actuator to command
+string[] joint                  # The name of each joint to command
+bool[] enabled                  # If each actuator can apply torque
+---
+bool[] success                  # If each actuator reached the commanded state

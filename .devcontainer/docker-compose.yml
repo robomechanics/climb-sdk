@@ -1,0 +1,30 @@
+services:
+  ros2:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    container_name: ROS2
+    hostname: docker
+    tty: true
+    privileged: true
+    environment:
+      - DISPLAY=:0
+      - QT_X11_NO_MITSHM=1
+      - WAYLAND_DISPLAY=wayland-0
+      - PULSE_SERVER=/mnt/wslg/PulseServer
+    volumes:
+      # Source code
+      - ..:/workspace/src
+      # Build artifacts
+      - ../.colcon/build/:/workspace/build
+      - ../.colcon/install/:/workspace/install
+      - ../.colcon/log/:/workspace/log
+      # VS Code settings
+      - ../.vscode:/workspace/.vscode
+      # Graphics (Windows)
+      - /run/desktop/mnt/host/wslg/.X11-unix:/tmp/.X11-unix
+      - /run/desktop/mnt/host/wslg:/mnt/wslg
+      - /tmp/.docker.xauth:/tmp/.docker.xauth:rw
+      # USB Ports (Windows)
+      - /dev:/dev
+    command: '/bin/bash'

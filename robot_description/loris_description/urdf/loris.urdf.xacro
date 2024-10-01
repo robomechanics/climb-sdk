@@ -1,0 +1,1068 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="loris">
+  <material
+    name="body_mat">
+    <color
+      rgba="1 1 1 1" />
+  </material>
+  <material
+    name="shoulder_mat">
+    <color
+      rgba="0.25098 0.25098 0.25098 1" />
+  </material>
+  <material
+    name="upper_mat">
+    <color
+      rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+  </material>
+  <material
+    name="lower_mat">
+    <color
+      rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+  </material>
+  <material
+    name="gripper_mat">
+    <color
+      rgba="0.250980392156863 0.250980392156863 0.250980392156863 1" />
+  </material>
+  <material
+    name="tail_mat">
+    <color
+      rgba="0.25098 0.25098 0.25098 1" />
+  </material>
+  <link name="root" />
+  <joint name="root_joint" type="fixed">
+    <parent link="root" />
+    <child link="body_front" />
+  </joint>
+  <link
+    name="body_front">
+    <inertial>
+      <origin
+        xyz="0.088526 4.9542E-05 0.019968"
+        rpy="0 0 0" />
+      <mass
+        value="0.87565" />
+      <inertia
+        ixx="0.0014577"
+        ixy="3.0574E-07"
+        ixz="1.0637E-07"
+        iyy="0.0017823"
+        iyz="-1.4776E-07"
+        izz="0.0029263" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/body_front.STL" />
+      </geometry>
+      <material
+        name="body_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/body_front.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="shoulder_1">
+    <inertial>
+      <origin
+        xyz="0.015026 0.00033378 5.8541E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.10342" />
+      <inertia
+        ixx="2.1451E-05"
+        ixy="-4.1299E-07"
+        ixz="3.4401E-08"
+        iyy="2.5017E-05"
+        iyz="1.9009E-08"
+        izz="2.8896E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/shoulder_1.STL" />
+      </geometry>
+      <material
+        name="shoulder_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/shoulder_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="shoulder_joint_1"
+    type="revolute">
+    <origin
+      xyz="0.14145 0.08175 -0.0003"
+      rpy="0 0 1.5708" />
+    <parent
+      link="body_front" />
+    <child
+      link="shoulder_1" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-1.22173"
+      upper="1.22173"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="upper_limb_1">
+    <inertial>
+      <origin
+        xyz="0.0945138162071381 -0.00219435785796701 -0.00808171492908145"
+        rpy="0 0 0" />
+      <mass
+        value="0.122852357543703" />
+      <inertia
+        ixx="3.54345460928741E-05"
+        ixy="-6.91676719337593E-07"
+        ixz="7.99818931512339E-07"
+        iyy="3.51134789983964E-05"
+        iyz="-2.29657896991753E-12"
+        izz="3.44677592214051E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/upper_limb_1.STL" />
+      </geometry>
+      <material
+        name="upper_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/upper_limb_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="wing_joint_1"
+    type="revolute">
+    <origin
+      xyz="0.02973 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="shoulder_1" />
+    <child
+      link="upper_limb_1" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.2217"
+      upper="1.5708"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="lower_limb_1">
+    <inertial>
+      <origin
+        xyz="0.0385688856224721 -0.0046889638702359 -0.00426946293309724"
+        rpy="0 0 0" />
+      <mass
+        value="0.0346530871970472" />
+      <inertia
+        ixx="7.71046451441355E-06"
+        ixy="-3.0991220361643E-07"
+        ixz="3.24361698315945E-06"
+        iyy="1.12808018413156E-05"
+        iyz="-4.85311495827955E-12"
+        izz="1.2230867218234E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/lower_limb_1.STL" />
+      </geometry>
+      <material
+        name="lower_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/lower_limb_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="knee_joint_1"
+    type="revolute">
+    <origin
+      xyz="0.11125 0 -0.02275"
+      rpy="0 1.5708 0" />
+    <parent
+      link="upper_limb_1" />
+    <child
+      link="lower_limb_1" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.5708"
+      upper="1.0472"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="gripper_1">
+    <inertial>
+      <origin
+        xyz="0.00454536689668263 6.93889390390723E-16 0.000630502612849193"
+        rpy="0 0 0" />
+      <mass
+        value="0.062469295997667" />
+      <inertia
+        ixx="4.42421322057347E-05"
+        ixy="3.61359625915917E-20"
+        ixz="-8.22176735773703E-07"
+        iyy="1.36212602544054E-05"
+        iyz="9.93950717413035E-19"
+        izz="3.31611786775593E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/gripper_1.STL" />
+      </geometry>
+      <material
+        name="gripper_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/gripper_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="wrist_joint_1"
+    type="fixed">
+    <origin
+      xyz="0.08595 -0.004 -0.02756"
+      rpy="0 0.5236 0" />
+    <parent
+      link="lower_limb_1" />
+    <child
+      link="gripper_1" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="shoulder_2">
+    <inertial>
+      <origin
+        xyz="0.0150259998235379 -0.000333783259922532 5.85409408931406E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.103423862682087" />
+      <inertia
+        ixx="2.14513424849859E-05"
+        ixy="4.129850457377E-07"
+        ixz="3.44007049222985E-08"
+        iyy="2.5016622013786E-05"
+        iyz="-1.90087151924638E-08"
+        izz="2.88958317731598E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/shoulder_2.STL" />
+      </geometry>
+      <material
+        name="shoulder_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/shoulder_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="shoulder_joint_2"
+    type="revolute">
+    <origin
+      xyz="0.14145 -0.08175 -0.0003"
+      rpy="0 0 -1.5708" />
+    <parent
+      link="body_front" />
+    <child
+      link="shoulder_2" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.2217"
+      upper="1.2217"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="upper_limb_2">
+    <inertial>
+      <origin
+        xyz="0.0945138162071325 0.00219435308518587 -0.00808171305317626"
+        rpy="0 0 0" />
+      <mass
+        value="0.122852357543703" />
+      <inertia
+        ixx="3.5434546092874E-05"
+        ixy="6.91673519430068E-07"
+        ixz="7.99827494833143E-07"
+        iyy="3.51134789983964E-05"
+        iyz="-2.29657897060913E-12"
+        izz="3.44677592214051E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/upper_limb_2.STL" />
+      </geometry>
+      <material
+        name="upper_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/upper_limb_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="wing_joint_2"
+    type="revolute">
+    <origin
+      xyz="0.02973 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="shoulder_2" />
+    <child
+      link="upper_limb_2" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.2217"
+      upper="1.570796"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="lower_limb_2">
+    <inertial>
+      <origin
+        xyz="0.0385688863392503 0.00464258079600216 -0.00426946679016998"
+        rpy="0 0 0" />
+      <mass
+        value="0.0346531415403108" />
+      <inertia
+        ixx="7.71047098830563E-06"
+        ixy="3.09946803224688E-07"
+        ixz="3.24361671046111E-06"
+        iyy="1.12808083384209E-05"
+        iyz="-4.34628827320742E-12"
+        izz="1.22308795663304E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/lower_limb_2.STL" />
+      </geometry>
+      <material
+        name="lower_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/lower_limb_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="knee_joint_2"
+    type="revolute">
+    <origin
+      xyz="0.11125 0 -0.02275"
+      rpy="0 1.5708 0" />
+    <parent
+      link="upper_limb_2" />
+    <child
+      link="lower_limb_2" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.5708"
+      upper="1.047198"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="gripper_2">
+    <inertial>
+      <origin
+        xyz="0.00454536689668164 -1.63757896132211E-15 0.000630502612847555"
+        rpy="0 0 0" />
+      <mass
+        value="0.0624692959976671" />
+      <inertia
+        ixx="4.42421322057347E-05"
+        ixy="2.7493038578957E-20"
+        ixz="-8.22176735773703E-07"
+        iyy="1.36212602544054E-05"
+        iyz="9.95083948473638E-19"
+        izz="3.31611786775593E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/gripper_2.STL" />
+      </geometry>
+      <material
+        name="gripper_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/gripper_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="wrist_joint_2"
+    type="fixed">
+    <origin
+      xyz="0.0859500505560914 0.0040000000000015 -0.0275596189432333"
+      rpy="0 0.523598775598298 0" />
+    <parent
+      link="lower_limb_2" />
+    <child
+      link="gripper_2" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="body_rear">
+    <inertial>
+      <origin
+        xyz="0.0811300558392716 -0.000405929819738513 0.00121008339941299"
+        rpy="0 0 0" />
+      <mass
+        value="3.13423337298763" />
+      <inertia
+        ixx="0.00626707152969831"
+        ixy="-4.70768643254072E-13"
+        ixz="-3.51127834155193E-08"
+        iyy="0.00809676727966312"
+        iyz="-2.02700054710046E-13"
+        izz="0.0134099994197008" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/body_rear.STL" />
+      </geometry>
+      <material
+        name="body_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/body_rear.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="spine_joint"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="0 0 -3.1416" />
+    <parent
+      link="body_front" />
+    <child
+      link="body_rear" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.047198"
+      upper="1.047198"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="shoulder_3">
+    <inertial>
+      <origin
+        xyz="0.015026 -0.00033378 5.8541E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.10342" />
+      <inertia
+        ixx="2.1451E-05"
+        ixy="4.1299E-07"
+        ixz="3.4401E-08"
+        iyy="2.5017E-05"
+        iyz="-1.9009E-08"
+        izz="2.8896E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/shoulder_3.STL" />
+      </geometry>
+      <material
+        name="shoulder_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/shoulder_3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="shoulder_joint_3"
+    type="revolute">
+    <origin
+      xyz="0.14145 -0.08175 -0.0003"
+      rpy="0 0 -1.5708" />
+    <parent
+      link="body_rear" />
+    <child
+      link="shoulder_3" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-1.22173"
+      upper="1.22173"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="upper_limb_3">
+    <inertial>
+      <origin
+        xyz="0.0945138162071374 0.00219435308517341 -0.00808171305317623"
+        rpy="0 0 0" />
+      <mass
+        value="0.122852357543703" />
+      <inertia
+        ixx="3.54345460928741E-05"
+        ixy="6.91673519430081E-07"
+        ixz="7.99827494833136E-07"
+        iyy="3.51134789983964E-05"
+        iyz="-2.296578964901E-12"
+        izz="3.44677592214051E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/upper_limb_3.STL" />
+      </geometry>
+      <material
+        name="upper_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/upper_limb_3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="wing_joint_3"
+    type="revolute">
+    <origin
+      xyz="0.02973 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="shoulder_3" />
+    <child
+      link="upper_limb_3" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.2217"
+      upper="1.570796"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="lower_limb_3">
+    <inertial>
+      <origin
+        xyz="0.0385688856224716 0.00464256533127552 -0.00426946293309863"
+        rpy="0 0 0" />
+      <mass
+        value="0.0346530871970472" />
+      <inertia
+        ixx="7.71046451441356E-06"
+        ixy="3.09940633207535E-07"
+        ixz="3.24361698315945E-06"
+        iyy="1.12808018413156E-05"
+        iyz="-4.85311495856079E-12"
+        izz="1.2230867218234E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/lower_limb_3.STL" />
+      </geometry>
+      <material
+        name="lower_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/lower_limb_3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="knee_joint_3"
+    type="revolute">
+    <origin
+      xyz="0.11125 0 -0.02275"
+      rpy="0 1.5708 0" />
+    <parent
+      link="upper_limb_3" />
+    <child
+      link="lower_limb_3" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.5708"
+      upper="1.047198"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="gripper_3">
+    <inertial>
+      <origin
+        xyz="0.00454536689668293 -1.07414077632484E-14 0.000630502612850609"
+        rpy="0 0 0" />
+      <mass
+        value="0.062469295997667" />
+      <inertia
+        ixx="4.42421322057347E-05"
+        ixy="2.377931455821E-20"
+        ixz="-8.22176735773704E-07"
+        iyy="1.36212602544054E-05"
+        iyz="9.96605194373943E-19"
+        izz="3.31611786775593E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/gripper_3.STL" />
+      </geometry>
+      <material
+        name="gripper_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/gripper_3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="wrist_joint_3"
+    type="fixed">
+    <origin
+      xyz="0.08595 0.004 -0.02756"
+      rpy="0 0.5236 0" />
+    <parent
+      link="lower_limb_3" />
+    <child
+      link="gripper_3" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="shoulder_4">
+    <inertial>
+      <origin
+        xyz="0.0150259998235409 0.000333783259930026 5.85409408929308E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.103423862682087" />
+      <inertia
+        ixx="2.14513424849859E-05"
+        ixy="-4.12985045737696E-07"
+        ixz="3.44007049223006E-08"
+        iyy="2.5016622013786E-05"
+        iyz="1.90087151924605E-08"
+        izz="2.88958317731599E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/shoulder_4.STL" />
+      </geometry>
+      <material
+        name="shoulder_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/shoulder_4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="shoulder_joint_4"
+    type="revolute">
+    <origin
+      xyz="0.14145 0.08175 -0.0003"
+      rpy="0 0 1.5708" />
+    <parent
+      link="body_rear" />
+    <child
+      link="shoulder_4" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.22173"
+      upper="1.22173"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="upper_limb_4">
+    <inertial>
+      <origin
+        xyz="0.0945138162071422 -0.00219435785796188 -0.00808171492908136"
+        rpy="0 0 0" />
+      <mass
+        value="0.122852357543703" />
+      <inertia
+        ixx="3.54345460928741E-05"
+        ixy="-6.91676719337609E-07"
+        ixz="7.99818931512324E-07"
+        iyy="3.51134789983964E-05"
+        iyz="-2.29657895887271E-12"
+        izz="3.44677592214051E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/upper_limb_4.STL" />
+      </geometry>
+      <material
+        name="upper_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/upper_limb_4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="wing_joint_4"
+    type="revolute">
+    <origin
+      xyz="0.02973 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="shoulder_4" />
+    <child
+      link="upper_limb_4" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.2217"
+      upper="1.570796"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="lower_limb_4">
+    <inertial>
+      <origin
+        xyz="0.0385688855605905 -0.00468896381981812 -0.00426946308940729"
+        rpy="0 0 0" />
+      <mass
+        value="0.0346530875935727" />
+      <inertia
+        ixx="7.71046452353352E-06"
+        ixy="-3.09912165324858E-07"
+        ixz="3.24361692446777E-06"
+        iyy="1.12808019629095E-05"
+        iyz="-4.80841621684181E-12"
+        izz="1.22308673032485E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/lower_limb_4.STL" />
+      </geometry>
+      <material
+        name="lower_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/lower_limb_4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="knee_joint_4"
+    type="revolute">
+    <origin
+      xyz="0.11125 0 -0.02275"
+      rpy="0 1.5708 0" />
+    <parent
+      link="upper_limb_4" />
+    <child
+      link="lower_limb_4" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.570796"
+      upper="1.047198"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="gripper_4">
+    <inertial>
+      <origin
+        xyz="0.00454536689667982 1.301736496373E-14 0.000630502612845113"
+        rpy="0 0 0" />
+      <mass
+        value="0.0624692959976671" />
+      <inertia
+        ixx="4.42421322057348E-05"
+        ixy="3.10777117557768E-20"
+        ixz="-8.22176735773723E-07"
+        iyy="1.36212602544054E-05"
+        iyz="1.01076571805027E-18"
+        izz="3.31611786775593E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/gripper_4.STL" />
+      </geometry>
+      <material
+        name="gripper_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/gripper_4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="wrist_joint_4"
+    type="fixed">
+    <origin
+      xyz="0.0859500505560914 -0.00399999999998341 -0.0275596189432316"
+      rpy="0 0.523598775598299 0" />
+    <parent
+      link="lower_limb_4" />
+    <child
+      link="gripper_4" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="tail">
+    <inertial>
+      <origin
+        xyz="0.18849 6.3748E-05 0.0018175"
+        rpy="0 0 0" />
+      <mass
+        value="0.082326" />
+      <inertia
+        ixx="1.3134E-05"
+        ixy="9.8923E-07"
+        ixz="-1.0874E-05"
+        iyy="0.00092502"
+        iyz="9.5373E-09"
+        izz="0.00093486" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/tail.STL" />
+      </geometry>
+      <material
+        name="tail_mat">
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://loris_description/meshes/tail.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="tail_joint"
+    type="revolute">
+    <origin
+      xyz="0.1657 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="body_rear" />
+    <child
+      link="tail" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.3963"
+      upper="1.3963"
+      effort="0"
+      velocity="0" />
+  </joint>
+</robot>

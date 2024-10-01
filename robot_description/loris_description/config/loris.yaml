@@ -1,0 +1,33 @@
+/**:
+  hardware:
+    ros__parameters:
+      actuator_ids: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+      actuator_joints:
+        - "shoulder_joint_1"
+        - "shoulder_joint_2"
+        - "shoulder_joint_3"
+        - "shoulder_joint_4"
+        - "wing_joint_1"
+        - "wing_joint_2"
+        - "wing_joint_3"
+        - "wing_joint_4"
+        - "knee_joint_1"
+        - "knee_joint_2"
+        - "knee_joint_3"
+        - "knee_joint_4"
+        - "spine_joint"
+        - "tail_joint"
+      actuator_models:
+        - "XM430-W350-T"
+  controller:
+    ros__parameters:
+      end_effector_frames:
+        - "gripper_1"
+        - "gripper_2"
+        - "gripper_3"
+        - "gripper_4"
+      end_effector_types:
+        - "microspine"
+        - "microspine"
+        - "microspine"
+        - "microspine"

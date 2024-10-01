@@ -1,0 +1,8 @@
+/**:
+  robot_state_publisher:
+    ros__parameters:
+      ignore_timestamp: False
+      publish_frequency: 20.0
+  hardware:
+    ros__parameters:
+      test: "Hello"
