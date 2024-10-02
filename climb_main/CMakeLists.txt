@@ -92,6 +92,7 @@ install(TARGETS
 
 # Add tests and test dependencies
 if(BUILD_TESTING)
+  # Linting tests
   find_package(ament_lint_auto REQUIRED)
   find_package(ament_cmake_gtest REQUIRED)
   # the following line skips the linter which checks for copyrights
@@ -100,11 +101,14 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 
+  # Hardware tests
+  ament_add_gtest(${PROJECT_NAME}_hardware_test test/hardware_test.cpp)
+  target_link_libraries(${PROJECT_NAME}_hardware_test ${PROJECT_NAME}_hardware)
+
+  # Kinematics tests
   ament_add_gtest(${PROJECT_NAME}_kinematics_test test/kinematics_test.cpp)
-  target_include_directories(${PROJECT_NAME}_kinematics_test PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-  )
+  target_link_libraries(${PROJECT_NAME}_kinematics_test
+    ${PROJECT_NAME}_kinematics)
 endif()
 
 # Install ROS launch and config files

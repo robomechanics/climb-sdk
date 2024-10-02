@@ -139,7 +139,7 @@ public:
   /**
    * @brief Get actuator ID by joint name
    * @param joint Joint name
-   * @return Vector of actuator IDs corresponding to joint
+   * @return Vector of corresponding actuator IDs (empty list if not found)
    */
   inline std::vector<int> getId(std::string joint) const
   {
@@ -151,7 +151,7 @@ public:
   }
 
   /**
-   * @brief Get actuator IDs
+   * @brief Get all actuator IDs
    * @return Vector of actuator IDs
    */
   inline std::vector<int> getIds() const {return ids_;}
@@ -159,45 +159,54 @@ public:
   /**
    * @brief Enable actuators by ID
    * @param ids Actuator IDs to enable
-   * @return True if actuators were successfully enabled
+   * @return True on success
    */
   virtual bool enable(std::vector<int> ids) = 0;
 
   /**
    * @brief Enable all actuators
-   * @return True if actuators were successfully enabled
+   * @return True on success
    */
   inline bool enable() {return enable(ids_);}
 
   /**
    * @brief Disable actuators by ID
    * @param ids Actuator IDs to disable
-   * @return True if actuators were successfully disabled
+   * @return True on success
    */
   virtual bool disable(std::vector<int> ids) = 0;
 
   /**
    * @brief Disable all actuators
+   * @return True on success
    */
   inline bool disable() {return disable(ids_);}
 
   /**
    * @brief Read current actuator states
-   * @return Actuator state message
+   * @return Actuator state message (empty list on failure)
    */
   virtual ActuatorState readActuatorState() = 0;
 
   /**
    * @brief Read current joint states from actuators
-   * @return Joint state message
+   * @return Joint state message (empty list on failure)
    */
   virtual JointState readJointState() = 0;
 
   /**
    * @brief Write desired joint state and operating modes to actuators
    * @param command Joint command message
+   * @return True on success
    */
-  virtual void writeJointState(JointCommand command) = 0;
+  virtual bool writeJointCommand(JointCommand command) = 0;
+
+  /**
+   * @brief Ensure a joint command is valid
+   * @param command Joint command to validate
+   * @return True if command is valid
+   */
+  bool validateJointCommand(const JointCommand & command);
 
 protected:
   // Actuator IDs

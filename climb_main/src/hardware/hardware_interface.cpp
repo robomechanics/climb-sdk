@@ -6,6 +6,7 @@ void HardwareInterface::addActuators(
   std::string model, double ratio)
 {
   for (unsigned int i = 0; i < ids.size(); i++) {
+    ids_.push_back(ids[i]);
     models_by_id_[ids[i]] = model;
     joints_by_id_[ids[i]] = joints[i];
     ratios_by_id_[ids[i]] = ratio;
@@ -17,12 +18,12 @@ void HardwareInterface::removeActuators(std::vector<int> ids)
 {
   disable(ids);
   for (int id : ids) {
+    auto & j = ids_by_joint_[joints_by_id_[id]];
+    j.erase(std::remove(j.begin(), j.end(), id), j.end());
+    ids_.erase(std::remove(ids_.begin(), ids_.end(), id), ids_.end());
     models_by_id_.erase(id);
     joints_by_id_.erase(id);
     ratios_by_id_.erase(id);
-    auto j = ids_by_joint_[joints_by_id_[id]];
-    j.erase(std::remove(j.begin(), j.end(), id), j.end());
-    ids_.erase(std::remove(ids_.begin(), ids_.end(), id), ids_.end());
   }
 }
 
@@ -44,4 +45,39 @@ void HardwareInterface::setRatios(std::vector<int> ids, double ratio)
       ratios_by_id_[id] = ratio;
     }
   }
+}
+
+bool HardwareInterface::validateJointCommand(const JointCommand & command)
+{
+  unsigned int name_size = command.name.size();
+  unsigned int mode_size = command.mode.size();
+  unsigned int position_size = command.position.size();
+  unsigned int velocity_size = command.velocity.size();
+  unsigned int effort_size = command.effort.size();
+  bool has_position_mode = std::find(
+    command.mode.begin(), command.mode.end(),
+    JointCommand::MODE_POSITION) != command.mode.end();
+  bool has_velocity_mode = std::find(
+    command.mode.begin(), command.mode.end(),
+    JointCommand::MODE_VELOCITY) != command.mode.end();
+  bool has_effort_mode = std::find(
+    command.mode.begin(), command.mode.end(),
+    JointCommand::MODE_EFFORT) != command.mode.end();
+  if (!name_size ||
+    name_size != mode_size ||
+    (has_position_mode && name_size != position_size) ||
+    (has_velocity_mode && name_size != velocity_size) ||
+    (has_effort_mode && name_size != effort_size) ||
+    (has_position_mode && velocity_size && velocity_size != name_size) ||
+    (has_position_mode && effort_size && effort_size != name_size) ||
+    (has_velocity_mode && effort_size && effort_size != name_size))
+  {
+    return false;
+  }
+  for (auto j : command.name) {
+    if (getId(j).empty()) {
+      return false;
+    }
+  }
+  return true;
 }

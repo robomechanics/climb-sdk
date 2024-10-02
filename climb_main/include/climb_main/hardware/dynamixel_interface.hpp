@@ -34,7 +34,7 @@ public:
 
   ActuatorState readActuatorState() override;
   JointState readJointState() override;
-  void writeJointState(JointCommand command) override;
+  bool writeJointCommand(JointCommand command) override;
 
   /**
    * @brief Sync read data from the control table of a set of Dynamixels
