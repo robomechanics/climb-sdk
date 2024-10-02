@@ -8,6 +8,6 @@
 std_msgs/Header header          # Header with timestamp (frame_id is not used)
 uint8[] id                      # The unique id of each actuator to command
 string[] joint                  # The name of each joint to command
-bool[] enabled                  # If each actuator can apply torque
+bool enable                     # If actuators should be enabled or disabled
 ---
-bool[] success                  # If each actuator reached the commanded state
+bool success                    # If command was carried out successfully

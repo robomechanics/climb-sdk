@@ -11,9 +11,9 @@
 #
 # Max velocity/effort is a limit on the absolute value of velocity/effort.
 
-uint8 POSITION_MODE = 0     # Position mode
-uint8 VELOCITY_MODE = 1     # Velocity mode
-uint8 EFFORT_MODE = 2       # Effort mode
+uint8 MODE_POSITION = 0     # Position mode
+uint8 MODE_VELOCITY = 1     # Velocity mode
+uint8 MODE_EFFORT = 2       # Effort mode
 
 std_msgs/Header header      # Header with timestamp (frame_id is not used)
 string[] name               # The name of each joint

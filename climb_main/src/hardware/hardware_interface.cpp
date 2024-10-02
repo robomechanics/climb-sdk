@@ -5,7 +5,7 @@ void HardwareInterface::addActuators(
   std::vector<int> ids, std::vector<std::string> joints,
   std::string model, double ratio)
 {
-  for (int i = 0; i < ids.size(); i++) {
+  for (unsigned int i = 0; i < ids.size(); i++) {
     models_by_id_[ids[i]] = model;
     joints_by_id_[ids[i]] = joints[i];
     ratios_by_id_[ids[i]] = ratio;

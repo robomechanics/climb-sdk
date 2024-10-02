@@ -159,26 +159,27 @@ public:
   /**
    * @brief Enable actuators by ID
    * @param ids Actuator IDs to enable
-   * @return True if all actuators were successfully enabled
+   * @return True if actuators were successfully enabled
    */
   virtual bool enable(std::vector<int> ids) = 0;
 
   /**
    * @brief Enable all actuators
-   * @return True if all actuators were successfully enabled
+   * @return True if actuators were successfully enabled
    */
   inline bool enable() {return enable(ids_);}
 
   /**
    * @brief Disable actuators by ID
    * @param ids Actuator IDs to disable
+   * @return True if actuators were successfully disabled
    */
-  virtual void disable(std::vector<int> ids) = 0;
+  virtual bool disable(std::vector<int> ids) = 0;
 
   /**
    * @brief Disable all actuators
    */
-  inline void disable() {disable(ids_);}
+  inline bool disable() {return disable(ids_);}
 
   /**
    * @brief Read current actuator states

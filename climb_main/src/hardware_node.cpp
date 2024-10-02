@@ -53,30 +53,45 @@ void HardwareNode::init()
 
 void HardwareNode::update()
 {
-  auto js = JointState();
+  auto js = interface_->readJointState();
   js.header.stamp = this->get_clock()->now();
-  for (unsigned int i = 0; i < ids_.size(); i++) {
-    js.name.push_back(joints_[i]);
-    js.position.push_back(0);
-  }
   this->joint_pub_->publish(js);
 
-  auto ms = ActuatorState();
-  this->actuator_pub_->publish(ms);
-
-  // Implement reading joint/motor states
+  auto as = interface_->readActuatorState();
+  as.header.stamp = this->get_clock()->now();
+  this->actuator_pub_->publish(as);
 }
 
 void HardwareNode::jointCmdCallback(const JointCommand::SharedPtr msg)
 {
-  // Implement sending joint commands
+  interface_->writeJointState(*msg);
 }
 
 void HardwareNode::actuatorCmdCallback(
   const ActuatorCommand::Request::SharedPtr request,
   ActuatorCommand::Response::SharedPtr response)
 {
-  // Implement sending actuator commands
+  std::vector<int> ids;
+  if (request->id.empty()) {
+    if (request->joint.empty()) {
+      ids = interface_->getIds();
+    } else {
+      for (const auto & joint : request->joint) {
+        for (int id : interface_->getId(joint)) {
+          ids.push_back(id);
+        }
+      }
+    }
+  } else {
+    for (int id : request->id) {
+      ids.push_back(id);
+    }
+  }
+  if (request->enable) {
+    response->success = interface_->enable(ids);
+  } else {
+    response->success = interface_->disable(ids);
+  }
 }
 
 rcl_interfaces::msg::SetParametersResult HardwareNode::parameterCallback(
