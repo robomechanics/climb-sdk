@@ -18,8 +18,8 @@ public:
   ~DynamixelInterface();
 
   void addActuators(
-    std::vector<int> ids,
-    std::vector<std::string> joints, std::string model, double ratio);
+    std::vector<int> ids, std::vector<std::string> joints,
+    std::string model, double ratio) override;
   bool connect() override;
   void disconnect() override;
   bool isConnected() override;
@@ -80,6 +80,7 @@ public:
   std::vector<double> readEffort(std::vector<int> ids);
   std::vector<double> readTemperature(std::vector<int> ids);
   std::vector<double> readVoltage(std::vector<int> ids);
+  std::vector<bool> readEnabled(std::vector<int> ids);
   std::vector<uint8_t> readError(std::vector<int> ids);
 
   bool writePosition(std::vector<int> ids, std::vector<double> position);

@@ -5,4 +5,5 @@
       publish_frequency: 20.0
   hardware:
     ros__parameters:
-      test: "Hello"
+      joint_update_freq: 500.0
+      actuator_update_freq: 10.0

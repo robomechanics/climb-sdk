@@ -210,7 +210,7 @@ std::vector<double> DynamixelInterface::readPosition(std::vector<int> ids)
       position[i] = 0;
     } else {
       // Convert from Dynamixel units (1/4095 revolutions) to radians
-      position[i] = position[i] / 4095.0 * 2 * PI / ratios_by_id_[ids[i]] - PI;
+      position[i] = position[i] / 4095.0 * 2 * PI / getRatio(i) - PI;
     }
   }
   return position;
@@ -227,7 +227,7 @@ std::vector<double> DynamixelInterface::readVelocity(std::vector<int> ids)
         velocity[i] -= 32768 * 2;
       }
       // Convert from Dynamixel units (0.229 rpm) to rad/s
-      velocity[i] = velocity[i] * 0.229 * 2 * PI / 60 / ratios_by_id_[ids[i]];
+      velocity[i] = velocity[i] * 0.229 * 2 * PI / 60 / getRatio(i);
     }
   }
   return velocity;
@@ -244,7 +244,7 @@ std::vector<double> DynamixelInterface::readEffort(std::vector<int> ids)
         effort[i] -= 32768 * 2;
       }
       // Convert from Dynamixel units (2.69 mA) to Nm
-      effort[i] = effort[i] * 2.69 * 4.1 / 2.3 * ratios_by_id_[ids[i]];
+      effort[i] = effort[i] * 2.69 * 4.1 / 2.3 * getRatio(i);
     }
   }
   return effort;
@@ -273,6 +273,16 @@ std::vector<double> DynamixelInterface::readVoltage(std::vector<int> ids)
     voltage[i] = voltage[i] / 10.0;
   }
   return voltage;
+}
+
+std::vector<bool> DynamixelInterface::readEnabled(std::vector<int> ids)
+{
+  std::vector<double> result = read(ids, TORQUE_ENABLE_XM, 2.0);
+  std::vector<bool> enabled(result.size());
+  for (unsigned int i = 0; i < enabled.size(); i++) {
+    enabled[i] = (result[i] == 1);
+  }
+  return enabled;
 }
 
 std::vector<uint8_t> DynamixelInterface::readError(std::vector<int> ids)
@@ -307,7 +317,7 @@ bool DynamixelInterface::writePosition(
   for (unsigned int i = 0; i < position.size(); i++) {
     // Convert from radians to Dynamixel units (1/4095 revolutions)
     position[i] =
-      (position[i] + PI) / (2 * PI) * 4095.0 * ratios_by_id_[ids[i]];
+      (position[i] + PI) / (2 * PI) * 4095.0 * getRatio(i);
   }
   return write(ids, GOAL_POSITION_XM, position, 2.0);
 }
@@ -317,7 +327,7 @@ bool DynamixelInterface::writeVelocity(
 {
   for (unsigned int i = 0; i < velocity.size(); i++) {
     // Convert from rad/s to Dynamixel units (0.229 rpm)
-    velocity[i] = velocity[i] * 60 / (2 * PI) / 0.229 * ratios_by_id_[ids[i]];
+    velocity[i] = velocity[i] * 60 / (2 * PI) / 0.229 * getRatio(i);
   }
   // TODO: velocity mode not yet supported
   if (!limit) {
@@ -335,7 +345,7 @@ bool DynamixelInterface::writeEffort(
 {
   for (unsigned int i = 0; i < effort.size(); i++) {
     // Convert from Nm to Dynamixel units (2.69 mA)
-    effort[i] = effort[i] * 2.3 / 4.1 / 2.69 / ratios_by_id_[ids[i]];
+    effort[i] = effort[i] * 2.3 / 4.1 / 2.69 / getRatio(i);
   }
   // TODO: effort mode not yet supported
   if (!limit) {
@@ -353,8 +363,9 @@ ActuatorState DynamixelInterface::readActuatorState()
   ActuatorState state;
   state.id = ids_;
   for (int i : ids_) {
-    state.joint.push_back(joints_by_id_.at(i));
+    state.joint.push_back(getJoint(i));
   }
+  state.enabled = readEnabled(ids_);
   state.temperature = readTemperature(ids_);
   state.voltage = readVoltage(ids_);
   state.error = readError(ids_);
@@ -364,12 +375,38 @@ ActuatorState DynamixelInterface::readActuatorState()
 JointState DynamixelInterface::readJointState()
 {
   JointState state;
-  for (int i : ids_) {
-    state.name.push_back(joints_by_id_.at(i));
+  auto position = readPosition(ids_);
+  auto velocity = readVelocity(ids_);
+  auto effort = readEffort(ids_);
+  std::map<std::string, double> pos, vel, eff;
+  for (unsigned int i = 0; i < ids_.size(); i++) {
+    auto j = getJoint(ids_[i]);
+    if (position.size() == ids_.size()) {
+      pos[j] += position[i] / getId(j).size();
+    }
+    if (velocity.size() == ids_.size()) {
+      vel[j] += velocity[i] / getId(j).size();
+    }
+    if (effort.size() == ids_.size()) {
+      eff[j] += effort[i];
+    }
+    if (std::find(state.name.begin(), state.name.end(), j) ==
+      state.name.end())
+    {
+      state.name.push_back(j);
+    }
   }
-  state.position = readPosition(ids_);
-  state.velocity = readVelocity(ids_);
-  state.effort = readEffort(ids_);
+  for (auto j : state.name) {
+    if (position.size() == ids_.size()) {
+      state.position.push_back(pos[j]);
+    }
+    if (velocity.size() == ids_.size()) {
+      state.velocity.push_back(vel[j]);
+    }
+    if (effort.size() == ids_.size()) {
+      state.effort.push_back(eff[j]);
+    }
+  }
   return state;
 }
 

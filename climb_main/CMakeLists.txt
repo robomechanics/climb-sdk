@@ -38,6 +38,7 @@ ament_target_dependencies(${PROJECT_NAME}_util rclcpp)
 add_library(${PROJECT_NAME}_hardware SHARED
   src/hardware/hardware_interface.cpp
   src/hardware/dynamixel_interface.cpp
+  src/hardware/dummy_interface.cpp
 )
 target_include_directories(${PROJECT_NAME}_hardware PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

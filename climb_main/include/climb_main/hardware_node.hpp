@@ -6,7 +6,6 @@
 #include "climb_msgs/srv/actuator_command.hpp"
 
 #include "climb_main/hardware/hardware_interface.hpp"
-#include "climb_main/hardware/dynamixel_interface.hpp"
 
 using sensor_msgs::msg::JointState;
 using climb_msgs::msg::JointCommand;
@@ -59,6 +58,14 @@ private:
   std::vector<std::string> joints_;
   // Actuator models
   std::vector<std::string> models_;
+  // Joint state update period
+  rclcpp::Duration joint_update_period_;
+  // Actuator state update period
+  rclcpp::Duration actuator_update_period_;
+  // Time of last joint state update
+  rclcpp::Time last_joint_update_;
+  // Time of last actuator state update
+  rclcpp::Time last_actuator_update_;
 
   /**
    * @brief Send commanded values to the joint actuators

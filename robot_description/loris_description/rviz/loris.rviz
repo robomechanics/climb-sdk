@@ -255,7 +255,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: loris/body_front
+    Fixed Frame: loris/root
     Frame Rate: 30
   Name: root
   Tools:
@@ -334,5 +334,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1451
-  X: 608
-  Y: 134
+  X: 576
+  Y: 102

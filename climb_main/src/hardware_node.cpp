@@ -1,10 +1,16 @@
 #include "climb_main/hardware_node.hpp"
+#include "climb_main/hardware/dynamixel_interface.hpp"
+#include "climb_main/hardware/dummy_interface.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
 
 HardwareNode::HardwareNode()
-: Node("HardwareNode")
+: Node("HardwareNode"),
+  joint_update_period_(rclcpp::Duration::from_seconds(0)),
+  actuator_update_period_(rclcpp::Duration::from_seconds(0)),
+  last_joint_update_(0, 0, RCL_ROS_TIME),
+  last_actuator_update_(0, 0, RCL_ROS_TIME)
 {
   // Initialize robot interface
   interface_ = std::make_unique<DynamixelInterface>();
@@ -17,6 +23,8 @@ HardwareNode::HardwareNode()
   this->declare_parameter("actuator_ids", std::vector<int>{});
   this->declare_parameter("actuator_joints", std::vector<std::string>{});
   this->declare_parameter("actuator_models", std::vector<std::string>{});
+  this->declare_parameter("joint_update_freq", 0.0);
+  this->declare_parameter("actuator_update_freq", 0.0);
   if (ids_.empty()) {
     RCLCPP_WARN(this->get_logger(), "Robot configuration has no actuators");
   }
@@ -48,18 +56,31 @@ void HardwareNode::init()
     }
   } else {
     RCLCPP_WARN(this->get_logger(), "Failed to connect to hardware interface");
+    interface_ = std::make_unique<DummyInterface>();
+    updateActuators();
+    interface_->connect();
+    interface_->enable();
+    RCLCPP_INFO(this->get_logger(), "Switching to dummy interface");
   }
 }
 
 void HardwareNode::update()
 {
-  auto js = interface_->readJointState();
-  js.header.stamp = this->get_clock()->now();
-  this->joint_pub_->publish(js);
+  auto now = this->get_clock()->now();
+  if (now - last_joint_update_ >= joint_update_period_) {
+    last_joint_update_ = now;
+    auto js = interface_->readJointState();
+    js.header.stamp = this->get_clock()->now();
+    this->joint_pub_->publish(js);
+  }
 
-  auto as = interface_->readActuatorState();
-  as.header.stamp = this->get_clock()->now();
-  this->actuator_pub_->publish(as);
+  now = this->get_clock()->now();
+  if (now - last_actuator_update_ >= actuator_update_period_) {
+    last_actuator_update_ = now;
+    auto as = interface_->readActuatorState();
+    as.header.stamp = this->get_clock()->now();
+    this->actuator_pub_->publish(as);
+  }
 }
 
 void HardwareNode::jointCmdCallback(const JointCommand::SharedPtr msg)
@@ -125,6 +146,14 @@ rcl_interfaces::msg::SetParametersResult HardwareNode::parameterCallback(
     } else if (param.get_name() == "actuator_models") {
       models_ = param.as_string_array();
       updateActuators();
+    } else if (param.get_name() == "joint_update_freq") {
+      double freq = param.as_double();
+      joint_update_period_ =
+        rclcpp::Duration::from_seconds((freq > 0) ? (1.0 / freq) : 0);
+    } else if (param.get_name() == "actuator_update_freq") {
+      double freq = param.as_double();
+      actuator_update_period_ =
+        rclcpp::Duration::from_seconds((freq > 0) ? (1.0 / freq) : 0);
     } else {
       interface_->setParameter(param, result);
     }
