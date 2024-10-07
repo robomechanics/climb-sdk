@@ -1,17 +1,17 @@
 #include "climb_main/hardware/dynamixel_interface.hpp"
 
 constexpr double PI = 3.14159;
-const std::tuple<int, int> OPERATING_MODE_XM = {11, 1};
-const std::tuple<int, int> TORQUE_ENABLE_XM = {64, 1};
-const std::tuple<int, int> PRESENT_POSITION_XM = {132, 4};
-const std::tuple<int, int> PRESENT_VELOCITY_XM = {128, 4};
-const std::tuple<int, int> PRESENT_CURRENT_XM = {126, 2};
-const std::tuple<int, int> GOAL_POSITION_XM = {116, 4};
-const std::tuple<int, int> PROFILE_VELOCITY_XM = {112, 4};
-const std::tuple<int, int> GOAL_CURRENT_XM = {102, 2};
-const std::tuple<int, int> PRESENT_TEMPERATURE_XM = {146, 1};
-const std::tuple<int, int> PRESENT_INPUT_VOLTAGE_XM = {144, 2};
-const std::tuple<int, int> HARDWARE_ERROR_STATUS_XM = {70, 1};
+const std::pair<int, int> OPERATING_MODE_XM = {11, 1};
+const std::pair<int, int> TORQUE_ENABLE_XM = {64, 1};
+const std::pair<int, int> PRESENT_POSITION_XM = {132, 4};
+const std::pair<int, int> PRESENT_VELOCITY_XM = {128, 4};
+const std::pair<int, int> PRESENT_CURRENT_XM = {126, 2};
+const std::pair<int, int> GOAL_POSITION_XM = {116, 4};
+const std::pair<int, int> PROFILE_VELOCITY_XM = {112, 4};
+const std::pair<int, int> GOAL_CURRENT_XM = {102, 2};
+const std::pair<int, int> PRESENT_TEMPERATURE_XM = {146, 1};
+const std::pair<int, int> PRESENT_INPUT_VOLTAGE_XM = {144, 2};
+const std::pair<int, int> HARDWARE_ERROR_STATUS_XM = {70, 1};
 
 DynamixelInterface::~DynamixelInterface()
 {
@@ -62,7 +62,7 @@ bool DynamixelInterface::isConnected()
 
 std::vector<double> DynamixelInterface::read(
   std::vector<int> ids,
-  std::tuple<int, int> item, float protocol)
+  std::pair<int, int> item, float protocol)
 {
   // Abort if not connected or no IDs provided
   if (!isConnected() || ids.empty()) {
@@ -104,7 +104,7 @@ std::vector<double> DynamixelInterface::read(
 
 bool DynamixelInterface::write(
   std::vector<int> ids,
-  std::tuple<int, int> item, std::vector<double> data, float protocol)
+  std::pair<int, int> item, std::vector<double> data, float protocol)
 {
   // Abort if not connected, no IDs provided, or data size mismatch
   if (!isConnected() || ids.empty()) {
@@ -129,7 +129,7 @@ bool DynamixelInterface::write(
     group_write[item]->clearParam();
   }
   // Write data
-  for (unsigned int i = 0; i < ids.size(); i++) {
+  for (size_t i = 0; i < ids.size(); i++) {
     auto bytes = toBytes((data.size() > 1) ? data[i] : data[0], length);
     group_write[item]->addParam(ids[i], bytes.data());
   }
@@ -205,7 +205,7 @@ bool DynamixelInterface::disable(std::vector<int> ids)
 std::vector<double> DynamixelInterface::readPosition(std::vector<int> ids)
 {
   std::vector<double> position = read(ids, PRESENT_POSITION_XM, 2.0);
-  for (unsigned int i = 0; i < position.size(); i++) {
+  for (size_t i = 0; i < position.size(); i++) {
     if (position[i] == -1) {
       position[i] = 0;
     } else {
@@ -219,7 +219,7 @@ std::vector<double> DynamixelInterface::readPosition(std::vector<int> ids)
 std::vector<double> DynamixelInterface::readVelocity(std::vector<int> ids)
 {
   std::vector<double> velocity = read(ids, PRESENT_VELOCITY_XM, 2.0);
-  for (unsigned int i = 0; i < velocity.size(); i++) {
+  for (size_t i = 0; i < velocity.size(); i++) {
     if (velocity[i] == -1) {
       velocity[i] = 0;
     } else {
@@ -236,7 +236,7 @@ std::vector<double> DynamixelInterface::readVelocity(std::vector<int> ids)
 std::vector<double> DynamixelInterface::readEffort(std::vector<int> ids)
 {
   std::vector<double> effort = read(ids, PRESENT_CURRENT_XM, 2.0);
-  for (unsigned int i = 0; i < effort.size(); i++) {
+  for (size_t i = 0; i < effort.size(); i++) {
     if (effort[i] == -1) {
       effort[i] = 0;
     } else {
@@ -253,7 +253,7 @@ std::vector<double> DynamixelInterface::readEffort(std::vector<int> ids)
 std::vector<double> DynamixelInterface::readTemperature(std::vector<int> ids)
 {
   std::vector<double> temperature = read(ids, PRESENT_TEMPERATURE_XM, 2.0);
-  for (unsigned int i = 0; i < temperature.size(); i++) {
+  for (size_t i = 0; i < temperature.size(); i++) {
     if (temperature[i] == -1) {
       temperature[i] = 0;
     }
@@ -265,7 +265,7 @@ std::vector<double> DynamixelInterface::readTemperature(std::vector<int> ids)
 std::vector<double> DynamixelInterface::readVoltage(std::vector<int> ids)
 {
   std::vector<double> voltage = read(ids, PRESENT_INPUT_VOLTAGE_XM, 2.0);
-  for (unsigned int i = 0; i < voltage.size(); i++) {
+  for (size_t i = 0; i < voltage.size(); i++) {
     if (voltage[i] == -1) {
       voltage[i] = 0;
     }
@@ -279,7 +279,7 @@ std::vector<bool> DynamixelInterface::readEnabled(std::vector<int> ids)
 {
   std::vector<double> result = read(ids, TORQUE_ENABLE_XM, 2.0);
   std::vector<bool> enabled(result.size());
-  for (unsigned int i = 0; i < enabled.size(); i++) {
+  for (size_t i = 0; i < enabled.size(); i++) {
     enabled[i] = (result[i] == 1);
   }
   return enabled;
@@ -289,7 +289,7 @@ std::vector<uint8_t> DynamixelInterface::readError(std::vector<int> ids)
 {
   std::vector<double> error = read(ids, HARDWARE_ERROR_STATUS_XM, 2.0);
   std::vector<uint8_t> code(error.size());
-  for (unsigned int i = 0; i < error.size(); i++) {
+  for (size_t i = 0; i < error.size(); i++) {
     if (error[i] == -1) {
       code[i] = ActuatorState::ERROR_COMMUNICATION;
     } else if (error[i] == 0) {
@@ -314,7 +314,7 @@ std::vector<uint8_t> DynamixelInterface::readError(std::vector<int> ids)
 bool DynamixelInterface::writePosition(
   std::vector<int> ids, std::vector<double> position)
 {
-  for (unsigned int i = 0; i < position.size(); i++) {
+  for (size_t i = 0; i < position.size(); i++) {
     // Convert from radians to Dynamixel units (1/4095 revolutions)
     position[i] =
       (position[i] + PI) / (2 * PI) * 4095.0 * getRatio(i);
@@ -325,7 +325,7 @@ bool DynamixelInterface::writePosition(
 bool DynamixelInterface::writeVelocity(
   std::vector<int> ids, std::vector<double> velocity, bool limit)
 {
-  for (unsigned int i = 0; i < velocity.size(); i++) {
+  for (size_t i = 0; i < velocity.size(); i++) {
     // Convert from rad/s to Dynamixel units (0.229 rpm)
     velocity[i] = velocity[i] * 60 / (2 * PI) / 0.229 * getRatio(i);
   }
@@ -343,7 +343,7 @@ bool DynamixelInterface::writeVelocity(
 bool DynamixelInterface::writeEffort(
   std::vector<int> ids, std::vector<double> effort, bool limit)
 {
-  for (unsigned int i = 0; i < effort.size(); i++) {
+  for (size_t i = 0; i < effort.size(); i++) {
     // Convert from Nm to Dynamixel units (2.69 mA)
     effort[i] = effort[i] * 2.3 / 4.1 / 2.69 / getRatio(i);
   }
@@ -362,8 +362,8 @@ ActuatorState DynamixelInterface::readActuatorState()
 {
   ActuatorState state;
   state.id = ids_;
-  for (int i : ids_) {
-    state.joint.push_back(getJoint(i));
+  for (int id : ids_) {
+    state.joint.push_back(getJoint(id));
   }
   state.enabled = readEnabled(ids_);
   state.temperature = readTemperature(ids_);
@@ -378,33 +378,33 @@ JointState DynamixelInterface::readJointState()
   auto position = readPosition(ids_);
   auto velocity = readVelocity(ids_);
   auto effort = readEffort(ids_);
-  std::map<std::string, double> pos, vel, eff;
-  for (unsigned int i = 0; i < ids_.size(); i++) {
-    auto j = getJoint(ids_[i]);
+  std::unordered_map<std::string, double> pos, vel, eff;
+  for (size_t i = 0; i < ids_.size(); i++) {
+    auto joint = getJoint(ids_[i]);
     if (position.size() == ids_.size()) {
-      pos[j] += position[i] / getId(j).size();
+      pos[joint] += position[i] / getId(joint).size();
     }
     if (velocity.size() == ids_.size()) {
-      vel[j] += velocity[i] / getId(j).size();
+      vel[joint] += velocity[i] / getId(joint).size();
     }
     if (effort.size() == ids_.size()) {
-      eff[j] += effort[i];
+      eff[joint] += effort[i];
     }
-    if (std::find(state.name.begin(), state.name.end(), j) ==
+    if (std::find(state.name.begin(), state.name.end(), joint) ==
       state.name.end())
     {
-      state.name.push_back(j);
+      state.name.push_back(joint);
     }
   }
-  for (auto j : state.name) {
+  for (auto joint : state.name) {
     if (position.size() == ids_.size()) {
-      state.position.push_back(pos[j]);
+      state.position.push_back(pos[joint]);
     }
     if (velocity.size() == ids_.size()) {
-      state.velocity.push_back(vel[j]);
+      state.velocity.push_back(vel[joint]);
     }
     if (effort.size() == ids_.size()) {
-      state.effort.push_back(eff[j]);
+      state.effort.push_back(eff[joint]);
     }
   }
   return state;
@@ -422,10 +422,12 @@ bool DynamixelInterface::writeJointCommand(JointCommand command)
   std::vector<double> p_pos;
   std::vector<double> v_pos, v_vel;
   std::vector<double> e_pos, e_vel, e_eff;
-  for (unsigned int j = 0; j < command.name.size(); j++) {
-    if (command.mode[j] == JointCommand::MODE_POSITION) {
-      for (int i : getId(command.name[j])) {
-        ids_pos.push_back(i);
+  for (size_t j = 0; j < command.name.size(); j++) {
+    if (command.mode[j] == JointCommand::MODE_POSITION ||
+      command.mode.size() == 0)
+    {
+      for (int id : getId(command.name[j])) {
+        ids_pos.push_back(id);
         p_pos.push_back(command.position[j]);
         v_pos.push_back(command.velocity.size() ? command.velocity[j] : 0);
         e_pos.push_back(
@@ -433,16 +435,16 @@ bool DynamixelInterface::writeJointCommand(JointCommand command)
           command.effort[j] / getId(command.name[j]).size() : 0);
       }
     } else if (command.mode[j] == JointCommand::MODE_VELOCITY) {
-      for (int i : getId(command.name[j])) {
-        ids_vel.push_back(i);
+      for (int id : getId(command.name[j])) {
+        ids_vel.push_back(id);
         v_vel.push_back(command.velocity[j]);
         e_vel.push_back(
           command.effort.size() ?
           command.effort[j] / getId(command.name[j]).size() : 0);
       }
     } else if (command.mode[j] == JointCommand::MODE_EFFORT) {
-      for (int i : getId(command.name[j])) {
-        ids_eff.push_back(i);
+      for (int id : getId(command.name[j])) {
+        ids_eff.push_back(id);
         e_eff.push_back(
           command.effort[j] / getId(command.name[j]).size());
       }
@@ -459,7 +461,7 @@ bool DynamixelInterface::writeJointCommand(JointCommand command)
   }
 
   // Write to actuators in velocity mode
-  if (ids_pos.size()) {
+  if (ids_vel.size()) {
     success = success && writeVelocity(ids_vel, v_vel);
     success = success && writeEffort(ids_vel, e_vel, true);
   }

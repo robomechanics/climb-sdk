@@ -19,6 +19,7 @@ find_package(dynamixel_sdk REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(orocos_kdl REQUIRED)
 find_package(kdl_parser REQUIRED)
+find_package(urdf REQUIRED)
 
 # list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 # set(CUSTOM_RBDL_PATH "" CACHE PATH "Path to specific RBDL Installation")
@@ -60,7 +61,7 @@ target_include_directories(${PROJECT_NAME}_kinematics PUBLIC
 target_link_libraries(${PROJECT_NAME}_kinematics ${PROJECT_NAME}_util
   Eigen3::Eigen orocos-kdl)
 ament_target_dependencies(${PROJECT_NAME}_kinematics kdl_parser sensor_msgs
-geometry_msgs)
+geometry_msgs urdf)
 
 # Controller library
 add_library(${PROJECT_NAME}_controller SHARED
@@ -110,6 +111,10 @@ if(BUILD_TESTING)
   ament_add_gtest(${PROJECT_NAME}_kinematics_test test/kinematics_test.cpp)
   target_link_libraries(${PROJECT_NAME}_kinematics_test
     ${PROJECT_NAME}_kinematics)
+
+  install(DIRECTORY test/resources/
+    DESTINATION share/${PROJECT_NAME}/test/resources
+  )
 endif()
 
 # Install ROS launch and config files

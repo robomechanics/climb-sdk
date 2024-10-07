@@ -1,3 +1,6 @@
+#ifndef HARDWARE_NODE_HPP
+#define HARDWARE_NODE_HPP
+
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 
@@ -95,3 +98,5 @@ private:
    */
   void updateActuators();
 };
+
+#endif  // HARDWARE_NODE_HPP

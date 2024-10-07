@@ -1,3 +1,6 @@
+#ifndef CONTROLLER_NODE_HPP
+#define CONTROLLER_NODE_HPP
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <std_msgs/msg/string.hpp>
@@ -87,3 +90,5 @@ private:
   rcl_interfaces::msg::SetParametersResult parameterCallback(
     const std::vector<rclcpp::Parameter> & parameters);
 };
+
+#endif  // CONTROLLER_NODE_HPP

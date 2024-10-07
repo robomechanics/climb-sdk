@@ -1,5 +1,5 @@
-#ifndef PARAMETERIZED_H
-#define PARAMETERIZED_H
+#ifndef PARAMETERIZED_HPP
+#define PARAMETERIZED_HPP
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -102,4 +102,4 @@ protected:
   }
 };
 
-#endif  // PARAMETERIZED_H
+#endif  // PARAMETERIZED_HPP

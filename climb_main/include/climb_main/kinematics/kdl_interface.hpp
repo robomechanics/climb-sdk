@@ -1,19 +1,26 @@
-#ifndef RBDL_INTERFACE_H
-#define RBDL_INTERFACE_H
+#ifndef KDL_INTERFACE_HPP
+#define KDL_INTERFACE_HPP
 
-// #include <rbdl/rbdl.h>
 #include "climb_main/kinematics/kinematics_interface.hpp"
 #include <kdl/tree.hpp>
+#include <kdl/jntarray.hpp>
 
 /**
- * @brief Interface for the Rigid Body Dynamics Library (RBDL)
+ * @brief Interface for the Orocos Kinematics and Dynamics Library (KDL)
  */
 class KdlInterface : public KinematicsInterface
 {
 public:
   bool loadRobotDescription(std::string urdf_file) override;
-  Eigen::MatrixXd getJacobian() override;
+  Eigen::MatrixXd getHandJacobian(std::string contact_frame) override;
+  Eigen::MatrixXd getMixedJacobian(
+    std::string contact_frame,
+    bool linear) override;
   Eigen::MatrixXd getGraspMap() override;
+
+  void updateJointState(const JointState & states) override;
+  void updateContactFrames(
+    const std::vector<TransformStamped> & transforms) override;
 
   void declareParameters(const rclcpp::Node::SharedPtr node) override;
   void setParameter(
@@ -21,23 +28,41 @@ public:
     rcl_interfaces::msg::SetParametersResult & result) override;
 
 private:
+  // Struct to represent information about a joint
+  struct Joint
+  {
+    int index;                              // Joint index in full joint array
+    std::vector<std::string> chain_names;   // Name of each parent chain
+    std::vector<int> chain_indices;         // Joint index in each chain
+  };
+
+  // Struct to represent information about a kinematic chain
+  struct Chain
+  {
+    std::vector<std::string> joint_names;   // Names of joints in the chain
+    KDL::JntArray joint_pos;                // Positions of joints in the chain
+    KDL::Frame transform;                   // Transform across the chain
+    KDL::Chain chain;                       // KDL chain
+  };
+
   /**
    * @brief Cache KDL chains for each end effector
    */
-  void update_chains();
+  void updateChains();
+
+  /**
+   * @brief Update the transform from the end effector to the contact frame
+   * @param contact Name of the contact frame
+   * @param transform Transform from end effector to contact frame
+   */
+  void updateContactFrame(std::string contact, KDL::Frame transform);
 
   // KDL tree representing robot
   KDL::Tree tree_;
-  // Flag indicating whether the KDL tree has been initialized
-  bool initialized_;
-  // End effector frame names
-  std::vector<std::string> ee_frames_;
-  // Contact frame names
-  std::vector<std::string> contact_frames_;
-  // KDL chains from body to each end effector frame
-  std::map<std::string, KDL::Chain> ee_chains_;
-  // KDL chains from body to each contact frame
-  std::map<std::string, KDL::Chain> contact_chains_;
+  // Kinematic chains from body to each contact
+  std::unordered_map<std::string, Chain> chains_;
+  // Joint information by joint name
+  std::unordered_map<std::string, Joint> joints_;
 };
 
-#endif  // RBDL_INTERFACE_H
+#endif  // KDL_INTERFACE_HPP

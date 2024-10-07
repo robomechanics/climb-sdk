@@ -1,8 +1,22 @@
-#ifndef DXL_INTERFACE_H
-#define DXL_INTERFACE_H
+#ifndef DXL_INTERFACE_HPP
+#define DXL_INTERFACE_HPP
 
 #include <dynamixel_sdk/dynamixel_sdk.h>
 #include "climb_main/hardware/hardware_interface.hpp"
+
+/**
+ * @brief Hash function for std::pair
+ */
+struct pair_hash
+{
+  template<class T1, class T2>
+  std::size_t operator()(const std::pair<T1, T2> & pair) const
+  {
+    std::size_t h1 = std::hash<T1>{}(pair.first);
+    std::size_t h2 = std::hash<T2>{}(pair.second);
+    return h1 ^ (h2 << 1);
+  }
+};
 
 /**
  * @brief Interface for communicating with a robot composed of Dynamixel motors
@@ -44,7 +58,7 @@ public:
    * @return Vector of data received (or empty vector if read failed)
    */
   std::vector<double> read(
-    std::vector<int> ids, std::tuple<int, int> item,
+    std::vector<int> ids, std::pair<int, int> item,
     float protocol = 2.0);
 
   /**
@@ -56,7 +70,7 @@ public:
    * @return True if the write was successful
    */
   bool write(
-    std::vector<int> ids, std::tuple<int, int> item,
+    std::vector<int> ids, std::pair<int, int> item,
     std::vector<double> data, float protocol = 2.0);
 
   /**
@@ -97,19 +111,19 @@ private:
   // Dynamixel serial packet handler for protocol 2.0
   std::shared_ptr<dynamixel::PacketHandler> packet_handler_2_;
   // Group sync write instances for each control table item (protocol 1.0)
-  std::map<std::tuple<int, int>, std::shared_ptr<dynamixel::GroupSyncWrite>>
-  group_write_1_;
+  std::unordered_map<std::pair<int, int>,
+    std::shared_ptr<dynamixel::GroupSyncWrite>, pair_hash> group_write_1_;
   // Group sync write instances for each control table item (protocol 2.0)
-  std::map<std::tuple<int, int>, std::shared_ptr<dynamixel::GroupSyncWrite>>
-  group_write_2_;
+  std::unordered_map<std::pair<int, int>,
+    std::shared_ptr<dynamixel::GroupSyncWrite>, pair_hash> group_write_2_;
   // Group sync read instances for each control table item (protocol 1.0)
-  std::map<std::tuple<int, int>, std::shared_ptr<dynamixel::GroupSyncRead>>
-  group_read_1_;
+  std::unordered_map<std::pair<int, int>,
+    std::shared_ptr<dynamixel::GroupSyncRead>, pair_hash> group_read_1_;
   // Group sync read instances for each control table item (protocol 2.0)
-  std::map<std::tuple<int, int>, std::shared_ptr<dynamixel::GroupSyncRead>>
-  group_read_2_;
+  std::unordered_map<std::pair<int, int>,
+    std::shared_ptr<dynamixel::GroupSyncRead>, pair_hash> group_read_2_;
   // Error status types not returned by the actuator (resets on enable)
-  std::map<int, int> error_status_;
+  std::unordered_map<int, int> error_status_;
 
   // Parameters
   std::string port_name_;       // Serial port name
@@ -117,4 +131,4 @@ private:
   bool connected_ = false;      // Flag indicating if the port is open
 };
 
-#endif  // DXL_INTERFACE_H
+#endif  // DXL_INTERFACE_HPP

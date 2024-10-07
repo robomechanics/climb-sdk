@@ -18,12 +18,18 @@
       - "tail_joint"
     actuator_models:
       - "XM430-W350-T"
+    body_frame: "root"
     end_effector_frames:
+      - "wrist_1"
+      - "wrist_2"
+      - "wrist_3"
+      - "wrist_4"
+    contact_frames:
       - "gripper_1"
       - "gripper_2"
       - "gripper_3"
       - "gripper_4"
-    end_effector_types:
+    contact_types_:
       - "microspine"
       - "microspine"
       - "microspine"

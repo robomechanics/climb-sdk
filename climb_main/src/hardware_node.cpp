@@ -170,7 +170,7 @@ void HardwareNode::updateActuators()
   if (models_.size() == 1 && joints_.size() == ids_.size()) {
     interface_->addActuators(ids_, joints_, models_[0]);
   } else if (models_.size() == ids_.size() && joints_.size() == ids_.size()) {
-    for (unsigned int i = 0; i < ids_.size(); i++) {
+    for (size_t i = 0; i < ids_.size(); i++) {
       interface_->addActuators({ids_[i]}, {joints_[i]}, models_[i]);
     }
   } else {

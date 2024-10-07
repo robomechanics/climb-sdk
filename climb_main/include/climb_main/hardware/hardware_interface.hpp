@@ -1,5 +1,5 @@
-#ifndef HARDWARE_INTERFACE_H
-#define HARDWARE_INTERFACE_H
+#ifndef HARDWARE_INTERFACE_HPP
+#define HARDWARE_INTERFACE_HPP
 
 #include <string>
 #include <vector>
@@ -87,7 +87,10 @@ public:
    * @brief Get actuator models indexed by actuator ID
    * @return Map of actuator IDs to actuator models
    */
-  inline std::map<int, std::string> getActuators() const {return models_by_id_;}
+  inline std::unordered_map<int, std::string> getActuators() const
+  {
+    return models_by_id_;
+  }
 
   /**
    * @brief Get gear ratio by actuator ID
@@ -107,7 +110,10 @@ public:
    * @brief Get gear ratios indexed by actuator ID
    * @return Map of actuator IDs to gear ratios
    */
-  inline std::map<int, double> getRatios() const {return ratios_by_id_;}
+  inline std::unordered_map<int, double> getRatios() const
+  {
+    return ratios_by_id_;
+  }
 
   /**
    * @brief Change gear ratio of specific actuators
@@ -134,7 +140,10 @@ public:
    * @brief Get joint names indexed by actuator ID
    * @return Map of actuator IDs to joint names
    */
-  inline std::map<int, std::string> getJoints() const {return joints_by_id_;}
+  inline std::unordered_map<int, std::string> getJoints() const
+  {
+    return joints_by_id_;
+  }
 
   /**
    * @brief Get actuator ID by joint name
@@ -212,13 +221,13 @@ protected:
   // Actuator IDs
   std::vector<int> ids_;
   // Actuator IDs for each joint name
-  std::map<std::string, std::vector<int>> ids_by_joint_;
+  std::unordered_map<std::string, std::vector<int>> ids_by_joint_;
   // Actuator models for each ID
-  std::map<int, std::string> models_by_id_;
+  std::unordered_map<int, std::string> models_by_id_;
   // Joint names for each actuator ID
-  std::map<int, std::string> joints_by_id_;
+  std::unordered_map<int, std::string> joints_by_id_;
   // Gear ratios for each actuator ID
-  std::map<int, double> ratios_by_id_;
+  std::unordered_map<int, double> ratios_by_id_;
 };
 
-#endif  // HARDWARE_INTERFACE_H
+#endif  // HARDWARE_INTERFACE_HPP

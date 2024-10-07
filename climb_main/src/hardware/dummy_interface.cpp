@@ -1,5 +1,29 @@
 #include "climb_main/hardware/dummy_interface.hpp"
 
+void DummyInterface::addActuators(
+  std::vector<int> ids, std::vector<std::string> joints,
+  std::string model, double ratio)
+{
+  HardwareInterface::addActuators(ids, joints, model, ratio);
+  for (int id : ids) {
+    enabled_[id] = false;
+    position_[id] = 0;
+    velocity_[id] = 0;
+    effort_[id] = 0;
+  }
+}
+
+void DummyInterface::removeActuators(std::vector<int> ids)
+{
+  HardwareInterface::removeActuators(ids);
+  for (int id : ids) {
+    enabled_.erase(id);
+    position_.erase(id);
+    velocity_.erase(id);
+    effort_.erase(id);
+  }
+}
+
 bool DummyInterface::connect()
 {
   connected_ = true;
@@ -37,9 +61,7 @@ ActuatorState DummyInterface::readActuatorState()
   ActuatorState state;
   for (int id : ids_) {
     state.id.push_back(id);
-    for (int i : ids_) {
-      state.joint.push_back(joints_by_id_.at(i));
-    }
+    state.joint.push_back(getJoint(id));
     if (isConnected()) {
       state.enabled.push_back(enabled_[id]);
       state.voltage.push_back(0);
@@ -53,19 +75,23 @@ ActuatorState DummyInterface::readActuatorState()
 JointState DummyInterface::readJointState()
 {
   JointState state;
-  double pos, vel, eff;
-  for (const auto & item : ids_by_joint_) {
-    pos = vel = eff = 0;
-    for (int i : item.second) {
-      pos += position_[i] / getId(item.first).size();
-      vel += velocity_[i] / getId(item.first).size();
-      eff += effort_[i];
+  std::unordered_map<std::string, double> pos, vel, eff;
+  for (int id : ids_) {
+    auto joint = getJoint(id);
+    pos[joint] += position_[id] / getId(joint).size();
+    vel[joint] += velocity_[id] / getId(joint).size();
+    eff[joint] += effort_[id];
+    if (std::find(state.name.begin(), state.name.end(), joint) ==
+      state.name.end())
+    {
+      state.name.push_back(joint);
     }
-    state.name.push_back(item.first);
-    if (isConnected()) {
-      state.position.push_back(pos);
-      state.velocity.push_back(vel);
-      state.effort.push_back(eff);
+  }
+  if (isConnected()) {
+    for (auto joint : state.name) {
+      state.position.push_back(pos[joint]);
+      state.velocity.push_back(vel[joint]);
+      state.effort.push_back(eff[joint]);
     }
   }
   return state;
@@ -76,19 +102,19 @@ bool DummyInterface::writeJointCommand(JointCommand command)
   if (!isConnected() || !validateJointCommand(command)) {
     return false;
   }
-  for (unsigned int j = 0; j < command.name.size(); j++) {
-    for (int i : getId(command.name[j])) {
+  for (size_t j = 0; j < command.name.size(); j++) {
+    for (int id : getId(command.name[j])) {
       if (command.mode[j] == JointCommand::MODE_POSITION) {
-        position_[i] = command.position[j];
-        velocity_[i] = command.velocity.size() ? command.velocity[j] : 0;
-        effort_[i] = (command.effort.size() ? command.effort[j] : 0) /
+        position_[id] = command.position[j];
+        velocity_[id] = command.velocity.size() ? command.velocity[j] : 0;
+        effort_[id] = (command.effort.size() ? command.effort[j] : 0) /
           getId(command.name[j]).size();
       } else if (command.mode[j] == JointCommand::MODE_VELOCITY) {
-        velocity_[i] = command.velocity[j];
-        effort_[i] = (command.effort.size() ? command.effort[j] : 0) /
+        velocity_[id] = command.velocity[j];
+        effort_[id] = (command.effort.size() ? command.effort[j] : 0) /
           getId(command.name[j]).size();
       } else if (command.mode[j] == JointCommand::MODE_EFFORT) {
-        effort_[i] = command.effort[j] / getId(command.name[j]).size();
+        effort_[id] = command.effort[j] / getId(command.name[j]).size();
       }
     }
   }

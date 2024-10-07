@@ -5,7 +5,7 @@ void HardwareInterface::addActuators(
   std::vector<int> ids, std::vector<std::string> joints,
   std::string model, double ratio)
 {
-  for (unsigned int i = 0; i < ids.size(); i++) {
+  for (size_t i = 0; i < ids.size(); i++) {
     ids_.push_back(ids[i]);
     models_by_id_[ids[i]] = model;
     joints_by_id_[ids[i]] = joints[i];
@@ -49,11 +49,11 @@ void HardwareInterface::setRatios(std::vector<int> ids, double ratio)
 
 bool HardwareInterface::validateJointCommand(const JointCommand & command)
 {
-  unsigned int name_size = command.name.size();
-  unsigned int mode_size = command.mode.size();
-  unsigned int position_size = command.position.size();
-  unsigned int velocity_size = command.velocity.size();
-  unsigned int effort_size = command.effort.size();
+  size_t name_size = command.name.size();
+  size_t mode_size = command.mode.size();
+  size_t position_size = command.position.size();
+  size_t velocity_size = command.velocity.size();
+  size_t effort_size = command.effort.size();
   bool has_position_mode = std::find(
     command.mode.begin(), command.mode.end(),
     JointCommand::MODE_POSITION) != command.mode.end();
@@ -64,7 +64,7 @@ bool HardwareInterface::validateJointCommand(const JointCommand & command)
     command.mode.begin(), command.mode.end(),
     JointCommand::MODE_EFFORT) != command.mode.end();
   if (!name_size ||
-    name_size != mode_size ||
+    (mode_size && mode_size != name_size) ||
     (has_position_mode && name_size != position_size) ||
     (has_velocity_mode && name_size != velocity_size) ||
     (has_effort_mode && name_size != effort_size) ||

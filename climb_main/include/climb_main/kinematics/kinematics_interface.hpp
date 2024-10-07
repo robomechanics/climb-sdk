@@ -1,5 +1,5 @@
-#ifndef KINEMATICS_INTERFACE_H
-#define KINEMATICS_INTERFACE_H
+#ifndef KINEMATICS_INTERFACE_HPP
+#define KINEMATICS_INTERFACE_HPP
 
 #include <Eigen/Geometry>
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -16,7 +16,7 @@ using geometry_msgs::msg::TransformStamped;
 class KinematicsInterface : public Parameterized
 {
 public:
-  enum ContactType { microspine, magnet };
+  enum ContactType { DEFAULT, MICROSPINE, MAGNET_WHEEL };
 
   /**
    * @brief Constructor for KinematicsInterface
@@ -34,79 +34,218 @@ public:
    * @param[in] description robot description in URDF format
    * @return True if the robot description was successfully loaded
    */
-  virtual bool loadRobotDescription(std::string description) = 0;
+  virtual bool loadRobotDescription(std::string description);
 
   /**
-   * @brief Compute Jacobian mapping from joint velocities to contact velocities
-   * @return Jacobian matrix of size num_constraints x num_joints
-   *
-   * Contact velocity is the velocity of the contact frame relative to the base
-   * frame along constrained directions, measured in the contact frame.
+   * @brief Compute Jacobian mapping joint velocities to end effector
+   * velocity with respect to the body in the contact wrench basis
+   * @param[in] contact_frame Name of contact frame
+   * @return Jacobian matrix of size cols(wrench basis) x num_joints
    */
-  virtual Eigen::MatrixXd getJacobian() = 0;
+  virtual Eigen::MatrixXd getHandJacobian(std::string contact_frame) = 0;
 
   /**
-   * @brief Compute grasp map mapping from contact forces to body wrench
+   * @brief Compute Jacobian mapping joint velocities to end effector
+   * velocities with respect to the body in the contact wrench basis
+   * @return Jacobian matrix of size num_constraints x num_joints
+   */
+  virtual Eigen::MatrixXd getHandJacobian();
+
+  /**
+   * @brief Compute Jacobian mapping joint velocities to end effector
+   * velocity with respect to the body in the body frame at the origin of the
+   * contact frame
+   * @param[in] contact_frame Name of end effector's contact frame
+   * @param[in] linear True for linear axes, false for full twist
+   * @return Jacobian matrix of size 3 x num_joints or 6 x num_joints
+   */
+  virtual Eigen::MatrixXd getMixedJacobian(
+    std::string contact_frame,
+    bool linear = false) = 0;
+
+  /**
+   * @brief Compute Jacobian mapping joint velocities to end effector
+   * velocities with respect to the body in the body frame at the origins of the
+   * contact frames
+   * @param[in] linear True for linear axes only, false for full twist
+   * @return Mixed Jacobian matrix of size (3 * num_contacts) x num_joints or
+   * (6 * num_contacts) x num_joints
+   */
+  virtual Eigen::MatrixXd getMixedJacobian(bool linear = false);
+
+  /**
+   * @brief Compute skew symmetric matrix for a 3D vector
+   * @param[in] vector 3D vector
+   * @return Skew symmetric matrix of size 3 x 3
+   */
+  Eigen::Matrix3d getSkew(const Eigen::Vector3d & vector);
+
+  /**
+   * @brief Compute adjoint mapping twist in child frame to twist in base frame
+   * @param[in] position Position of child frame in base frame
+   * @param[in] rotation Rotation of child frame in base frame
+   * @return Adjoint matrix of size 6 x 6
+   */
+  Eigen::Matrix<double, 6, 6> getAdjoint(
+    const Eigen::Vector3d & position,
+    const Eigen::Matrix3d & rotation);
+
+  /**
+   * @brief Compute grasp map mapping contact forces on the end effectors in
+   * the contact wrench basis to wrench on the body
    * @return Grasp map matrix of size 6 x num_constraints
-   *
-   * Contact force is the force of the world on the robot at the contact along
-   * constrained directions, measured in the contact frame.
    */
   virtual Eigen::MatrixXd getGraspMap() = 0;
-
-  /**
-   * @brief Convert std::vector to Eigen::VectorXd ordered by joint
-   * @param[in] values std::vector of values for each joint
-   * @param[in] joints std::vector of corresponding joint names [optional]
-   * @return The corresponding Eigen vector ordered by joint
-   */
-  Eigen::VectorXd vectorToEigen(
-    const std::vector<double> & values,
-    const std::vector<std::string> & joints = std::vector<std::string>()
-  );
-
-  /**
-   * @brief Convert Eigen::VectorXd to std::vector
-   * @param[in] vector Eigen::VectorXd of values
-   * @return The corresponding std::vector<double> with same ordering
-   */
-  std::vector<double> eigenToVector(const Eigen::VectorXd & vector);
 
   /**
    * @brief Update joint states with latest data from robot
    * @param[in] states Joint states
    */
-  void updateJointState(const JointState & states);
+  virtual void updateJointState(const JointState & states);
 
   /**
    * @brief Update contact frames with latest data from robot
    * @param[in] transforms Transforms from end-effector frames to contact frames
    */
-  void updateContactFrames(const std::vector<TransformStamped> & transforms);
+  virtual void updateContactFrames(
+    const std::vector<TransformStamped> & transforms) = 0;
 
-  // Robot configuration
-  bool initialized = false;                 // Has robot description been loaded
-  std::string urdf_path;                    // Path to robot description file
-  std::vector<std::string> joints;          // Joint names
-  std::string body_frame;                   // Body frame name
-  std::vector<std::string> contact_frames;  // Contact frame names
-  std::vector<ContactType> contact_types;   // Contact frame types
-  int num_joints;                           // Number of joints
-  int num_contacts;                         // Number of contacts
-  int num_constraints;                      // Number of contact constraints
+  /**
+   * @return True if the robot description has been loaded
+   */
+  inline bool isInitialized() const {return initialized_;}
+
+  /**
+   * @return Number of joints
+   */
+  inline int getNumJoints() const {return num_joints_;}
+
+  /**
+   * @return Number of contact frames
+   */
+  inline int getNumContacts() const {return num_contacts_;}
+
+  /**
+   * @return Number of contact constraints
+   */
+  inline int getNumConstraints() const {return num_constraints_;}
+
+  /**
+   * @return Vector of joint names
+   */
+  inline std::vector<std::string> getJointNames() const {return joint_names_;}
+
+  /**
+   * @return Name of body frame
+   */
+  inline std::string getBodyFrame() const {return body_frame_;}
+
+  /**
+   * @return Vector of contact frame names
+   */
+  inline std::vector<std::string> getContactFrames() const
+  {
+    return contact_frames_;
+  }
+
+  /**
+   * @return Vector of end effector frame names
+   */
+  inline std::vector<std::string> getEndEffectorFrames() const
+  {
+    return end_effector_frames_;
+  }
+
+  /**
+   * @return Vector of contact types
+   */
+  inline std::vector<ContactType> getContactTypes() const
+  {
+    return contact_types_;
+  }
+
+  /**
+   * @return Vector of joint positions
+   */
+  inline Eigen::VectorXd getJointPosition() const {return joint_pos_;}
+
+  /**
+   * @return Vector of joint velocities
+   */
+  inline Eigen::VectorXd getJointVelocity() const {return joint_vel_;}
+
+  /**
+   * @return Vector of joint efforts
+   */
+  inline Eigen::VectorXd getJointEffort() const {return joint_eff_;}
+
+  /**
+   * @return Vector of joint position lower bounds
+   */
+  inline Eigen::VectorXd getJointPositionMin() const {return joint_pos_min_;}
+
+  /**
+   * @return Vector of joint position upper bounds
+   */
+  inline Eigen::VectorXd getJointPositionMax() const {return joint_pos_max_;}
+
+  /**
+   * @return Vector of joint velocity lower bounds
+   */
+  inline Eigen::VectorXd getJointVelocityMin() const {return joint_vel_min_;}
+
+  /**
+   * @return Vector of joint velocity upper bounds
+   */
+  inline Eigen::VectorXd getJointVelocityMax() const {return joint_vel_max_;}
+
+  /**
+   * @return Vector of joint effort lower bounds
+   */
+  inline Eigen::VectorXd getJointEffortMin() const {return joint_eff_min_;}
+
+  /**
+   * @return Vector of joint effort upper bounds
+   */
+  inline Eigen::VectorXd getJointEffortMax() const {return joint_eff_max_;}
+
+protected:
+  /**
+   * Update the contact wrench basis for each end effector
+   */
+  void updateBases();
+
+  bool initialized_ = false;      // Has robot description been loaded
+  int num_joints_;                // Number of joints
+  int num_contacts_;              // Number of contacts
+  int num_constraints_;           // Number of contact constraints
+
+  // Body frame name
+  std::string body_frame_;
+  // Contact frame names
+  std::vector<std::string> contact_frames_;
+  // End effector types
+  std::vector<ContactType> contact_types_;
+  // End effector frame names
+  std::vector<std::string> end_effector_frames_;
+  // Wrench basis for each contact frame
+  std::unordered_map<std::string, Eigen::Matrix<double, 6, Eigen::Dynamic>>
+  wrench_bases_;
+  // Joint names
+  std::vector<std::string> joint_names_;
 
   // Joint state
-  Eigen::VectorXd joint_pos;                // Joint positions (rad or m)
-  Eigen::VectorXd joint_vel;                // Joint velocities (rad/s or m/s)
-  Eigen::VectorXd joint_eff;                // Joint efforts (Nm or N)
+  Eigen::VectorXd joint_pos_;     // Joint positions (rad or m)
+  Eigen::VectorXd joint_vel_;     // Joint velocities (rad/s or m/s)
+  Eigen::VectorXd joint_eff_;     // Joint efforts (Nm or N)
 
   // Joint limits
-  Eigen::VectorXd joint_pos_min;  // Joint position lower bounds (rad or m)
-  Eigen::VectorXd joint_pos_max;  // Joint position upper bounds (rad or m)
-  Eigen::VectorXd joint_vel_min;  // Joint velocity lower bounds (rad/s or m/s)
-  Eigen::VectorXd joint_vel_max;  // Joint velocity upper bounds (rad/s or m/s)
-  Eigen::VectorXd joint_eff_min;  // Joint effort lower bounds (Nm or N)
-  Eigen::VectorXd joint_eff_max;  // Joint effort upper bounds (Nm or N)
+  Eigen::VectorXd joint_pos_min_; // Joint position lower bounds (rad or m)
+  Eigen::VectorXd joint_pos_max_; // Joint position upper bounds (rad or m)
+  Eigen::VectorXd joint_vel_min_; // Joint velocity lower bounds (rad/s or m/s)
+  Eigen::VectorXd joint_vel_max_; // Joint velocity upper bounds (rad/s or m/s)
+  Eigen::VectorXd joint_eff_min_; // Joint effort lower bounds (Nm or N)
+  Eigen::VectorXd joint_eff_max_; // Joint effort upper bounds (Nm or N)
 };
 
-#endif  // KINEMATICS_INTERFACE_H
+#endif  // KINEMATICS_INTERFACE_HPP

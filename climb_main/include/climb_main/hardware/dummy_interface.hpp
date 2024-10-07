@@ -1,5 +1,5 @@
-#ifndef DUMMY_INTERFACE_H
-#define DUMMY_INTERFACE_H
+#ifndef DUMMY_INTERFACE_HPP
+#define DUMMY_INTERFACE_HPP
 
 #include <climb_main/hardware/hardware_interface.hpp>
 
@@ -9,6 +9,10 @@
 class DummyInterface : public HardwareInterface
 {
 public:
+  void addActuators(
+    std::vector<int> ids, std::vector<std::string> joints,
+    std::string model, double ratio) override;
+  void removeActuators(std::vector<int> ids) override;
   bool connect() override;
   void disconnect() override;
   bool isConnected() override;
@@ -34,4 +38,4 @@ private:
   std::map<int, double> effort_;    // Effort by ID
 };
 
-#endif  // DUMMY_INTERFACE_H
+#endif  // DUMMY_INTERFACE_HPP
