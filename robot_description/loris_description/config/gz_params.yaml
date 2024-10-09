@@ -1,0 +1,27 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 1000
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+    climber_controller:
+      type: forward_command_controller/ForwardCommandController
+
+climber_controller:
+  ros__parameters:
+    type: forward_command_controller/ForwardCommandController
+    joints:
+      - shoulder_joint_1
+      - shoulder_joint_2
+      - shoulder_joint_3
+      - shoulder_joint_4
+      - wing_joint_1
+      - wing_joint_2
+      - wing_joint_3
+      - wing_joint_4
+      - knee_joint_1
+      - knee_joint_2
+      - knee_joint_3
+      - knee_joint_4
+      - spine_joint
+      - tail_joint
+    interface_name: position

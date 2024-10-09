@@ -11,19 +11,15 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(climb_msgs REQUIRED)
-find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(dynamixel_sdk REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(orocos_kdl REQUIRED)
 find_package(kdl_parser REQUIRED)
 find_package(urdf REQUIRED)
-
-# list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
-# set(CUSTOM_RBDL_PATH "" CACHE PATH "Path to specific RBDL Installation")
-# find_package (RBDL REQUIRED)
 
 # Utilities library
 add_library(${PROJECT_NAME}_util SHARED

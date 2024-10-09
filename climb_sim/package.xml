@@ -1,36 +1,26 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>climb_main</name>
+  <name>climb_sim</name>
   <version>0.0.0</version>
-  <description>Codebase for the LORIS climbing robot</description>
+  <description>Simulate climbing robots in Gazebo</description>
   <maintainer email="pnadan@cmu.edu">Paul Nadan</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-
-  <build_depend>rclcpp</build_depend>
-  <build_depend>eigen</build_depend>
-  <build_depend>dynamixel_sdk</build_depend>
-  <build_depend>urdf</build_depend>
-  <build_depend>orocos_kdl_vendor</build_depend>
-  <build_depend>kdl_parser</build_depend>
-
-  <depend>std_msgs</depend>
-  <depend>geometry_msgs</depend>
-  <depend>sensor_msgs</depend>
-  <depend>climb_msgs</depend>
-  <depend>tf2_ros</depend>
 
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>xacro</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>rviz2</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>gz_ros2_control</exec_depend>
+  <exec_depend>ros2_controllers</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
-  <test_depend>ament_cmake_gtest</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

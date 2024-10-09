@@ -130,8 +130,8 @@
     <limit
       lower="-1.22173"
       upper="1.22173"
-      effort="0"
-      velocity="0" />
+      effort="4.1"
+      velocity="4.8" />
   </joint>
   <link
     name="upper_limb_1">
@@ -186,8 +186,8 @@
     <limit
       lower="-1.2217"
       upper="1.5708"
-      effort="0"
-      velocity="0" />
+      effort="4.1"
+      velocity="4.8" />
   </joint>
   <link
     name="lower_limb_1">
@@ -242,8 +242,8 @@
     <limit
       lower="-1.5708"
       upper="1.0472"
-      effort="0"
-      velocity="0" />
+      effort="4.1"
+      velocity="4.8" />
   </joint>
   <link
     name="gripper_1">
@@ -349,8 +349,8 @@
     <limit
       lower="-1.2217"
       upper="1.2217"
-      effort="0"
-      velocity="0" />
+      effort="4.1"
+      velocity="4.8" />
   </joint>
   <link
     name="upper_limb_2">
@@ -405,8 +405,8 @@
     <limit
       lower="-1.2217"
       upper="1.570796"
-      effort="0"
-      velocity="0" />
+      effort="4.1"
+      velocity="4.8" />
   </joint>
   <link
     name="lower_limb_2">
@@ -461,8 +461,8 @@
     <limit
       lower="-1.5708"
       upper="1.047198"
-      effort="0"
-      velocity="0" />
+      effort="4.1"
+      velocity="4.8" />
   </joint>
   <link
     name="gripper_2">
@@ -568,8 +568,8 @@
     <limit
       lower="-1.047198"
       upper="1.047198"
-      effort="0"
-      velocity="0" />
+      effort="4.1"
+      velocity="4.8" />
   </joint>
   <link
     name="shoulder_3">
@@ -624,8 +624,8 @@
     <limit
       lower="-1.22173"
       upper="1.22173"
-      effort="0"
-      velocity="0" />
+      effort="4.1"
+      velocity="4.8" />
   </joint>
   <link
     name="upper_limb_3">
@@ -680,8 +680,8 @@
     <limit
       lower="-1.2217"
       upper="1.570796"
-      effort="0"
-      velocity="0" />
+      effort="4.1"
+      velocity="4.8" />
   </joint>
   <link
     name="lower_limb_3">
@@ -736,8 +736,8 @@
     <limit
       lower="-1.5708"
       upper="1.047198"
-      effort="0"
-      velocity="0" />
+      effort="4.1"
+      velocity="4.8" />
   </joint>
   <link
     name="gripper_3">
@@ -843,8 +843,8 @@
     <limit
       lower="-1.22173"
       upper="1.22173"
-      effort="0"
-      velocity="0" />
+      effort="4.1"
+      velocity="4.8" />
   </joint>
   <link
     name="upper_limb_4">
@@ -899,8 +899,8 @@
     <limit
       lower="-1.2217"
       upper="1.570796"
-      effort="0"
-      velocity="0" />
+      effort="4.1"
+      velocity="4.8" />
   </joint>
   <link
     name="lower_limb_4">
@@ -955,8 +955,8 @@
     <limit
       lower="-1.570796"
       upper="1.047198"
-      effort="0"
-      velocity="0" />
+      effort="4.1"
+      velocity="4.8" />
   </joint>
   <link
     name="gripper_4">
@@ -1062,7 +1062,103 @@
     <limit
       lower="-1.3963"
       upper="1.3963"
-      effort="0"
-      velocity="0" />
+      effort="4.1"
+      velocity="4.8" />
   </joint>
+
+  <ros2_control name="GazeboSystem" type="system">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+    <joint name="shoulder_joint_1">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="shoulder_joint_2">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="shoulder_joint_3">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="shoulder_joint_4">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="knee_joint_1">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="knee_joint_2">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="knee_joint_3">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="knee_joint_4">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="wing_joint_1">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="wing_joint_2">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="wing_joint_3">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="wing_joint_4">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="spine_joint">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+    <joint name="tail_joint">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </ros2_control>
+
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(find loris_description)/config/gz_params.yaml</parameters>
+    </plugin>
+  </gazebo>
 </robot>
