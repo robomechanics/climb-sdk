@@ -30,6 +30,9 @@ void DynamixelInterface::addActuators(
 
 bool DynamixelInterface::connect()
 {
+  if (isConnected()) {
+    disconnect();
+  }
   port_handler_ =
     std::shared_ptr<dynamixel::PortHandler>(
     dynamixel::PortHandler::getPortHandler(
@@ -40,10 +43,14 @@ bool DynamixelInterface::connect()
   if (!port_handler_->setBaudRate(baud_rate_)) {
     return connected_ = false;
   }
-  packet_handler_1_ = std::shared_ptr<dynamixel::PacketHandler>(
-    dynamixel::PacketHandler::getPacketHandler(1.0));
-  packet_handler_2_ = std::shared_ptr<dynamixel::PacketHandler>(
-    dynamixel::PacketHandler::getPacketHandler(2.0));
+  if (packet_handler_1_ == nullptr) {
+    packet_handler_1_ = std::shared_ptr<dynamixel::PacketHandler>(
+      dynamixel::PacketHandler::getPacketHandler(1.0));
+  }
+  if (packet_handler_2_ == nullptr) {
+    packet_handler_2_ = std::shared_ptr<dynamixel::PacketHandler>(
+      dynamixel::PacketHandler::getPacketHandler(2.0));
+  }
   return connected_ = true;
 }
 
@@ -51,6 +58,10 @@ void DynamixelInterface::disconnect()
 {
   if (isConnected()) {
     port_handler_->closePort();
+    group_read_1_.clear();
+    group_read_2_.clear();
+    group_write_1_.clear();
+    group_write_2_.clear();
   }
   connected_ = false;
 }
@@ -85,12 +96,11 @@ std::vector<double> DynamixelInterface::read(
     group_read[item]->addParam(id);
   }
   int dxl_comm_result = group_read[item]->txRxPacket();
-  // If communication fails, close connection and abort
+  // If communication fails, abort
   if (dxl_comm_result != COMM_SUCCESS) {
-    disconnect();
     return {};
   }
-  // Return read data (-1 for failed reads)
+  // Return read data (-1 for individual failed reads)
   std::vector<double> data;
   for (int id : ids) {
     if (group_read[item]->isAvailable(id, index, length)) {
@@ -210,7 +220,7 @@ std::vector<double> DynamixelInterface::readPosition(std::vector<int> ids)
       position[i] = 0;
     } else {
       // Convert from Dynamixel units (1/4095 revolutions) to radians
-      position[i] = position[i] / 4095.0 * 2 * PI / getRatio(i) - PI;
+      position[i] = position[i] / 4095.0 * 2 * PI / getRatio(ids[i]) - PI;
     }
   }
   return position;
@@ -223,11 +233,11 @@ std::vector<double> DynamixelInterface::readVelocity(std::vector<int> ids)
     if (velocity[i] == -1) {
       velocity[i] = 0;
     } else {
-      if (velocity[i] >= 32768) {
-        velocity[i] -= 32768 * 2;
+      if (velocity[i] >= 1L << (PRESENT_VELOCITY_XM.second * 8 - 1)) {
+        velocity[i] -= 1L << (PRESENT_VELOCITY_XM.second * 8);
       }
       // Convert from Dynamixel units (0.229 rpm) to rad/s
-      velocity[i] = velocity[i] * 0.229 * 2 * PI / 60 / getRatio(i);
+      velocity[i] = velocity[i] * 0.229 * 2 * PI / 60 / getRatio(ids[i]);
     }
   }
   return velocity;
@@ -240,11 +250,11 @@ std::vector<double> DynamixelInterface::readEffort(std::vector<int> ids)
     if (effort[i] == -1) {
       effort[i] = 0;
     } else {
-      if (effort[i] >= 32768) {
-        effort[i] -= 32768 * 2;
+      if (effort[i] >= 1L << (PRESENT_CURRENT_XM.second * 8 - 1)) {
+        effort[i] -= 1L << (PRESENT_CURRENT_XM.second * 8);
       }
       // Convert from Dynamixel units (2.69 mA) to Nm
-      effort[i] = effort[i] * 2.69 * 4.1 / 2.3 * getRatio(i);
+      effort[i] = effort[i] * 2.69 * 4.1 / 2300 * getRatio(ids[i]);
     }
   }
   return effort;
@@ -317,7 +327,7 @@ bool DynamixelInterface::writePosition(
   for (size_t i = 0; i < position.size(); i++) {
     // Convert from radians to Dynamixel units (1/4095 revolutions)
     position[i] =
-      (position[i] + PI) / (2 * PI) * 4095.0 * getRatio(i);
+      (position[i] + PI) / (2 * PI) * 4095.0 * getRatio(ids[i]);
   }
   return write(ids, GOAL_POSITION_XM, position, 2.0);
 }
@@ -327,7 +337,7 @@ bool DynamixelInterface::writeVelocity(
 {
   for (size_t i = 0; i < velocity.size(); i++) {
     // Convert from rad/s to Dynamixel units (0.229 rpm)
-    velocity[i] = velocity[i] * 60 / (2 * PI) / 0.229 * getRatio(i);
+    velocity[i] = velocity[i] * 60 / (2 * PI) / 0.229 * getRatio(ids[i]);
   }
   // TODO: velocity mode not yet supported
   if (!limit) {
@@ -344,8 +354,12 @@ bool DynamixelInterface::writeEffort(
   std::vector<int> ids, std::vector<double> effort, bool limit)
 {
   for (size_t i = 0; i < effort.size(); i++) {
+    // Zero indicates no limit
+    if (effort[i] == 0) {
+      effort[i] = 4.1 * getRatio(ids[i]);
+    }
     // Convert from Nm to Dynamixel units (2.69 mA)
-    effort[i] = effort[i] * 2.3 / 4.1 / 2.69 / getRatio(i);
+    effort[i] = effort[i] * 2300 / 4.1 / 2.69 / getRatio(ids[i]);
   }
   // TODO: effort mode not yet supported
   if (!limit) {

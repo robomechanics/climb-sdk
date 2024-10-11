@@ -5,5 +5,5 @@
       publish_frequency: 20.0
   hardware:
     ros__parameters:
-      joint_update_freq: 500.0
-      actuator_update_freq: 10.0
+      joint_update_freq: 0.0
+      actuator_update_freq: 1.0
