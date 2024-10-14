@@ -98,6 +98,44 @@ public:
   virtual Eigen::MatrixXd getGraspMap() = 0;
 
   /**
+   * @brief Compute mass matrix in joint space of the robot
+   * @return Mass matrix of size num_joints x num_joints
+   */
+  virtual Eigen::MatrixXd getMassMatrix() = 0;
+
+  /**
+   * @brief Compute Coriolis vector in joint space of the robot
+   * @return Coriolis vector of size num_joints
+   */
+  virtual Eigen::VectorXd getCoriolisVector() = 0;
+
+  /**
+   * @brief Compute gravity vector in joint space of the robot
+   * @param[in] gravity Gravity vector in the base frame
+   * @return Gravity vector of size num_joints
+   */
+  virtual Eigen::VectorXd getGravitationalVector(
+    const Eigen::Vector3d & gravity) = 0;
+
+  /**
+   * @brief Compute derivative of gravitational vector in joint space of the
+   * robot with respect to gravity in the base frame
+   * @return Gravitational matrix of size num_joints x 3
+   */
+  virtual Eigen::MatrixXd getGravitationalMatrix() = 0;
+
+  /**
+   * @brief Compute center of mass of the robot in the body frame
+   * @return Center of mass of the robot in the body frame
+   */
+  virtual Eigen::Vector3d getCenterOfMass() = 0;
+
+  /**
+   * @return Total mass of the robot (kg)
+   */
+  inline double getMass() const {return mass_;}
+
+  /**
    * @brief Update joint states with latest data from robot
    * @param[in] states Joint states
    */
@@ -165,47 +203,47 @@ public:
   }
 
   /**
-   * @return Vector of joint positions
+   * @return Vector of joint positions (rad or m)
    */
   inline Eigen::VectorXd getJointPosition() const {return joint_pos_;}
 
   /**
-   * @return Vector of joint velocities
+   * @return Vector of joint velocities (rad/s or m/s)
    */
   inline Eigen::VectorXd getJointVelocity() const {return joint_vel_;}
 
   /**
-   * @return Vector of joint efforts
+   * @return Vector of joint efforts (Nm or N)
    */
   inline Eigen::VectorXd getJointEffort() const {return joint_eff_;}
 
   /**
-   * @return Vector of joint position lower bounds
+   * @return Vector of joint position lower bounds (rad or m)
    */
   inline Eigen::VectorXd getJointPositionMin() const {return joint_pos_min_;}
 
   /**
-   * @return Vector of joint position upper bounds
+   * @return Vector of joint position upper bounds (rad or m)
    */
   inline Eigen::VectorXd getJointPositionMax() const {return joint_pos_max_;}
 
   /**
-   * @return Vector of joint velocity lower bounds
+   * @return Vector of joint velocity lower bounds (rad/s or m/s)
    */
   inline Eigen::VectorXd getJointVelocityMin() const {return joint_vel_min_;}
 
   /**
-   * @return Vector of joint velocity upper bounds
+   * @return Vector of joint velocity upper bounds (rad/s or m/s)
    */
   inline Eigen::VectorXd getJointVelocityMax() const {return joint_vel_max_;}
 
   /**
-   * @return Vector of joint effort lower bounds
+   * @return Vector of joint effort lower bounds (Nm or N)
    */
   inline Eigen::VectorXd getJointEffortMin() const {return joint_eff_min_;}
 
   /**
-   * @return Vector of joint effort upper bounds
+   * @return Vector of joint effort upper bounds (Nm or N)
    */
   inline Eigen::VectorXd getJointEffortMax() const {return joint_eff_max_;}
 
@@ -246,6 +284,9 @@ protected:
   Eigen::VectorXd joint_vel_max_; // Joint velocity upper bounds (rad/s or m/s)
   Eigen::VectorXd joint_eff_min_; // Joint effort lower bounds (Nm or N)
   Eigen::VectorXd joint_eff_max_; // Joint effort upper bounds (Nm or N)
+
+  // Inertial properties
+  double mass_;                   // Total mass (kg)
 };
 
 #endif  // KINEMATICS_INTERFACE_HPP

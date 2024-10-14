@@ -108,6 +108,11 @@ if(BUILD_TESTING)
   target_link_libraries(${PROJECT_NAME}_kinematics_test
     ${PROJECT_NAME}_kinematics)
 
+  # Controller tests
+  ament_add_gtest(${PROJECT_NAME}_controller_test test/controller_test.cpp)
+  target_link_libraries(${PROJECT_NAME}_controller_test
+    ${PROJECT_NAME}_controller)
+
   install(DIRECTORY test/resources/
     DESTINATION share/${PROJECT_NAME}/test/resources
   )

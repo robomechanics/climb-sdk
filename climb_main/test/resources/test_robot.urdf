@@ -12,6 +12,10 @@
         <box size=".8 1.6 .8" />
       </geometry>
     </visual>
+    <inertial>
+      <mass value="2"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+    </inertial>
   </link>
   <link name="left_thigh">
     <visual>
@@ -79,6 +83,10 @@
         <sphere radius=".4" />
       </geometry>
     </visual>
+    <inertial>
+      <mass value="1"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+    </inertial>
   </link>
   <link name="right_foot">
     <visual>
@@ -86,6 +94,10 @@
         <sphere radius=".4" />
       </geometry>
     </visual>
+    <inertial>
+      <mass value="1"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+    </inertial>
   </link>
   <joint name="left_ankle" type="fixed">
     <parent link="left_leg" />

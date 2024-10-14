@@ -17,6 +17,12 @@ public:
     std::string contact_frame,
     bool linear) override;
   Eigen::MatrixXd getGraspMap() override;
+  Eigen::MatrixXd getMassMatrix() override;
+  Eigen::VectorXd getCoriolisVector() override;
+  Eigen::VectorXd getGravitationalVector(
+    const Eigen::Vector3d & gravity) override;
+  Eigen::MatrixXd getGravitationalMatrix() override;
+  Eigen::Vector3d getCenterOfMass() override;
 
   void updateJointState(const JointState & states) override;
   void updateContactFrames(
@@ -41,6 +47,7 @@ private:
   {
     std::vector<std::string> joint_names;   // Names of joints in the chain
     KDL::JntArray joint_pos;                // Positions of joints in the chain
+    KDL::JntArray joint_vel;                // Velocities of joints in the chain
     KDL::Frame transform;                   // Transform across the chain
     KDL::Chain chain;                       // KDL chain
   };

@@ -7,11 +7,13 @@ KinematicsInterface::KinematicsInterface()
 
 bool KinematicsInterface::loadRobotDescription(std::string description)
 {
+  // Load model
   urdf::Model urdf_model;
   initialized_ = urdf_model.initString(description);
   if (!initialized_) {
     return initialized_;
   }
+  // Load joint names
   for (const auto & joint : urdf_model.joints_) {
     if (joint.second->type == urdf::Joint::REVOLUTE ||
       joint.second->type == urdf::Joint::CONTINUOUS ||
@@ -24,6 +26,7 @@ bool KinematicsInterface::loadRobotDescription(std::string description)
       }
     }
   }
+  // Initialize joint state and limits
   num_joints_ = joint_names_.size();
   joint_pos_ = Eigen::VectorXd::Zero(num_joints_);
   joint_vel_ = Eigen::VectorXd::Zero(num_joints_);
@@ -46,6 +49,13 @@ bool KinematicsInterface::loadRobotDescription(std::string description)
     joint_vel_max_[i] = joint->limits->velocity;
     joint_eff_min_[i] = -joint->limits->effort;
     joint_eff_max_[i] = joint->limits->effort;
+  }
+  // Compute total mass
+  mass_ = 0;
+  for (const auto & link_pair : urdf_model.links_) {
+    if (link_pair.second->inertial) {
+      mass_ += link_pair.second->inertial->mass;
+    }
   }
   return initialized_;
 }
