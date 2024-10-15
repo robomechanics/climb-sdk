@@ -1,6 +1,8 @@
 #ifndef FORCE_ESTIMATOR_HPP
 #define FORCE_ESTIMATOR_HPP
 
+#include <string>
+#include <queue>
 #include <Eigen/Geometry>
 #include <sensor_msgs/msg/imu.hpp>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
@@ -68,11 +70,12 @@ public:
   std::vector<WrenchStamped> forcesToMessages(
     Eigen::VectorXd forces, rclcpp::Time stamp, std::string tf_prefix = "");
 
-  void declareParameters(const rclcpp::Node::SharedPtr node) override;
+  void declareParameters() override;
 
   void setParameter(
-    const rclcpp::Parameter & param,
-    rcl_interfaces::msg::SetParametersResult & result) override;
+    const Parameter & param, SetParametersResult & result) override;
+
+  using Parameterized::setParameter;
 
 private:
   /**

@@ -31,11 +31,6 @@ public:
   HardwareNode();
 
   /**
-   * @brief Declare additional parameters
-   */
-  void init();
-
-  /**
    * @brief Read and publish current joint and actuator values
    */
   void update();

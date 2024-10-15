@@ -40,11 +40,10 @@ public:
   bool enable(std::vector<int> ids) override;
   bool disable(std::vector<int> ids) override;
 
-  void declareParameters(const rclcpp::Node::SharedPtr node) override;
+  void declareParameters() override;
   void setParameter(
-    const rclcpp::Parameter & param,
-    rcl_interfaces::msg::SetParametersResult & result)
-  override;
+    const Parameter & param, SetParametersResult & result) override;
+  using Parameterized::setParameter;
 
   ActuatorState readActuatorState() override;
   JointState readJointState() override;

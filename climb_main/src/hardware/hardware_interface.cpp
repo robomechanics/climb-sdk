@@ -1,11 +1,13 @@
 #include "climb_main/hardware/hardware_interface.hpp"
-#include "climb_msgs/msg/joint_command.hpp"
 
 void HardwareInterface::addActuators(
   std::vector<int> ids, std::vector<std::string> joints,
   std::string model, double ratio)
 {
   for (size_t i = 0; i < ids.size(); i++) {
+    if (ids[i] == -1) {
+      continue;   // Passive joint
+    }
     ids_.push_back(ids[i]);
     models_by_id_[ids[i]] = model;
     joints_by_id_[ids[i]] = joints[i];

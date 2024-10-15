@@ -20,11 +20,18 @@ HardwareNode::HardwareNode()
     std::bind(&HardwareNode::parameterCallback, this, _1));
 
   // Declare parameters
+  this->declare_parameter("joint_names", std::vector<std::string>{});
   this->declare_parameter("actuator_ids", std::vector<int>{});
-  this->declare_parameter("actuator_joints", std::vector<std::string>{});
   this->declare_parameter("actuator_models", std::vector<std::string>{});
   this->declare_parameter("joint_update_freq", 0.0);
   this->declare_parameter("actuator_update_freq", 0.0);
+  for (const auto & [param, default_value, description] :
+    interface_->getParameters())
+  {
+    this->declare_parameter(param, default_value, description);
+  }
+
+  // Validate configuration
   if (ids_.empty()) {
     RCLCPP_WARN(this->get_logger(), "Robot configuration has no actuators");
   }
@@ -39,13 +46,10 @@ HardwareNode::HardwareNode()
     "actuator_command",
     std::bind(&HardwareNode::actuatorCmdCallback, this, _1, _2));
 
-  RCLCPP_INFO(this->get_logger(), "Hardware node initialized");
-}
-
-void HardwareNode::init()
-{
-  interface_->declareParameters(shared_from_this());
-  RCLCPP_INFO(this->get_logger(), "Parameters loaded; trying to connect...");
+  // Attempt connection to robot
+  RCLCPP_INFO(
+    this->get_logger(),
+    "Hardware node initialized; connecting to hardware interface...");
   if (interface_->connect()) {
     RCLCPP_INFO(this->get_logger(), "Connected to hardware interface");
     bool enabled = interface_->enable();
@@ -140,7 +144,7 @@ rcl_interfaces::msg::SetParametersResult HardwareNode::parameterCallback(
         ids_.push_back(static_cast<int>(id));
       }
       updateActuators();
-    } else if (param.get_name() == "actuator_joints") {
+    } else if (param.get_name() == "joint_names") {
       joints_ = param.as_string_array();
       updateActuators();
     } else if (param.get_name() == "actuator_models") {
@@ -183,7 +187,6 @@ int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<HardwareNode>();
-  node->init();
 
   while (rclcpp::ok()) {
     node->update();

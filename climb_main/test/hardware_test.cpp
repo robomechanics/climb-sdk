@@ -1,8 +1,6 @@
 #include <gtest/gtest.h>
-#include "climb_main/hardware/hardware_interface.hpp"
 #include "climb_main/hardware/dynamixel_interface.hpp"
 #include "climb_main/hardware/dummy_interface.hpp"
-#include "climb_msgs/msg/joint_command.hpp"
 
 class HardwareTest : public ::testing::Test
 {

@@ -12,26 +12,25 @@ class KdlInterface : public KinematicsInterface
 {
 public:
   bool loadRobotDescription(std::string urdf_file) override;
+  bool initialize(std::string & error_message) override;
+
   Eigen::MatrixXd getHandJacobian(std::string contact_frame) override;
   Eigen::MatrixXd getMixedJacobian(
     std::string contact_frame,
     bool linear) override;
   Eigen::MatrixXd getGraspMap() override;
+
   Eigen::MatrixXd getMassMatrix() override;
   Eigen::VectorXd getCoriolisVector() override;
   Eigen::VectorXd getGravitationalVector(
     const Eigen::Vector3d & gravity) override;
+
   Eigen::MatrixXd getGravitationalMatrix() override;
   Eigen::Vector3d getCenterOfMass() override;
 
   void updateJointState(const JointState & states) override;
   void updateContactFrames(
     const std::vector<TransformStamped> & transforms) override;
-
-  void declareParameters(const rclcpp::Node::SharedPtr node) override;
-  void setParameter(
-    const rclcpp::Parameter & param,
-    rcl_interfaces::msg::SetParametersResult & result) override;
 
 private:
   // Struct to represent information about a joint
@@ -51,11 +50,6 @@ private:
     KDL::Frame transform;                   // Transform across the chain
     KDL::Chain chain;                       // KDL chain
   };
-
-  /**
-   * @brief Cache KDL chains for each end effector
-   */
-  void updateChains();
 
   /**
    * @brief Update the transform from the end effector to the contact frame

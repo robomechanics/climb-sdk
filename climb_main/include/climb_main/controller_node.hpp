@@ -37,11 +37,6 @@ public:
   ControllerNode();
 
   /**
-   * @brief Declare additional parameters
-   */
-  void init();
-
-  /**
    * @brief Compute the controller output based on the latest sensor data
    */
   void update();

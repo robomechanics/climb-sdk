@@ -146,17 +146,16 @@ std::vector<WrenchStamped> ForceEstimator::forcesToMessages(
   return messages;
 }
 
-void ForceEstimator::declareParameters(const rclcpp::Node::SharedPtr node)
+void ForceEstimator::declareParameters()
 {
   declareParameter(
-    node, "joint_effort_filter_window", 1,
-    "Number of past joint effort measurements to average", 1, 100);
+    "joint_effort_filter_window", 1,
+    "Number of past joint effort measurements to average", 1);
   declareParameter(
-    node, "joint_effort_variance", std::vector<double>(),
-    "Variance of joint effort measurements in N^2 or (Nm)^2");
+    "joint_effort_variance", std::vector<double>(),
+    "Variance of joint effort measurements in N^2 or (Nm)^2", 0);
   declareParameter(
-    node, "gravity", 9.81,
-    "Gravitational acceleration in m/s^2");
+    "gravity", 9.81, "Gravitational acceleration in m/s^2", 0);
 }
 
 void ForceEstimator::setParameter(

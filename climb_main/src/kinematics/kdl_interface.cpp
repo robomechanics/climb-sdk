@@ -7,16 +7,18 @@
 
 bool KdlInterface::loadRobotDescription(std::string description)
 {
-  initialized_ = KinematicsInterface::loadRobotDescription(description);
-  initialized_ = initialized_ && kdl_parser::treeFromString(description, tree_);
-  if (initialized_) {
-    updateChains();
+  if (!KinematicsInterface::loadRobotDescription(description)) {
+    return false;
   }
-  return initialized_;
+  return kdl_parser::treeFromString(description, tree_);
 }
 
-void KdlInterface::updateChains()
+bool KdlInterface::initialize(std::string & error_message)
 {
+  if (!KinematicsInterface::initialize(error_message)) {
+    return false;
+  }
+  initialized_ = false;
   chains_.clear();
   joints_.clear();
   // Initialize joint indices
@@ -34,7 +36,9 @@ void KdlInterface::updateChains()
       chain.addSegment(
         KDL::Segment(KDL::Joint(contact, KDL::Joint::Fixed)));
     } else {
-      continue;
+      error_message = "Could not find chain from " + body_frame_ +
+        " to " + contact + " or " + end_effector_frames_[i];
+      return false;
     }
     // Store the chain, joint positions, joint velocities, and transform
     chains_[contact].chain = chain;
@@ -45,6 +49,7 @@ void KdlInterface::updateChains()
     int index = 0;  // Joint index in the chain
     for (size_t j = 0; j < chain.getNrOfSegments(); j++) {
       std::string joint = chain.getSegment(j).getJoint().getName();
+      // Check that joint is in the list of joints (not a fixed joint)
       if (std::find(joint_names_.begin(), joint_names_.end(), joint) !=
         joint_names_.end())
       {
@@ -55,6 +60,7 @@ void KdlInterface::updateChains()
       }
     }
   }
+  return initialized_ = true;
 }
 
 Eigen::MatrixXd KdlInterface::getHandJacobian(std::string contact_frame)
@@ -297,78 +303,4 @@ void KdlInterface::updateContactFrame(
   // Update chain transform
   KDL::ChainFkSolverPos_recursive fk_solver(chains_[contact].chain);
   fk_solver.JntToCart(chains_[contact].joint_pos, chains_[contact].transform);
-}
-
-void KdlInterface::declareParameters(const rclcpp::Node::SharedPtr node)
-{
-  declareParameter(
-    node, "body_frame", "base_link",
-    "Name of the body frame");
-  declareParameter(
-    node, "end_effector_frames", std::vector<std::string>(),
-    "Name of each end-effector frame");
-  declareParameter(
-    node, "contact_frames", std::vector<std::string>(),
-    "Name of each contact frame");
-  declareParameter(
-    node, "contact_types", std::vector<std::string>(),
-    "Type of each end-effector");
-  declareParameter(
-    node, "actuator_joints", std::vector<std::string>(),
-    "Names of each actuated joint");
-}
-
-void KdlInterface::setParameter(
-  const rclcpp::Parameter & param,
-  [[maybe_unused]] rcl_interfaces::msg::SetParametersResult & result)
-{
-  if (param.get_name() == "body_frame") {
-    body_frame_ = param.as_string();
-    if (initialized_) {
-      updateChains();
-    }
-  }
-  if (param.get_name() == "end_effector_frames") {
-    end_effector_frames_ = param.as_string_array();
-    if (initialized_) {
-      updateChains();
-    }
-  }
-  if (param.get_name() == "contact_frames") {
-    contact_frames_ = param.as_string_array();
-    num_contacts_ = contact_frames_.size();
-    updateBases();
-    if (initialized_) {
-      updateChains();
-    }
-  }
-  if (param.get_name() == "contact_types") {
-    contact_types_.clear();
-    ContactType contact_type;
-    for (auto name : param.as_string_array()) {
-      if (name == "microspine") {
-        contact_type = ContactType::MICROSPINE;
-      } else if (name == "tail") {
-        contact_type = ContactType::TAIL;
-      } else if (name == "magnetic wheel" || name == "magnetic_wheel") {
-        contact_type = ContactType::MAGNET_WHEEL;
-      } else {
-        contact_type = ContactType::DEFAULT;
-      }
-      contact_types_.push_back(contact_type);
-    }
-    updateBases();
-  }
-  if (param.get_name() == "actuator_joints") {
-    std::vector<std::string> joints = param.as_string_array();
-    for (auto joint : joint_names_) {
-      if (std::find(joints.begin(), joints.end(), joint) == joints.end()) {
-        joints.push_back(joint);
-      }
-    }
-    joint_names_ = joints;
-    if (initialized_) {
-      updateChains();
-    }
-  }
 }

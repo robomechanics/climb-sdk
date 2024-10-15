@@ -3,6 +3,11 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+using rcl_interfaces::msg::SetParametersResult;
+using rcl_interfaces::msg::ParameterDescriptor;
+using rclcpp::Parameter;
+using rclcpp::ParameterValue;
+
 /**
  * @brief Interface to support ROS parameter handling
  */
@@ -12,10 +17,18 @@ public:
   virtual ~Parameterized() = default;
 
   /**
-   * @brief Declare all parameters
-   * @param[in] node ROS node to declare the parameters
+   * @brief Get a list of the node's requested parameters
+   * @return List of parameters
    */
-  virtual void declareParameters(const rclcpp::Node::SharedPtr node) = 0;
+  inline const std::vector<
+    std::tuple<std::string, ParameterValue, ParameterDescriptor>>
+  getParameters()
+  {
+    if (parameters_.empty()) {
+      declareParameters();
+    }
+    return parameters_;
+  }
 
   /**
    * @brief Update the value of a parameter
@@ -24,13 +37,29 @@ public:
    * present but value is rejected)
    */
   virtual void setParameter(
-    const rclcpp::Parameter & param,
-    rcl_interfaces::msg::SetParametersResult & result) = 0;
+    const Parameter & param, SetParametersResult & result) = 0;
+
+  /**
+   * @brief Update the value of a parameter and discard the result
+   * @param[in] name The name of the parameter
+   * @param[in] value The new value of the parameter
+   * @tparam T Type of the parameter
+   */
+  template<typename T>
+  inline void setParameter(const std::string & name, const T & value)
+  {
+    SetParametersResult result;
+    setParameter(Parameter(name, value), result);
+  }
 
 protected:
   /**
-   * @brief Shorthand to declare a single parameter
-   * @param[in] node ROS node to declare the parameter
+   * @brief Declare all parameters using the declareParameter method
+   */
+  virtual void declareParameters() = 0;
+
+  /**
+   * @brief Shorthand to declare a parameter
    * @param[in] name Name of the parameter
    * @param[in] default_value Default value of the parameter
    * @param[in] description Description of the parameter
@@ -38,12 +67,13 @@ protected:
    */
   template<typename T>
   void declareParameter(
-    const rclcpp::Node::SharedPtr node, const std::string & name,
-    const T & default_value, const std::string & description)
+    const std::string & name,
+    const T & default_value,
+    const std::string & description)
   {
     auto param_desc = rcl_interfaces::msg::ParameterDescriptor{};
     param_desc.description = description;
-    node->declare_parameter(name, default_value, param_desc);
+    parameters_.emplace_back(name, default_value, param_desc);
   }
 
   /**
@@ -60,9 +90,10 @@ protected:
    */
   template<typename T>
   void declareParameter(
-    const rclcpp::Node::SharedPtr node, const std::string & name,
-    const T & default_value, const std::string & description,
-    const double & min, const double & max)
+    const std::string & name,
+    const T & default_value,
+    const std::string & description,
+    const double & min, const double & max = std::numeric_limits<double>::max())
   {
     auto param_desc = rcl_interfaces::msg::ParameterDescriptor{};
     param_desc.description = description;
@@ -70,7 +101,7 @@ protected:
     range.from_value = min;
     range.to_value = max;
     param_desc.floating_point_range.push_back(range);
-    node->declare_parameter(name, default_value, param_desc);
+    parameters_.emplace_back(name, default_value, param_desc);
   }
 
   /**
@@ -87,9 +118,10 @@ protected:
    */
   template<typename T>
   void declareParameter(
-    const rclcpp::Node::SharedPtr node, const std::string & name,
-    const T & default_value, const std::string & description,
-    const int & min, const int & max)
+    const std::string & name,
+    const T & default_value,
+    const std::string & description,
+    const int & min, const int & max = std::numeric_limits<int>::max())
   {
     auto param_desc = rcl_interfaces::msg::ParameterDescriptor{};
     param_desc.description = description;
@@ -98,8 +130,11 @@ protected:
     range.to_value = max;
     range.step = 1;
     param_desc.integer_range.push_back(range);
-    node->declare_parameter(name, default_value, param_desc);
+    parameters_.emplace_back(name, default_value, param_desc);
   }
+
+  std::vector<std::tuple<std::string, ParameterValue, ParameterDescriptor>>
+  parameters_;    // List of declared parameters (name, default, description)
 };
 
 #endif  // PARAMETERIZED_HPP

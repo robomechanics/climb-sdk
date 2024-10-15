@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <fstream>
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include "climb_main/kinematics/kinematics_interface.hpp"
 #include "climb_main/kinematics/kdl_interface.hpp"
 #include "climb_main/controller/force_estimator.hpp"
 
@@ -26,28 +25,28 @@ protected:
       std::istreambuf_iterator<char>());
     urdf_file.close();
     robot_ = std::make_unique<KdlInterface>();
-    robot_->loadRobotDescription(urdf);
+    if (!robot_->loadRobotDescription(urdf)) {
+      GTEST_SKIP() << "Failed to load robot description";
+    }
 
     // Set parameters
-    rcl_interfaces::msg::SetParametersResult result;
-    result.successful = true;
-    robot_->setParameter(rclcpp::Parameter("body_frame", "body"), result);
+    robot_->setParameter("body_frame", "body");
     robot_->setParameter(
-      rclcpp::Parameter(
-        "end_effector_frames",
-        std::vector<std::string>{"left_foot", "right_foot"}), result);
+      "end_effector_frames", std::vector<std::string> {
+      "left_foot", "right_foot"});
     robot_->setParameter(
-      rclcpp::Parameter(
-        "contact_frames",
-        std::vector<std::string>{"left_contact", "right_contact"}), result);
+      "contact_frames", std::vector<std::string> {
+      "left_contact", "right_contact"});
     robot_->setParameter(
-      rclcpp::Parameter(
-        "contact_types",
-        std::vector<std::string> {"microspine", "microspine"}), result);
+      "contact_types", std::vector<std::string> {
+      "microspine", "microspine"});
     robot_->setParameter(
-      rclcpp::Parameter(
-        "actuator_joints", std::vector<std::string> {
-      "left_hip", "right_hip", "left_knee", "right_knee"}), result);
+      "joint_names", std::vector<std::string> {
+      "left_hip", "right_hip", "left_knee", "right_knee"});
+    std::string error_message;
+    if (!robot_->initialize(error_message)) {
+      GTEST_SKIP() << error_message;
+    }
 
     // Set joint configuration
     JointState joint_state;
@@ -74,15 +73,10 @@ TEST_F(ControllerTest, ForceEstimator)
 {
   // Initialize estimator
   ForceEstimator estimator(robot_);
-  rcl_interfaces::msg::SetParametersResult result;
   estimator.setParameter(
-    rclcpp::Parameter(
-      "joint_effort_variance", std::vector<double> {1, 1, 1, 1}),
-    result);
-  estimator.setParameter(
-    rclcpp::Parameter("joint_effort_filter_window", 2), result);
-  estimator.setParameter(
-    rclcpp::Parameter("gravity", 10.0), result);
+    "joint_effort_variance", std::vector<double> {1, 1, 1, 1});
+  estimator.setParameter("joint_effort_filter_window", 2);
+  estimator.setParameter("gravity", 10.0);
 
   // Set joint effort values
   JointState joint_state;

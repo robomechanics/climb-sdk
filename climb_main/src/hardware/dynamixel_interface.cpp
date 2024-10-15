@@ -173,10 +173,10 @@ bool DynamixelInterface::getBit(int value, int bit)
   return (value & (1 << bit)) != 0;
 }
 
-void DynamixelInterface::declareParameters(const rclcpp::Node::SharedPtr node)
+void DynamixelInterface::declareParameters()
 {
-  declareParameter(node, "port_name", "/dev/ttyUSB0", "Serial port name");
-  declareParameter(node, "baud_rate", 1000000, "Communication baud rate");
+  declareParameter("port_name", "/dev/ttyUSB0", "Serial port name");
+  declareParameter("baud_rate", 1000000, "Communication baud rate");
 }
 
 void DynamixelInterface::setParameter(

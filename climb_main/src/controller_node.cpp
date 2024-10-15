@@ -16,6 +16,16 @@ ControllerNode::ControllerNode()
 
   // Declare parameters
   this->declare_parameter("tf_prefix", "");
+  for (const auto & [param, default_value, description] :
+    robot_->getParameters())
+  {
+    this->declare_parameter(param, default_value, description);
+  }
+  for (const auto & [param, default_value, description] :
+    force_estimator_->getParameters())
+  {
+    this->declare_parameter(param, default_value, description);
+  }
 
   // Define publishers and subscribers
   description_sub_ = this->create_subscription<String>(
@@ -30,12 +40,6 @@ ControllerNode::ControllerNode()
   joint_cmd_pub_ = this->create_publisher<JointCommand>("joint_commands", 1);
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
   RCLCPP_INFO(this->get_logger(), "Controller node initialized");
-}
-
-void ControllerNode::init()
-{
-  robot_->declareParameters(shared_from_this());
-  force_estimator_->declareParameters(shared_from_this());
 }
 
 void ControllerNode::update()
@@ -62,7 +66,17 @@ void ControllerNode::update()
 
 void ControllerNode::descriptionCallback(const String::SharedPtr msg)
 {
-  robot_->loadRobotDescription(msg->data);
+  if (!robot_->loadRobotDescription(msg->data)) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to load robot description");
+    return;
+  }
+  std::string error_message;
+  if (!robot_->initialize(error_message)) {
+    RCLCPP_ERROR(
+      this->get_logger(),
+      "Failed to initialize kinematics interface: %s", error_message.c_str());
+    return;
+  }
 }
 
 void ControllerNode::jointCallback(const JointState::SharedPtr msg)
@@ -98,9 +112,7 @@ rcl_interfaces::msg::SetParametersResult ControllerNode::parameterCallback(
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<ControllerNode>();
-  node->init();
-  rclcpp::spin(node);
+  rclcpp::spin(std::make_shared<ControllerNode>());
   rclcpp::shutdown();
   return 0;
 }

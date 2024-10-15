@@ -19,12 +19,12 @@ public:
   bool enable(std::vector<int> ids) override;
   bool disable(std::vector<int> ids) override;
 
-  inline void declareParameters(
-    [[maybe_unused]] const rclcpp::Node::SharedPtr node) override {}
+  inline void declareParameters() override {}
   inline void setParameter(
-    [[maybe_unused]] const rclcpp::Parameter & param,
-    [[maybe_unused]] rcl_interfaces::msg::SetParametersResult & result)
+    [[maybe_unused]] const Parameter & param,
+    [[maybe_unused]] SetParametersResult & result)
   override {}
+  using Parameterized::setParameter;
 
   ActuatorState readActuatorState() override;
   JointState readJointState() override;
