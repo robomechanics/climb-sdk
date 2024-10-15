@@ -3,11 +3,7 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded:
-        - /Global Options1
-        - /Status1
-        - /TF1
-        - /RobotModel1
+      Expanded: ~
       Splitter Ratio: 0.5
     Tree Height: 558
   - Class: rviz_common/Selection
@@ -86,6 +82,10 @@ Visualization Manager:
           Value: true
         loris/tail:
           Value: true
+        loris/tail_contact:
+          Value: true
+        loris/tail_tip:
+          Value: true
         loris/upper_limb_1:
           Value: true
         loris/upper_limb_2:
@@ -93,6 +93,14 @@ Visualization Manager:
         loris/upper_limb_3:
           Value: true
         loris/upper_limb_4:
+          Value: true
+        loris/wrist_1:
+          Value: true
+        loris/wrist_2:
+          Value: true
+        loris/wrist_3:
+          Value: true
+        loris/wrist_4:
           Value: true
       Marker Scale: 0.20000000298023224
       Name: TF
@@ -106,25 +114,31 @@ Visualization Manager:
               loris/shoulder_3:
                 loris/upper_limb_3:
                   loris/lower_limb_3:
-                    loris/gripper_3:
-                      {}
+                    loris/wrist_3:
+                      loris/gripper_3:
+                        {}
               loris/shoulder_4:
                 loris/upper_limb_4:
                   loris/lower_limb_4:
-                    loris/gripper_4:
-                      {}
+                    loris/wrist_4:
+                      loris/gripper_4:
+                        {}
               loris/tail:
-                {}
+                loris/tail_tip:
+                  loris/tail_contact:
+                    {}
             loris/shoulder_1:
               loris/upper_limb_1:
                 loris/lower_limb_1:
-                  loris/gripper_1:
-                    {}
+                  loris/wrist_1:
+                    loris/gripper_1:
+                      {}
             loris/shoulder_2:
               loris/upper_limb_2:
                 loris/lower_limb_2:
-                  loris/gripper_2:
-                    {}
+                  loris/wrist_2:
+                    loris/gripper_2:
+                      {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -224,6 +238,14 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        tail_contact:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        tail_tip:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
         upper_limb_1:
           Alpha: 1
           Show Axes: false
@@ -244,6 +266,22 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        wrist_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        wrist_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        wrist_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        wrist_4:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
       Mass Properties:
         Inertia: false
         Mass: false
@@ -252,6 +290,101 @@ Visualization Manager:
       Update Interval: 0
       Value: true
       Visual Enabled: true
+    - Accept NaN Values: true
+      Alpha: 1
+      Arrow Width: 0.05000000074505806
+      Class: rviz_default_plugins/Wrench
+      Enabled: true
+      Force Arrow Scale: 0.05000000074505806
+      Force Color: 204; 51; 51
+      History Length: 1
+      Name: Wrench 1
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /loris/contact_force_1
+      Torque Arrow Scale: 0.05000000074505806
+      Torque Color: 204; 204; 51
+      Value: true
+    - Accept NaN Values: false
+      Alpha: 1
+      Arrow Width: 0.05000000074505806
+      Class: rviz_default_plugins/Wrench
+      Enabled: true
+      Force Arrow Scale: 0.05000000074505806
+      Force Color: 204; 51; 51
+      History Length: 1
+      Name: Wrench 2
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /loris/contact_force_2
+      Torque Arrow Scale: 0.05000000074505806
+      Torque Color: 204; 204; 51
+      Value: true
+    - Accept NaN Values: false
+      Alpha: 1
+      Arrow Width: 0.05000000074505806
+      Class: rviz_default_plugins/Wrench
+      Enabled: true
+      Force Arrow Scale: 0.05000000074505806
+      Force Color: 204; 51; 51
+      History Length: 1
+      Name: Wrench 3
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /loris/contact_force_3
+      Torque Arrow Scale: 0.05000000074505806
+      Torque Color: 204; 204; 51
+      Value: true
+    - Accept NaN Values: false
+      Alpha: 1
+      Arrow Width: 0.05000000074505806
+      Class: rviz_default_plugins/Wrench
+      Enabled: true
+      Force Arrow Scale: 0.05000000074505806
+      Force Color: 204; 51; 51
+      History Length: 1
+      Name: Wrench 4
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /loris/contact_force_4
+      Torque Arrow Scale: 0.05000000074505806
+      Torque Color: 204; 204; 51
+      Value: true
+    - Accept NaN Values: false
+      Alpha: 1
+      Arrow Width: 0.05000000074505806
+      Class: rviz_default_plugins/Wrench
+      Enabled: true
+      Force Arrow Scale: 0.05000000074505806
+      Force Color: 204; 51; 51
+      History Length: 1
+      Name: Wrench 5
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /loris/contact_force_5
+      Torque Arrow Scale: 0.05000000074505806
+      Torque Color: 204; 204; 51
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -298,7 +431,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 0.9079784750938416
+      Distance: 1.035447597503662
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -313,10 +446,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4603983163833618
+      Pitch: 0.39479702711105347
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.6303986310958862
+      Yaw: 5.653564929962158
     Saved: ~
 Window Geometry:
   Displays:
@@ -334,5 +467,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1451
-  X: 576
-  Y: 102
+  X: 104
+  Y: -21

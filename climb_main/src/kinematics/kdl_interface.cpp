@@ -292,9 +292,8 @@ void KdlInterface::updateContactFrame(
     return;
   }
   // Update contact frame
-  auto & segment = chains_[contact].chain.getSegment(
-    chains_[contact].chain.getNrOfSegments() - 1);
-  segment = KDL::Segment(segment.getName(), segment.getJoint(), transform);
+  chains_[contact].chain.getSegment(
+    chains_[contact].chain.getNrOfSegments() - 1).setFrameToTip(transform);
   // Update chain transform
   KDL::ChainFkSolverPos_recursive fk_solver(chains_[contact].chain);
   fk_solver.JntToCart(chains_[contact].joint_pos, chains_[contact].transform);
@@ -349,6 +348,10 @@ void KdlInterface::setParameter(
     for (auto name : param.as_string_array()) {
       if (name == "microspine") {
         contact_type = ContactType::MICROSPINE;
+      } else if (name == "tail") {
+        contact_type = ContactType::TAIL;
+      } else if (name == "magnetic wheel" || name == "magnetic_wheel") {
+        contact_type = ContactType::MAGNET_WHEEL;
       } else {
         contact_type = ContactType::DEFAULT;
       }

@@ -3,9 +3,11 @@
 
 #include <Eigen/Geometry>
 #include <sensor_msgs/msg/imu.hpp>
+#include <geometry_msgs/msg/wrench_stamped.hpp>
 #include "climb_main/kinematics/kinematics_interface.hpp"
 
 using sensor_msgs::msg::Imu;
+using geometry_msgs::msg::WrenchStamped;
 
 /**
  * @brief Estimates contact forces from joint effort and IMU if present
@@ -55,6 +57,16 @@ public:
    * @param[in] num_joints Number of joints in the robot
    */
   void reset(int num_joints);
+
+  /**
+   * @brief Convert contact force vector to individual WrenchStamped messages
+   * @param[in] forces Vector of contact forces
+   * @param[in] stamp Timestamp of contact force measurement
+   * @param[in] tf_prefix Optional prefix for contact frame names
+   * @return Vector of WrenchStamped messages
+   */
+  std::vector<WrenchStamped> forcesToMessages(
+    Eigen::VectorXd forces, rclcpp::Time stamp, std::string tf_prefix = "");
 
   void declareParameters(const rclcpp::Node::SharedPtr node) override;
 

@@ -292,7 +292,7 @@
     <parent
       link="lower_limb_1" />
     <child
-      link="gripper_1" />
+      link="wrist_1" />
     <axis
       xyz="0 0 0" />
   </joint>
@@ -511,7 +511,7 @@
     <parent
       link="lower_limb_2" />
     <child
-      link="gripper_2" />
+      link="wrist_2" />
     <axis
       xyz="0 0 0" />
   </joint>
@@ -786,7 +786,7 @@
     <parent
       link="lower_limb_3" />
     <child
-      link="gripper_3" />
+      link="wrist_3" />
     <axis
       xyz="0 0 0" />
   </joint>
@@ -1005,9 +1005,29 @@
     <parent
       link="lower_limb_4" />
     <child
-      link="gripper_4" />
+      link="wrist_4" />
     <axis
       xyz="0 0 0" />
+  </joint>
+  <link name="wrist_1" />
+  <joint name="gripper_joint_1" type="fixed">
+    <parent link="wrist_1"/>
+    <child link="gripper_1"/>
+  </joint>
+  <link name="wrist_2" />
+  <joint name="gripper_joint_2" type="fixed">
+    <parent link="wrist_2"/>
+    <child link="gripper_2"/>
+  </joint>
+  <link name="wrist_3" />
+  <joint name="gripper_joint_3" type="fixed">
+    <parent link="wrist_3"/>
+    <child link="gripper_3"/>
+  </joint>
+  <link name="wrist_4" />
+  <joint name="gripper_joint_4" type="fixed">
+    <parent link="wrist_4"/>
+    <child link="gripper_4"/>
   </joint>
   <link
     name="tail">
@@ -1064,6 +1084,17 @@
       upper="1.3963"
       effort="4.1"
       velocity="4.8" />
+  </joint>
+  <link name="tail_tip" />
+  <joint name="tail_tip_joint" type="fixed">
+    <parent link="tail"/>
+    <child link="tail_tip"/>
+    <origin xyz="0.35 0 0" rpy="0 1.5708 0"/>
+  </joint>
+  <link name="tail_contact" />
+  <joint name="tail_contact_joint" type="fixed">
+    <parent link="tail_tip"/>
+    <child link="tail_contact"/>
   </joint>
 
   <ros2_control name="GazeboSystem" type="system">

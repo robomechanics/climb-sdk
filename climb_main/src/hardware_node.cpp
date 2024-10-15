@@ -154,9 +154,8 @@ rcl_interfaces::msg::SetParametersResult HardwareNode::parameterCallback(
       double freq = param.as_double();
       actuator_update_period_ =
         rclcpp::Duration::from_seconds((freq > 0) ? (1.0 / freq) : 0);
-    } else {
-      interface_->setParameter(param, result);
     }
+    interface_->setParameter(param, result);
   }
   return result;
 }

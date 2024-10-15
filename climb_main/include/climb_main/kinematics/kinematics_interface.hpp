@@ -16,7 +16,7 @@ using geometry_msgs::msg::TransformStamped;
 class KinematicsInterface : public Parameterized
 {
 public:
-  enum ContactType { DEFAULT, MICROSPINE, MAGNET_WHEEL };
+  enum ContactType { DEFAULT, MICROSPINE, TAIL, MAGNET_WHEEL };
 
   /**
    * @brief Constructor for KinematicsInterface
@@ -192,6 +192,18 @@ public:
   inline std::vector<std::string> getEndEffectorFrames() const
   {
     return end_effector_frames_;
+  }
+
+  /**
+   * @return Vector of end effector frame names
+   */
+  inline Eigen::MatrixXd getWrenchBasis(std::string contact) const
+  {
+    auto it = wrench_bases_.find(contact);
+    if (it == wrench_bases_.end()) {
+      return Eigen::MatrixXd();
+    }
+    return it->second;
   }
 
   /**

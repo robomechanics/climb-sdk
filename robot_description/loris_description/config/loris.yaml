@@ -24,13 +24,16 @@
       - wrist_2
       - wrist_3
       - wrist_4
+      - tail_tip
     contact_frames:
       - gripper_1
       - gripper_2
       - gripper_3
       - gripper_4
-    contact_types_:
+      - tail_contact
+    contact_types:
       - microspine
       - microspine
       - microspine
       - microspine
+      - tail

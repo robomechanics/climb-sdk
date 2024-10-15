@@ -1,97 +1,106 @@
-#include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/joint_state.hpp>
-#include <std_msgs/msg/string.hpp>
-#include <tf2_ros/transform_broadcaster.h>
-
-#include "climb_msgs/msg/contact_state.hpp"
-
-#include "climb_main/kinematics/kinematics_interface.hpp"
+#include "climb_main/controller_node.hpp"
 #include "climb_main/kinematics/kdl_interface.hpp"
 
 using std::placeholders::_1;
-using std_msgs::msg::String;
-using sensor_msgs::msg::JointState;
-using climb_msgs::msg::ContactState;
 
-/**
- * Computes optimal joint displacements given current state, desired contact
- * mode, and desired free-space motion.
- */
-class ControllerNode : public rclcpp::Node
+ControllerNode::ControllerNode()
+: Node("ControllerNode")
 {
-public:
-  ControllerNode()
-  : Node("ControllerNode")
-  {
-    this->declare_parameter("tf_prefix", "");
-    name_ = this->get_parameter("tf_prefix").as_string();
+  // Initialize kinematics model, estimators, and controller
+  robot_ = std::make_shared<KdlInterface>();
+  force_estimator_ = std::make_unique<ForceEstimator>(robot_);
 
-    robot_ = std::make_unique<KdlInterface>();
-    description_sub_ = this->create_subscription<String>(
-      "robot_description", 1,
-      std::bind(&ControllerNode::description_callback, this, _1));
-    joint_sub_ = this->create_subscription<JointState>(
-      "joint_states", 1,
-      std::bind(&ControllerNode::joint_callback, this, _1));
-    joint_cmd_pub_ = this->create_publisher<JointState>("joint_commands", 1);
-    tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
-    RCLCPP_INFO(this->get_logger(), "Controller node initialized");
+  // Subscribe to parameter changes
+  param_handle_ = this->add_on_set_parameters_callback(
+    std::bind(&ControllerNode::parameterCallback, this, _1));
+
+  // Declare parameters
+  this->declare_parameter("tf_prefix", "");
+
+  // Define publishers and subscribers
+  description_sub_ = this->create_subscription<String>(
+    "robot_description", rclcpp::QoS(1).transient_local(),
+    std::bind(&ControllerNode::descriptionCallback, this, _1));
+  joint_sub_ = this->create_subscription<JointState>(
+    "joint_states", 1,
+    std::bind(&ControllerNode::jointCallback, this, _1));
+  contact_cmd_sub_ = this->create_subscription<ContactCommand>(
+    "contact_commands", 1,
+    std::bind(&ControllerNode::contactCmdCallback, this, _1));
+  joint_cmd_pub_ = this->create_publisher<JointCommand>("joint_commands", 1);
+  tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+  RCLCPP_INFO(this->get_logger(), "Controller node initialized");
+}
+
+void ControllerNode::init()
+{
+  robot_->declareParameters(shared_from_this());
+  force_estimator_->declareParameters(shared_from_this());
+}
+
+void ControllerNode::update()
+{
+  // Estimate contact forces
+  Eigen::VectorXd forces = force_estimator_->update();
+
+  // Update controller
+
+  // Publish joint commands
+
+  // Publish contact forces
+  std::vector<WrenchStamped> contact_forces =
+    force_estimator_->forcesToMessages(forces, this->get_clock()->now(), name_);
+  for (size_t i = 0; i < contact_forces.size(); i++) {
+    if (contact_force_pubs_.size() == i) {
+      contact_force_pubs_.push_back(
+        this->create_publisher<WrenchStamped>(
+          "contact_force_" + std::to_string(i + 1), 10));
+    }
+    contact_force_pubs_[i]->publish(contact_forces[i]);
   }
+}
 
-private:
-  std::unique_ptr<KinematicsInterface> robot_;
+void ControllerNode::descriptionCallback(const String::SharedPtr msg)
+{
+  robot_->loadRobotDescription(msg->data);
+}
 
-  rclcpp::Subscription<String>::SharedPtr description_sub_;
-  rclcpp::Subscription<JointState>::SharedPtr joint_sub_;
-  rclcpp::Subscription<ContactState>::SharedPtr contact_cmd_sub_;
-
-  rclcpp::Publisher<JointState>::SharedPtr joint_cmd_pub_;
-  rclcpp::Publisher<ContactState>::SharedPtr contact_pub_;
-
-  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
-
-  std::string name_;
-
-  /**
-   * @brief the kinematics model using the provided robot description
-   * @param[in] msg Message containing robot description in URDF format
-   */
-  void description_callback(const String::SharedPtr msg)
-  {
-    robot_->loadRobotDescription(msg->data);
+void ControllerNode::jointCallback(const JointState::SharedPtr msg)
+{
+  if (!robot_->isInitialized()) {
+    return;
   }
+  robot_->updateJointState(*msg);
+  update();
+}
 
-  /**
-   * @brief Publish robot state corresponding to the provided joint states
-   * @param[in] msg Message containing joint states
-   */
-  void joint_callback(const JointState::SharedPtr msg)
-  {
-    // ContactState contact_state;
-    // this->contact_pub_->publish(contact_state);
+void ControllerNode::contactCmdCallback(const ContactCommand::SharedPtr msg)
+{
 
-    // geometry_msgs::msg::TransformStamped t;
-    // t.header.stamp = this->get_clock()->now();
-    // t.header.frame_id = "world";
-    // t.child_frame_id = "world";
-    // tf_broadcaster_->sendTransform(t);
+}
+
+rcl_interfaces::msg::SetParametersResult ControllerNode::parameterCallback(
+  const std::vector<rclcpp::Parameter> & parameters)
+{
+  rcl_interfaces::msg::SetParametersResult result;
+  result.successful = true;
+  result.reason = "Success";
+  for (const auto & param : parameters) {
+    if (param.get_name() == "tf_prefix") {
+      name_ = param.as_string();
+    }
+    robot_->setParameter(param, result);
+    force_estimator_->setParameter(param, result);
   }
-
-  /**
-   * @brief Publish joint commands to achieve the provided contact commands
-   * @param[in] msg Message containing contact commands
-   */
-  void contact_cmd_callback(const ContactState::SharedPtr msg)
-  {
-    JointState joint_cmd;
-    this->joint_cmd_pub_->publish(joint_cmd);
-  }
-};
+  return result;
+}
 
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_unique<ControllerNode>());
+  auto node = std::make_shared<ControllerNode>();
+  node->init();
+  rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
 }

@@ -138,10 +138,14 @@ void KinematicsInterface::updateBases()
     Eigen::MatrixXd basis;
     if (i >= contact_types_.size()) {
       basis = Eigen::MatrixXd::Identity(6, 6);
-    } else if (contact_types_[i] == ContactType::MICROSPINE) {
+    } else if (contact_types_[i] == ContactType::MICROSPINE ||
+      contact_types_[i] == ContactType::MAGNET_WHEEL)
+    {
       basis = (Eigen::MatrixXd(6, 3) <<
         Eigen::MatrixXd::Identity(3, 3),
         Eigen::MatrixXd::Zero(3, 3)).finished();
+    } else if (contact_types_[i] == ContactType::TAIL) {
+      basis = (Eigen::MatrixXd(6, 1) << 1, 0, 0, 0, 0, 0).finished();
     } else {
       basis = Eigen::MatrixXd::Identity(6, 6);
     }
