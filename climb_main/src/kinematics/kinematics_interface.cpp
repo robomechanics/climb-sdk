@@ -4,10 +4,15 @@ KinematicsInterface::KinematicsInterface()
 {
 }
 
-bool KinematicsInterface::loadRobotDescription(std::string description)
+bool KinematicsInterface::loadRobotDescription(
+  std::string description, std::string & error_message)
 {
   initialized_ = false;
-  return urdf_model_.initString(description);
+  if (!urdf_model_.initString(description)) {
+    error_message = "Failed to parse URDF";
+    return false;
+  }
+  return initialize(error_message);
 }
 
 bool KinematicsInterface::initialize(std::string & error_message)
@@ -16,52 +21,34 @@ bool KinematicsInterface::initialize(std::string & error_message)
 
   // Check that robot description has been loaded
   if (!urdf_model_.getRoot()) {
-    error_message = "Robot description not loaded";
+    error_message = "Robot description not yet loaded";
     return false;
   }
 
-  // Check that requested frames and joints are present in robot description
-  if (!urdf_model_.getLink(body_frame_)) {
-    error_message =
-      "Body frame " + body_frame_ + " not found in robot description";
+  // Check for parameter length mismatch
+  if (num_contacts_ == 0) {
+    error_message = "Contact frames not set";
     return false;
   }
-  for (const auto & frame : contact_frames_) {
-    if (!urdf_model_.getLink(frame)) {
-      error_message =
-        "Contact frame " + frame + " not found in robot description";
-      return false;
-    }
+  if (end_effector_frames_.size() != num_contacts_) {
+    error_message =
+      "End-effector frames and contact frames must have same length";
+    return false;
   }
-  for (const auto & frame : end_effector_frames_) {
-    if (!urdf_model_.getLink(frame)) {
-      error_message =
-        "End effector frame " + frame + " not found in robot description";
-      return false;
-    }
-  }
-  for (const auto & joint : joint_names_) {
-    if (!urdf_model_.getJoint(joint)) {
-      error_message = "Joint " + joint + " not found in robot description";
-      return false;
-    }
-    if (urdf_model_.getJoint(joint)->type != urdf::Joint::REVOLUTE &&
-      urdf_model_.getJoint(joint)->type != urdf::Joint::CONTINUOUS &&
-      urdf_model_.getJoint(joint)->type != urdf::Joint::PRISMATIC)
-    {
-      error_message = "Joint " + joint + " type is not supported";
-      return false;
-    }
+  if (contact_types_.size() != num_contacts_) {
+    error_message = "Contact types and contact frames must have same length";
+    return false;
   }
 
-  // Check that parameter lengths match
-  if (contact_frames_.size() != end_effector_frames_.size()) {
-    error_message =
-      "Contact frames and end effector frames must be same length";
-    return false;
-  }
-  if (contact_frames_.size() != contact_types_.size()) {
-    error_message = "Contact frames and contact types must be same length";
+  // Validate parameters (they may have been set before URDF model was loaded)
+  SetParametersResult result;
+  result.successful = true;
+  setParameter(Parameter("body_frame", body_frame_), result);
+  setParameter(Parameter("contact_frames", contact_frames_), result);
+  setParameter(Parameter("end_effector_frames", end_effector_frames_), result);
+  setParameter(Parameter("joint_names", joint_names_), result);
+  if (!result.successful) {
+    error_message = result.reason;
     return false;
   }
 
@@ -78,9 +65,9 @@ bool KinematicsInterface::initialize(std::string & error_message)
       }
     }
   }
+  num_joints_ = joint_names_.size();
 
   // Initialize joint state and limits
-  num_joints_ = joint_names_.size();
   joint_pos_ = Eigen::VectorXd::Zero(num_joints_);
   joint_vel_ = Eigen::VectorXd::Zero(num_joints_);
   joint_eff_ = Eigen::VectorXd::Zero(num_joints_);
@@ -90,7 +77,7 @@ bool KinematicsInterface::initialize(std::string & error_message)
   joint_vel_max_.resize(num_joints_);
   joint_eff_min_.resize(num_joints_);
   joint_eff_max_.resize(num_joints_);
-  for (int i = 0; i < num_joints_; i++) {
+  for (size_t i = 0; i < num_joints_; i++) {
     auto joint = urdf_model_.getJoint(joint_names_[i]);
     joint_pos_min_[i] = joint->limits->lower;
     joint_pos_max_[i] = joint->limits->upper;
@@ -115,9 +102,9 @@ bool KinematicsInterface::initialize(std::string & error_message)
   // Initialize wrench bases
   num_constraints_ = 0;
   wrench_bases_.clear();
-  for (size_t i = 0; i < contact_frames_.size(); i++) {
-    auto contact = contact_frames_[i];
-    auto basis = WRENCH_BASES.at(contact_types_[i]);
+  for (size_t index = 0; index < num_contacts_; index++) {
+    auto contact = contact_frames_[index];
+    auto basis = WRENCH_BASES.at(contact_types_[index]);
     int c = 6 - std::count(basis.begin(), basis.end(), 0);
     wrench_bases_[contact] = Eigen::MatrixXd::Zero(6, c);
     int j = 0;
@@ -158,7 +145,7 @@ Eigen::MatrixXd KinematicsInterface::getMixedJacobian(bool linear)
 {
   int p = linear ? 3 : 6;
   Eigen::MatrixXd jac(p * num_contacts_, num_joints_);
-  for (int i = 0; i < num_contacts_; i++) {
+  for (size_t i = 0; i < num_contacts_; i++) {
     Eigen::MatrixXd jac_i = getMixedJacobian(contact_frames_[i], linear);
     if (jac_i.size() == 0) {
       return Eigen::MatrixXd();
@@ -172,7 +159,7 @@ Eigen::MatrixXd KinematicsInterface::getHandJacobian()
 {
   Eigen::MatrixXd jac(num_constraints_, num_joints_);
   int row = 0;
-  for (int i = 0; i < num_contacts_; i++) {
+  for (size_t i = 0; i < num_contacts_; i++) {
     Eigen::MatrixXd jac_i = getHandJacobian(contact_frames_[i]);
     if (jac_i.size() == 0) {
       return Eigen::MatrixXd();
@@ -223,57 +210,89 @@ void KinematicsInterface::setParameter(
   const Parameter & param, SetParametersResult & result)
 {
   if (param.get_name() == "body_frame") {
-    body_frame_ = param.as_string();
-    if (initialized_) {
-      std::string error_message;
-      if (!initialize(error_message)) {
+    // Validate parameter
+    if (urdf_model_.getRoot()) {
+      if (!urdf_model_.getLink(param.as_string())) {
         result.successful = false;
-        result.reason = error_message;
+        result.reason =
+          "Body frame " + body_frame_ + " not found in robot description";
         return;
       }
+    }
+    // Update value and attempt to initialize if parameter has changed
+    if (body_frame_ != param.as_string()) {
+      body_frame_ = param.as_string();
+      initialize(result.reason);
     }
   } else if (param.get_name() == "end_effector_frames") {
-    end_effector_frames_ = param.as_string_array();
-    if (initialized_) {
-      std::string error_message;
-      if (!initialize(error_message)) {
-        result.successful = false;
-        result.reason = error_message;
-        return;
+    // Validate parameter
+    if (urdf_model_.getRoot()) {
+      for (const auto & frame : param.as_string_array()) {
+        if (!urdf_model_.getLink(frame)) {
+          result.successful = false;
+          result.reason =
+            "End effector frame " + frame + " not found in robot description";
+          return;
+        }
       }
+    }
+    // Update value and attempt to initialize if parameter has changed
+    if (end_effector_frames_ != param.as_string_array()) {
+      end_effector_frames_ = param.as_string_array();
+      initialize(result.reason);
     }
   } else if (param.get_name() == "contact_frames") {
-    contact_frames_ = param.as_string_array();
-    num_contacts_ = contact_frames_.size();
-    if (initialized_) {
-      std::string error_message;
-      if (!initialize(error_message)) {
-        result.successful = false;
-        result.reason = error_message;
-        return;
+    // Validate parameter
+    if (urdf_model_.getRoot()) {
+      for (const auto & frame : param.as_string_array()) {
+        if (!urdf_model_.getLink(frame)) {
+          result.successful = false;
+          result.reason =
+            "Contact frame " + frame + " not found in robot description";
+          return;
+        }
       }
+    }
+    // Update value and attempt to initialize if parameter has changed
+    if (contact_frames_ != param.as_string_array()) {
+      contact_frames_ = param.as_string_array();
+      num_contacts_ = contact_frames_.size();
+      initialize(result.reason);
     }
   } else if (param.get_name() == "joint_names") {
-    auto original = joint_names_;
-    joint_names_.clear();
-    for (auto name : param.as_string_array()) {
-      if (std::find(joint_names_.begin(), joint_names_.end(), name) ==
-        joint_names_.end())
-      {
-        joint_names_.push_back(name);
+    // Validate parameter
+    if (urdf_model_.getRoot()) {
+      for (const auto & joint : param.as_string_array()) {
+        if (!urdf_model_.getJoint(joint)) {
+          result.successful = false;
+          result.reason = "Joint " + joint + " not found in robot description";
+          return;
+        }
+        if (urdf_model_.getJoint(joint)->type != urdf::Joint::REVOLUTE &&
+          urdf_model_.getJoint(joint)->type != urdf::Joint::CONTINUOUS &&
+          urdf_model_.getJoint(joint)->type != urdf::Joint::PRISMATIC)
+        {
+          result.successful = false;
+          result.reason = "Joint " + joint + " type is not supported";
+          return;
+        }
       }
     }
-    num_joints_ = joint_names_.size();
-    if (initialized_) {
-      std::string error_message;
-      if (!initialize(error_message)) {
-        result.successful = false;
-        result.reason = error_message;
-        joint_names_ = original;
-        return;
+    // Update value and attempt to initialize if parameter has changed
+    if (joint_names_ != param.as_string_array()) {
+      joint_names_.clear();
+      for (auto name : param.as_string_array()) {
+        if (std::find(joint_names_.begin(), joint_names_.end(), name) ==
+          joint_names_.end())
+        {
+          joint_names_.push_back(name);
+        }
       }
+      num_joints_ = joint_names_.size();
+      initialize(result.reason);
     }
   } else if (param.get_name() == "contact_types") {
+    // Validate parameter
     std::vector<ContactType> contact_types;
     for (auto name : param.as_string_array()) {
       if (name == "microspine") {
@@ -290,14 +309,10 @@ void KinematicsInterface::setParameter(
         return;
       }
     }
-    contact_types_ = contact_types;
-    if (initialized_) {
-      std::string error_message;
-      if (!initialize(error_message)) {
-        result.successful = false;
-        result.reason = error_message;
-        return;
-      }
+    // Update value and attempt to initialize if parameter has changed
+    if (contact_types_ != contact_types) {
+      contact_types_ = contact_types;
+      initialize(result.reason);
     }
   }
 }

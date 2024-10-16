@@ -24,9 +24,6 @@ protected:
       std::istreambuf_iterator<char>());
     urdf_file.close();
     robot_ = std::make_unique<KdlInterface>();
-    if (!robot_->loadRobotDescription(urdf)) {
-      GTEST_SKIP() << "Failed to load robot description";
-    }
 
     // Set parameters
     robot_->setParameter("body_frame", "body");
@@ -43,7 +40,7 @@ protected:
       "joint_names", std::vector<std::string> {
       "left_hip", "right_hip", "left_knee", "right_knee"});
     std::string error_message;
-    if (!robot_->initialize(error_message)) {
+    if (!robot_->loadRobotDescription(urdf, error_message)) {
       GTEST_SKIP() << error_message;
     }
 

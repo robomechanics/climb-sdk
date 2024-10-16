@@ -66,15 +66,19 @@ void ControllerNode::update()
 
 void ControllerNode::descriptionCallback(const String::SharedPtr msg)
 {
-  if (!robot_->loadRobotDescription(msg->data)) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to load robot description");
-    return;
-  }
   std::string error_message;
-  if (!robot_->initialize(error_message)) {
+  if (robot_->loadRobotDescription(msg->data, error_message)) {
+    RCLCPP_INFO(this->get_logger(), "Robot description loaded");
+    RCLCPP_INFO(this->get_logger(), "\tMass: %.3f kg", robot_->getMass());
+    RCLCPP_INFO(this->get_logger(), "\tJoints: %d", robot_->getNumJoints());
+    RCLCPP_INFO(
+      this->get_logger(), "\tEnd effectors: %d", robot_->getNumContacts());
+    RCLCPP_INFO(
+      this->get_logger(), "\tConstraints: %d", robot_->getNumConstraints());
+  } else {
     RCLCPP_ERROR(
       this->get_logger(),
-      "Failed to initialize kinematics interface: %s", error_message.c_str());
+      "Failed to load robot description: %s", error_message.c_str());
     return;
   }
 }
@@ -103,8 +107,18 @@ rcl_interfaces::msg::SetParametersResult ControllerNode::parameterCallback(
     if (param.get_name() == "tf_prefix") {
       name_ = param.as_string();
     }
+    bool initialized = robot_->isInitialized();
     robot_->setParameter(param, result);
     force_estimator_->setParameter(param, result);
+    if (!initialized && robot_->isInitialized()) {
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Kinematics interface initialized");
+    } else if (initialized && !robot_->isInitialized()) {
+      RCLCPP_WARN(
+        this->get_logger(),
+        "Kinematics interface disabled: %s", result.reason.c_str());
+    }
   }
   return result;
 }

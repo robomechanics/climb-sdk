@@ -1,8 +1,8 @@
 services:
   ros2:
     build:
-      context: ..
-      dockerfile: .devcontainer/Dockerfile
+      context: .
+      dockerfile: Dockerfile
     container_name: ROS2
     hostname: docker
     tty: true

@@ -13,8 +13,9 @@ RUN apt-get -y update \
     ros-${ROS_DISTRO}-ros-gz \
     ros-${ROS_DISTRO}-gz-ros2-control \
     ros-${ROS_DISTRO}-ros2-controllers \
- && rm -rf /var/lib/apt/lists/* \
- && echo "source /ros_entrypoint.sh" >> ~/.bashrc \
- && echo "if [ -f install/local_setup.bash ]; then source install/local_setup.bash; fi" >> ~/.bashrc \
- && echo "trap 'exec /bin/bash' ERR" >> ~/.bashrc \
- && echo "alias gz='ign gazebo'" >> ~/.bashrc
+ && rm -rf /var/lib/apt/lists/*
+
+COPY docker_config.sh /tmp/docker_config.sh
+
+RUN cat /tmp/docker_config.sh >> /root/.bashrc \
+ && rm /tmp/docker_config.sh

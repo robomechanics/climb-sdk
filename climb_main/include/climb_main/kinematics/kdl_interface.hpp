@@ -11,7 +11,6 @@
 class KdlInterface : public KinematicsInterface
 {
 public:
-  bool loadRobotDescription(std::string urdf_file) override;
   bool initialize(std::string & error_message) override;
 
   Eigen::MatrixXd getHandJacobian(std::string contact_frame) override;

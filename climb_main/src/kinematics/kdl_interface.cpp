@@ -5,27 +5,25 @@
 #include <kdl/chainjnttojacsolver.hpp>
 #include <kdl/chaindynparam.hpp>
 
-bool KdlInterface::loadRobotDescription(std::string description)
-{
-  if (!KinematicsInterface::loadRobotDescription(description)) {
-    return false;
-  }
-  return kdl_parser::treeFromString(description, tree_);
-}
-
 bool KdlInterface::initialize(std::string & error_message)
 {
+  // Parent class initialization
   if (!KinematicsInterface::initialize(error_message)) {
     return false;
   }
+  // Load KDL tree from URDF model
   initialized_ = false;
+  if (!kdl_parser::treeFromUrdfModel(urdf_model_, tree_)) {
+    error_message = "KDL could not parse URDF model";
+    return false;
+  }
   chains_.clear();
   joints_.clear();
   // Initialize joint indices
-  for (size_t i = 0; i < joint_names_.size(); i++) {
+  for (size_t i = 0; i < num_joints_; i++) {
     joints_[joint_names_[i]].index = i;
   }
-  for (size_t i = 0; i < contact_frames_.size(); i++) {
+  for (size_t i = 0; i < num_contacts_; i++) {
     std::string contact = contact_frames_[i];
     // Create a chain for each end effector
     KDL::Chain chain;

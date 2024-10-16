@@ -51,17 +51,11 @@ public:
   /**
    * @brief Load robot description from a URDF string
    * @param[in] description robot description in URDF format
+   * @param[out] error_message Error message if initialization fails
    * @return True if the robot description was successfully loaded
    */
-  virtual bool loadRobotDescription(std::string description);
-
-  /**
-   * @brief Perform any necessary initialization steps after loading the robot
-   * description and setting parameter values
-   * @param[out] error_message Error message if initialization fails
-   * @return True if the robot was successfully initialized
-   */
-  virtual bool initialize(std::string & error_message);
+  bool loadRobotDescription(
+    std::string description, std::string & error_message);
 
   /**
    * @brief Compute Jacobian mapping joint velocities to end effector
@@ -294,10 +288,18 @@ public:
   inline Eigen::VectorXd getJointEffortMax() const {return joint_eff_max_;}
 
 protected:
+  /**
+   * @brief Perform any necessary initialization steps after loading the robot
+   * description and setting parameter values
+   * @param[out] error_message Error message if initialization fails
+   * @return True if the robot was successfully initialized
+   */
+  virtual bool initialize(std::string & error_message);
+
   bool initialized_ = false;      // Has robot description been loaded
-  int num_joints_;                // Number of joints
-  int num_contacts_;              // Number of contacts
-  int num_constraints_;           // Number of contact constraints
+  size_t num_joints_;             // Number of joints
+  size_t num_contacts_;           // Number of contacts
+  size_t num_constraints_;        // Number of contact constraints
 
   // URDF model
   urdf::Model urdf_model_;
