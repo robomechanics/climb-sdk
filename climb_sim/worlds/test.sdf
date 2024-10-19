@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <sdf version="1.8">
-    <world name="test">
+  <world name="test">
     <physics name="1ms" type="ignored">
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1.0</real_time_factor>
@@ -21,6 +21,10 @@
       filename="gz-sim-contact-system"
       name="gz::sim::systems::Contact">
     </plugin>
+    <plugin
+      filename="ignition-gazebo-forcetorque-system"
+      name="ignition::gazebo::systems::ForceTorque">
+    </plugin>
 
     <light type="directional" name="sun">
       <cast_shadows>true</cast_shadows>
@@ -36,7 +40,7 @@
       <direction>-0.5 0.1 -0.9</direction>
     </light>
 
-    <model name="ground_plane">
+    <model name="ground">
       <static>true</static>
       <link name="link">
         <collision name="collision">
@@ -61,6 +65,41 @@
           </material>
         </visual>
       </link>
+
+      <self_collide>true</self_collide>
+
+      <plugin filename="libgz-sim-detachable-joint-system.so" name="gz::sim::systems::DetachableJoint">
+        <parent_link>link</parent_link>
+        <child_model>loris</child_model>
+        <child_link>gripper_1</child_link>
+        <detach_topic>release</detach_topic>
+      </plugin>
+
+      <plugin filename="libgz-sim-detachable-joint-system.so" name="gz::sim::systems::DetachableJoint">
+        <parent_link>link</parent_link>
+        <child_model>loris</child_model>
+        <child_link>gripper_2</child_link>
+        <detach_topic>release</detach_topic>
+      </plugin>
+
+      <plugin filename="libgz-sim-detachable-joint-system.so" name="gz::sim::systems::DetachableJoint">
+        <parent_link>link</parent_link>
+        <child_model>loris</child_model>
+        <child_link>gripper_3</child_link>
+        <detach_topic>release</detach_topic>
+      </plugin>
+
+      <plugin filename="libgz-sim-detachable-joint-system.so" name="gz::sim::systems::DetachableJoint">
+        <parent_link>link</parent_link>
+        <child_model>loris</child_model>
+        <child_link>gripper_4</child_link>
+        <detach_topic>release</detach_topic>
+      </plugin>
     </model>
+
+    <plugin
+      filename="GraspSystem"
+      name="grasp_system::GraspSystem">
+    </plugin>
   </world>
 </sdf>

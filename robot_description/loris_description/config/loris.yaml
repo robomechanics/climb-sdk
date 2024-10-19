@@ -20,10 +20,10 @@
       - XM430-W350-T
     body_frame: root
     end_effector_frames:
-      - wrist_1
-      - wrist_2
-      - wrist_3
-      - wrist_4
+      - wrist_1c
+      - wrist_2c
+      - wrist_3c
+      - wrist_4c
       - tail_tip
     contact_frames:
       - gripper_1

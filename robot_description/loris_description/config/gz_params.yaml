@@ -5,6 +5,8 @@ controller_manager:
       type: joint_state_broadcaster/JointStateBroadcaster
     climber_controller:
       type: forward_command_controller/ForwardCommandController
+    fts_broadcaster_1:
+      type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
 
 climber_controller:
   ros__parameters:
@@ -25,3 +27,8 @@ climber_controller:
       - spine_joint
       - tail_joint
     interface_name: position
+
+fts_broadcaster_1:
+  ros__parameters:
+    sensor_name: "fts_1"
+    frame_id: "gripper_1"

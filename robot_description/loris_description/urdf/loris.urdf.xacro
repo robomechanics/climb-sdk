@@ -249,7 +249,7 @@
     name="gripper_1">
     <inertial>
       <origin
-        xyz="0.00454536689668263 6.93889390390723E-16 0.000630502612849193"
+        xyz="0.00454536689668263 6.93889390390723E-16 -0.02"
         rpy="0 0 0" />
       <mass
         value="0.062469295997667" />
@@ -284,7 +284,7 @@
     </collision>
   </link>
   <joint
-    name="wrist_joint_1"
+    name="wrist_joint_1a"
     type="fixed">
     <origin
       xyz="0.08595 -0.004 -0.02756"
@@ -292,7 +292,7 @@
     <parent
       link="lower_limb_1" />
     <child
-      link="wrist_1" />
+      link="wrist_1a" />
     <axis
       xyz="0 0 0" />
   </joint>
@@ -468,7 +468,7 @@
     name="gripper_2">
     <inertial>
       <origin
-        xyz="0.00454536689668164 -1.63757896132211E-15 0.000630502612847555"
+        xyz="0.00454536689668164 -1.63757896132211E-15 -0.02"
         rpy="0 0 0" />
       <mass
         value="0.0624692959976671" />
@@ -503,7 +503,7 @@
     </collision>
   </link>
   <joint
-    name="wrist_joint_2"
+    name="wrist_joint_2a"
     type="fixed">
     <origin
       xyz="0.0859500505560914 0.0040000000000015 -0.0275596189432333"
@@ -511,7 +511,7 @@
     <parent
       link="lower_limb_2" />
     <child
-      link="wrist_2" />
+      link="wrist_2a" />
     <axis
       xyz="0 0 0" />
   </joint>
@@ -743,7 +743,7 @@
     name="gripper_3">
     <inertial>
       <origin
-        xyz="0.00454536689668293 -1.07414077632484E-14 0.000630502612850609"
+        xyz="0.00454536689668293 -1.07414077632484E-14 -0.02"
         rpy="0 0 0" />
       <mass
         value="0.062469295997667" />
@@ -778,7 +778,7 @@
     </collision>
   </link>
   <joint
-    name="wrist_joint_3"
+    name="wrist_joint_3a"
     type="fixed">
     <origin
       xyz="0.08595 0.004 -0.02756"
@@ -786,7 +786,7 @@
     <parent
       link="lower_limb_3" />
     <child
-      link="wrist_3" />
+      link="wrist_3a" />
     <axis
       xyz="0 0 0" />
   </joint>
@@ -962,7 +962,7 @@
     name="gripper_4">
     <inertial>
       <origin
-        xyz="0.00454536689667982 1.301736496373E-14 0.000630502612845113"
+        xyz="0.00454536689667982 1.301736496373E-14 -0.02"
         rpy="0 0 0" />
       <mass
         value="0.0624692959976671" />
@@ -997,7 +997,7 @@
     </collision>
   </link>
   <joint
-    name="wrist_joint_4"
+    name="wrist_joint_4a"
     type="fixed">
     <origin
       xyz="0.0859500505560914 -0.00399999999998341 -0.0275596189432316"
@@ -1005,30 +1005,135 @@
     <parent
       link="lower_limb_4" />
     <child
-      link="wrist_4" />
+      link="wrist_4a" />
     <axis
       xyz="0 0 0" />
   </joint>
-  <link name="wrist_1" />
-  <joint name="gripper_joint_1" type="fixed">
-    <parent link="wrist_1"/>
+
+  <link name="wrist_1a" />
+  <link name="wrist_1b">
+    <inertial>
+      <mass value="1e-3"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5" />
+    </inertial>
+  </link>
+  <link name="wrist_1c">
+    <inertial>
+      <mass value="1e-3"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5" />
+    </inertial>
+  </link>
+  <joint name="wrist_joint_1b" type="continuous">
+    <parent link="wrist_1a"/>
+    <child link="wrist_1b"/>
+    <axis xyz="1 0 0" />
+  </joint>
+  <joint name="wrist_joint_1c" type="revolute">
+    <parent link="wrist_1b"/>
+    <child link="wrist_1c"/>
+    <axis xyz="0 1 0" />
+    <limit lower="-0.61" upper="0.61" effort="0" velocity="4.8" />
+  </joint>
+  <joint name="gripper_joint_1" type="revolute">
+    <parent link="wrist_1c"/>
     <child link="gripper_1"/>
+    <axis xyz="0 0 1" />
+    <limit lower="-0.61" upper="0.61" effort="0" velocity="4.8" />
   </joint>
-  <link name="wrist_2" />
-  <joint name="gripper_joint_2" type="fixed">
-    <parent link="wrist_2"/>
+
+  <link name="wrist_2a" />
+  <link name="wrist_2b">
+    <inertial>
+      <mass value="1e-3"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5" />
+    </inertial>
+  </link>
+  <link name="wrist_2c">
+    <inertial>
+      <mass value="1e-3"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5" />
+    </inertial>
+  </link>
+  <joint name="wrist_joint_2b" type="continuous">
+    <parent link="wrist_2a"/>
+    <child link="wrist_2b"/>
+    <axis xyz="1 0 0" />
+  </joint>
+  <joint name="wrist_joint_2c" type="revolute">
+    <parent link="wrist_2b"/>
+    <child link="wrist_2c"/>
+    <axis xyz="0 1 0" />
+    <limit lower="-0.61" upper="0.61" effort="0" velocity="4.8" />
+  </joint>
+  <joint name="gripper_joint_2" type="revolute">
+    <parent link="wrist_2c"/>
     <child link="gripper_2"/>
+    <axis xyz="0 0 1" />
+    <limit lower="-0.61" upper="0.61" effort="0" velocity="4.8" />
   </joint>
-  <link name="wrist_3" />
-  <joint name="gripper_joint_3" type="fixed">
-    <parent link="wrist_3"/>
+
+  <link name="wrist_3a" />
+  <link name="wrist_3b">
+    <inertial>
+      <mass value="1e-3"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5" />
+    </inertial>
+  </link>
+  <link name="wrist_3c">
+    <inertial>
+      <mass value="1e-3"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5" />
+    </inertial>
+  </link>
+  <joint name="wrist_joint_3b" type="continuous">
+    <parent link="wrist_3a"/>
+    <child link="wrist_3b"/>
+    <axis xyz="1 0 0" />
+  </joint>
+  <joint name="wrist_joint_3c" type="revolute">
+    <parent link="wrist_3b"/>
+    <child link="wrist_3c"/>
+    <axis xyz="0 1 0" />
+    <limit lower="-0.61" upper="0.61" effort="0" velocity="4.8" />
+  </joint>
+  <joint name="gripper_joint_3" type="revolute">
+    <parent link="wrist_3c"/>
     <child link="gripper_3"/>
+    <axis xyz="0 0 1" />
+    <limit lower="-0.61" upper="0.61" effort="0" velocity="4.8" />
   </joint>
-  <link name="wrist_4" />
-  <joint name="gripper_joint_4" type="fixed">
-    <parent link="wrist_4"/>
+
+  <link name="wrist_4a" />
+  <link name="wrist_4b">
+    <inertial>
+      <mass value="1e-3"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5" />
+    </inertial>
+  </link>
+  <link name="wrist_4c">
+    <inertial>
+      <mass value="1e-3"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5" />
+    </inertial>
+  </link>
+  <joint name="wrist_joint_4b" type="continuous">
+    <parent link="wrist_4a"/>
+    <child link="wrist_4b"/>
+    <axis xyz="1 0 0" />
+  </joint>
+  <joint name="wrist_joint_4c" type="revolute">
+    <parent link="wrist_4b"/>
+    <child link="wrist_4c"/>
+    <axis xyz="0 1 0" />
+    <limit lower="-0.61" upper="0.61" effort="0" velocity="4.8" />
+  </joint>
+  <joint name="gripper_joint_4" type="revolute">
+    <parent link="wrist_4c"/>
     <child link="gripper_4"/>
+    <axis xyz="0 0 1" />
+    <limit lower="-0.61" upper="0.61" effort="0" velocity="4.8" />
   </joint>
+
   <link
     name="tail">
     <inertial>
@@ -1186,6 +1291,21 @@
       <state_interface name="effort"/>
     </joint>
   </ros2_control>
+
+  <gazebo reference="gripper_joint_1">
+    <preserveFixedJoint>true</preserveFixedJoint>
+    <sensor name="force_torque_sensor" type="force_torque">
+      <pose>0 0 0 0 0 0</pose>
+      <update_rate>100</update_rate>
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+      <topic>force_torque</topic>
+      <force_torque>
+        <frame>child</frame>
+        <measure_direction>child_to_parent</measure_direction>
+      </force_torque>
+    </sensor>
+  </gazebo>
 
   <gazebo>
     <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">

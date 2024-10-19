@@ -105,6 +105,11 @@ def generate_launch_description():
         executable='spawner',
         arguments=['joint_state_broadcaster'],
     )
+    fts_broadcaster_1 = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['fts_broadcaster_1'],
+    )
 
     return LaunchDescription([
         # Launch arguments
@@ -119,6 +124,12 @@ def generate_launch_description():
             event_handler=OnProcessExit(
                 target_action=spawn_node,
                 on_exit=[joint_broadcaster],
+            )
+        ),
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=spawn_node,
+                on_exit=[fts_broadcaster_1],
             )
         ),
         RegisterEventHandler(
