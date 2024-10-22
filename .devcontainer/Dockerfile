@@ -13,6 +13,7 @@ RUN apt-get -y update \
     ros-${ROS_DISTRO}-ros-gz \
     ros-${ROS_DISTRO}-gz-ros2-control \
     ros-${ROS_DISTRO}-ros2-controllers \
+    ros-${ROS_DISTRO}-osqp-vendor \
  && rm -rf /var/lib/apt/lists/*
 
 COPY docker_config.sh /tmp/docker_config.sh

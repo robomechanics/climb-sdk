@@ -44,7 +44,6 @@ bool KinematicsInterface::initialize(std::string & error_message)
   SetParametersResult result;
   result.successful = true;
   setParameter(Parameter("body_frame", body_frame_), result);
-  setParameter(Parameter("contact_frames", contact_frames_), result);
   setParameter(Parameter("end_effector_frames", end_effector_frames_), result);
   setParameter(Parameter("joint_names", joint_names_), result);
   if (!result.successful) {
@@ -79,16 +78,24 @@ bool KinematicsInterface::initialize(std::string & error_message)
   joint_eff_max_.resize(num_joints_);
   for (size_t i = 0; i < num_joints_; i++) {
     auto joint = urdf_model_.getJoint(joint_names_[i]);
-    joint_pos_min_[i] = joint->limits->lower;
-    joint_pos_max_[i] = joint->limits->upper;
     if (joint->type == urdf::Joint::CONTINUOUS) {
       joint_pos_min_[i] = -std::numeric_limits<double>::infinity();
       joint_pos_max_[i] = std::numeric_limits<double>::infinity();
+    } else {
+      joint_pos_min_[i] = joint->limits->lower;
+      joint_pos_max_[i] = joint->limits->upper;
     }
-    joint_vel_min_[i] = -joint->limits->velocity;
-    joint_vel_max_[i] = joint->limits->velocity;
-    joint_eff_min_[i] = -joint->limits->effort;
-    joint_eff_max_[i] = joint->limits->effort;
+    if (joint->limits != nullptr) {
+      joint_vel_min_[i] = -joint->limits->velocity;
+      joint_vel_max_[i] = joint->limits->velocity;
+      joint_eff_min_[i] = -joint->limits->effort;
+      joint_eff_max_[i] = joint->limits->effort;
+    } else {
+      joint_vel_min_[i] = -std::numeric_limits<double>::infinity();
+      joint_vel_max_[i] = std::numeric_limits<double>::infinity();
+      joint_eff_min_[i] = -std::numeric_limits<double>::infinity();
+      joint_eff_max_[i] = std::numeric_limits<double>::infinity();
+    }
   }
 
   // Compute total mass
@@ -242,17 +249,6 @@ void KinematicsInterface::setParameter(
       initialize(result.reason);
     }
   } else if (param.get_name() == "contact_frames") {
-    // Validate parameter
-    if (urdf_model_.getRoot()) {
-      for (const auto & frame : param.as_string_array()) {
-        if (!urdf_model_.getLink(frame)) {
-          result.successful = false;
-          result.reason =
-            "Contact frame " + frame + " not found in robot description";
-          return;
-        }
-      }
-    }
     // Update value and attempt to initialize if parameter has changed
     if (contact_frames_ != param.as_string_array()) {
       contact_frames_ = param.as_string_array();
@@ -281,7 +277,7 @@ void KinematicsInterface::setParameter(
     // Update value and attempt to initialize if parameter has changed
     if (joint_names_ != param.as_string_array()) {
       joint_names_.clear();
-      for (auto name : param.as_string_array()) {
+      for (const auto & name : param.as_string_array()) {
         if (std::find(joint_names_.begin(), joint_names_.end(), name) ==
           joint_names_.end())
         {
@@ -294,7 +290,7 @@ void KinematicsInterface::setParameter(
   } else if (param.get_name() == "contact_types") {
     // Validate parameter
     std::vector<ContactType> contact_types;
-    for (auto name : param.as_string_array()) {
+    for (const auto & name : param.as_string_array()) {
       if (name == "microspine") {
         contact_types.push_back(ContactType::MICROSPINE);
       } else if (name == "tail") {

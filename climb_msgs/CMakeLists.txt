@@ -13,11 +13,11 @@ find_package(rosidl_default_generators REQUIRED)
 
 # Generate interfaces
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/Command.msg"
-  "msg/ContactState.msg"
+  "msg/BehaviorCommand.msg"
+  "msg/EndEffectorState.msg"
   "msg/ActuatorState.msg"
   "msg/JointCommand.msg"
-  "msg/ContactCommand.msg"
+  "msg/EndEffectorCommand.msg"
   "srv/ActuatorCommand.srv"
   DEPENDENCIES std_msgs geometry_msgs
 )

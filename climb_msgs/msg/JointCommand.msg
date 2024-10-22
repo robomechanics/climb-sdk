@@ -2,7 +2,7 @@
 
 # Each joint can be operated in one of 3 modes.
 #
-# Position mode:
+# Position mode (default):
 #   Move to commanded position while respecting max velocity and max effort
 # Velocity mode:
 #   Move at commanded velocity while respecting max effort (ignore position)

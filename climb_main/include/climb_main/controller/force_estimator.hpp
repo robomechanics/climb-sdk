@@ -6,6 +6,7 @@
 #include <Eigen/Geometry>
 #include <sensor_msgs/msg/imu.hpp>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
+#include "climb_main/util/parameterized.hpp"
 #include "climb_main/kinematics/kinematics_interface.hpp"
 
 using sensor_msgs::msg::Imu;
@@ -93,6 +94,8 @@ private:
   size_t effort_window_;
   // Gravitational acceleration in m/s^2
   double g_;
+  // Offset joint torques to account for robot weight
+  bool gravity_offset_;
   // Diagonal elements of joint effort covariance matrix in N^2 or (Nm)^2
   Eigen::VectorXd effort_variance_;
   // Running total of past joint effort measurements

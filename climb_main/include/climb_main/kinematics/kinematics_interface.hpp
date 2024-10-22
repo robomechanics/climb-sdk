@@ -58,6 +58,23 @@ public:
     std::string description, std::string & error_message);
 
   /**
+   * @brief Get transform from parent frame to child frame
+   * @param[in] parent Name of parent frame
+   * @param[in] child Name of child frame
+   * @return Pair of position and rotation matrix of child frame in parent frame
+   */
+  virtual std::pair<Eigen::Vector3d, Eigen::Matrix3d> getTransform(
+    std::string parent, std::string child) = 0;
+
+  /**
+   * @brief Get transform from body frame to child frame
+   * @param[in] child Name of child frame
+   * @return Pair of position and rotation matrix of child frame in parent frame
+   */
+  virtual inline std::pair<Eigen::Vector3d, Eigen::Matrix3d> getTransform(
+    std::string child) {return getTransform(body_frame_, child);}
+
+  /**
    * @brief Compute Jacobian mapping joint velocities to end effector
    * velocity with respect to the body in the contact wrench basis
    * @param[in] contact_frame Name of contact frame

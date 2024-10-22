@@ -385,6 +385,25 @@ Visualization Manager:
       Torque Arrow Scale: 0.05000000074505806
       Torque Color: 204; 204; 51
       Value: true
+    - Accept NaN Values: false
+      Alpha: 1
+      Arrow Width: 0.05000000074505806
+      Class: rviz_default_plugins/Wrench
+      Enabled: true
+      Force Arrow Scale: 0.05000000074505806
+      Force Color: 204; 51; 51
+      History Length: 1
+      Name: Body Wrench
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /loris/gravity_force
+      Torque Arrow Scale: 0.05000000074505806
+      Torque Color: 204; 204; 51
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -431,7 +450,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 1.035447597503662
+      Distance: 2.947028160095215
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -446,10 +465,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.39479702711105347
+      Pitch: 0.3447968065738678
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.653564929962158
+      Yaw: 5.018564224243164
     Saved: ~
 Window Geometry:
   Displays:
@@ -467,5 +486,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1451
-  X: 104
-  Y: -21
+  X: 140
+  Y: 20

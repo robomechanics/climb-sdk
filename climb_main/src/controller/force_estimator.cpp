@@ -13,12 +13,17 @@ Eigen::VectorXd ForceEstimator::update(const Eigen::VectorXd & effort)
 
   // Compute robot kinematics
   Eigen::MatrixXd J = robot_->getHandJacobian();
-  Eigen::MatrixXd Gs = -robot_->getGraspMap();
-  Eigen::MatrixXd dVdg = robot_->getGravitationalMatrix();
-  double m = robot_->getMass();
 
   // Set up linear system of equations
-  Eigen::MatrixXd A = -J.transpose() + dVdg * Gs.topRows(3) / m;
+  Eigen::MatrixXd A = -J.transpose();
+
+  // Apply gravity offset
+  if (gravity_offset_) {
+    Eigen::MatrixXd Gs = -robot_->getGraspMap();
+    Eigen::MatrixXd dVdg = robot_->getGravitationalMatrix();
+    double m = robot_->getMass();
+    A += dVdg * Gs.topRows(3) / m;
+  }
 
   // Solve system (use SVD in case of singular A)
   return A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(u);
@@ -44,16 +49,21 @@ Eigen::VectorXd ForceEstimator::update(
   // Compute robot kinematics
   Eigen::MatrixXd J = robot_->getHandJacobian();
   Eigen::MatrixXd Gs = -robot_->getGraspMap();
-  Eigen::MatrixXd N =
-    robot_->getGravitationalVector(f_ext.head(3) / robot_->getMass());
 
   // Set up linear system of equations
   Eigen::MatrixXd A(J.cols() + Gs.rows(), Gs.cols());
   A.block(0, 0, J.cols(), J.rows()) = -J.transpose();
   A.block(J.cols(), 0, Gs.rows(), Gs.cols()) = Gs;
   Eigen::VectorXd b = Eigen::VectorXd::Zero(J.cols() + Gs.rows());
-  b.head(J.cols()) = u - N;
+  b.head(J.cols()) = u;
   b.tail(Gs.rows()) = f_ext;
+
+  // Apply gravity offset
+  if (gravity_offset_) {
+    Eigen::MatrixXd N =
+      robot_->getGravitationalVector(f_ext.head(3) / robot_->getMass());
+    b.head(J.cols()) -= N;
+  }
 
   // Solve fully or under-determined system (use SVD in case of singular A)
   if (A.rows() <= A.cols()) {
@@ -122,6 +132,7 @@ std::vector<WrenchStamped> ForceEstimator::forcesToMessages(
 {
   std::vector<WrenchStamped> messages;
   auto contacts = robot_->getContactFrames();
+  contacts.push_back(robot_->getBodyFrame());
   size_t index = 0;
   for (size_t i = 0; i < contacts.size(); i++) {
     WrenchStamped message;
@@ -131,9 +142,16 @@ std::vector<WrenchStamped> ForceEstimator::forcesToMessages(
     } else {
       message.header.frame_id = contacts[i];
     }
-    Eigen::MatrixXd basis = robot_->getWrenchBasis(contacts[i]);
-    Eigen::VectorXd f = forces(Eigen::seq(index, index + basis.cols() - 1));
-    Eigen::VectorXd wrench = basis * f;
+    Eigen::VectorXd wrench;
+    if (i == contacts.size() - 1) {
+      Eigen::MatrixXd Gs = -robot_->getGraspMap();
+      wrench = Gs * forces;
+    } else {
+      Eigen::MatrixXd basis = robot_->getWrenchBasis(contacts[i]);
+      Eigen::VectorXd f = forces(Eigen::seq(index, index + basis.cols() - 1));
+      wrench = basis * f;
+      index += basis.cols();
+    }
     message.wrench.force.x = wrench(0);
     message.wrench.force.y = wrench(1);
     message.wrench.force.z = wrench(2);
@@ -141,7 +159,6 @@ std::vector<WrenchStamped> ForceEstimator::forcesToMessages(
     message.wrench.torque.y = wrench(4);
     message.wrench.torque.z = wrench(5);
     messages.push_back(message);
-    index += basis.cols();
   }
   return messages;
 }
@@ -156,6 +173,9 @@ void ForceEstimator::declareParameters()
     "Variance of joint effort measurements in N^2 or (Nm)^2", 0);
   declareParameter(
     "gravity", 9.81, "Gravitational acceleration in m/s^2", 0);
+  declareParameter(
+    "gravity_offset", true,
+    "Offset joint torque estimates to account for mass of robot limbs");
 }
 
 void ForceEstimator::setParameter(
@@ -164,12 +184,12 @@ void ForceEstimator::setParameter(
 {
   if (param.get_name() == "joint_effort_filter_window") {
     effort_window_ = param.as_int();
-  }
-  if (param.get_name() == "joint_effort_variance") {
+  } else if (param.get_name() == "joint_effort_variance") {
     effort_variance_ = Eigen::Map<const Eigen::VectorXd>(
       param.as_double_array().data(), param.as_double_array().size());
-  }
-  if (param.get_name() == "gravity") {
+  } else if (param.get_name() == "gravity") {
     g_ = param.as_double();
+  } else if (param.get_name() == "gravity_offset") {
+    gravity_offset_ = param.as_bool();
   }
 }

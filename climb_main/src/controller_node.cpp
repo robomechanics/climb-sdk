@@ -34,9 +34,9 @@ ControllerNode::ControllerNode()
   joint_sub_ = this->create_subscription<JointState>(
     "joint_states", 1,
     std::bind(&ControllerNode::jointCallback, this, _1));
-  contact_cmd_sub_ = this->create_subscription<ContactCommand>(
-    "contact_commands", 1,
-    std::bind(&ControllerNode::contactCmdCallback, this, _1));
+  ee_cmd_sub_ = this->create_subscription<EndEffectorCommand>(
+    "end_effector_commands", 1,
+    std::bind(&ControllerNode::endEffectorCmdCallback, this, _1));
   joint_cmd_pub_ = this->create_publisher<JointCommand>("joint_commands", 1);
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
   RCLCPP_INFO(this->get_logger(), "Controller node initialized");
@@ -56,9 +56,14 @@ void ControllerNode::update()
     force_estimator_->forcesToMessages(forces, this->get_clock()->now(), name_);
   for (size_t i = 0; i < contact_forces.size(); i++) {
     if (contact_force_pubs_.size() == i) {
-      contact_force_pubs_.push_back(
-        this->create_publisher<WrenchStamped>(
-          "contact_force_" + std::to_string(i + 1), 10));
+      if (i == contact_forces.size() - 1) {
+        contact_force_pubs_.push_back(
+          this->create_publisher<WrenchStamped>("gravity_force", 10));
+      } else {
+        contact_force_pubs_.push_back(
+          this->create_publisher<WrenchStamped>(
+            "contact_force_" + std::to_string(i + 1), 10));
+      }
     }
     contact_force_pubs_[i]->publish(contact_forces[i]);
   }
@@ -92,7 +97,7 @@ void ControllerNode::jointCallback(const JointState::SharedPtr msg)
   update();
 }
 
-void ControllerNode::contactCmdCallback(const ContactCommand::SharedPtr msg)
+void ControllerNode::endEffectorCmdCallback(const EndEffectorCommand::SharedPtr msg)
 {
 
 }

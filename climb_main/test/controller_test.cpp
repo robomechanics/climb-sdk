@@ -3,6 +3,7 @@
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include "climb_main/kinematics/kdl_interface.hpp"
 #include "climb_main/controller/force_estimator.hpp"
+#include "climb_main/controller/force_controller.hpp"
 
 const double PI = 3.14159265;
 const double TOL = 1e-6;
@@ -27,7 +28,7 @@ protected:
     robot_ = std::make_unique<KdlInterface>();
 
     // Set parameters
-    robot_->setParameter("body_frame", "body");
+    robot_->setParameter("body_frame", "root");
     robot_->setParameter(
       "end_effector_frames", std::vector<std::string> {
       "left_foot", "right_foot"});
@@ -74,6 +75,7 @@ TEST_F(ControllerTest, ForceEstimator)
     "joint_effort_variance", std::vector<double> {1, 1, 1, 1});
   estimator.setParameter("joint_effort_filter_window", 2);
   estimator.setParameter("gravity", 10.0);
+  estimator.setParameter("gravity_offset", true);
 
   // Set joint effort values
   JointState joint_state;
@@ -107,6 +109,24 @@ TEST_F(ControllerTest, ForceEstimator)
   EXPECT_TRUE(forces.isApprox(forces_expected, TOL)) <<
     "Force Estimate with IMU\nExpected: \n" << forces_expected <<
     "\nActual: \n" << forces;
+}
+
+TEST_F(ControllerTest, ForceController)
+{
+  // Initialize controller
+  ForceController controller(robot_);
+  EndEffectorCommand command;
+  command.frame = {"left_contact", "right_contact"};
+  command.mode = {
+    EndEffectorCommand::MODE_STANCE, EndEffectorCommand::MODE_STANCE};
+  controller.setEndEffectorCommand(command);
+  Eigen::VectorXd position = controller.update(Eigen::VectorXd::Zero(6));
+  Eigen::MatrixXd G = robot_->getGraspMap();
+  Eigen::MatrixXd J = robot_->getHandJacobian("left_contact");
+  JointState joint_state;
+  joint_state.name = {"left_hip", "right_hip", "left_knee", "right_knee"};
+  joint_state.position = std::vector<double>(position.data(), position.data() + position.size());
+  robot_->updateJointState(joint_state);
 }
 
 int main(int argc, char ** argv)

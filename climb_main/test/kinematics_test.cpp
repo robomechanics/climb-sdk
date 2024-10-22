@@ -26,7 +26,7 @@ protected:
     robot_ = std::make_unique<KdlInterface>();
 
     // Set parameters
-    robot_->setParameter("body_frame", "body");
+    robot_->setParameter("body_frame", "root");
     robot_->setParameter(
       "end_effector_frames", std::vector<std::string> {
       "left_foot", "right_foot"});
@@ -64,6 +64,21 @@ protected:
 
   std::shared_ptr<KinematicsInterface> robot_;
 };
+
+TEST_F(KinematicsTest, Transform)
+{
+  auto [p, R] = robot_->getTransform("left_foot");
+  Eigen::Vector3d p_expected;
+  p_expected << 1, 1, -1;
+  EXPECT_TRUE(p.isApprox(p_expected, TOL)) <<
+    "Left foot position\nExpected: \n" << p_expected << "\nActual: \n" << p;
+  Eigen::Matrix3d R_expected;
+  R_expected << 0, 0, -1,
+    0, 1, 0,
+    1, 0, 0;
+  EXPECT_TRUE(R.isApprox(R_expected, TOL)) <<
+    "Left foot rotation\nExpected: \n" << R_expected << "\nActual: \n" << R;
+}
 
 TEST_F(KinematicsTest, MixedJacobian)
 {

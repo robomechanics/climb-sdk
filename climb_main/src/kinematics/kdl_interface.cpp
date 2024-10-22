@@ -61,6 +61,30 @@ bool KdlInterface::initialize(std::string & error_message)
   return initialized_ = true;
 }
 
+std::pair<Eigen::Vector3d, Eigen::Matrix3d> KdlInterface::getTransform(
+  std::string parent, std::string child)
+{
+  KDL::Chain chain;
+  if (tree_.getChain(parent, child, chain)) {
+    KDL::Frame transform;
+    KDL::ChainFkSolverPos_recursive solver(chain);
+    KDL::JntArray joint_pos(chain.getNrOfJoints());
+    int index = 0;
+    for (const auto & segment : chain.segments) {
+      if (joints_.find(segment.getJoint().getName()) != joints_.end()) {
+        auto joint = joints_[segment.getJoint().getName()];
+        joint_pos(index) = joint_pos_(joint.index);
+        index++;
+      }
+    }
+    solver.JntToCart(joint_pos, transform);
+    Eigen::Vector3d position(transform.p.data);
+    Eigen::Matrix<double, 3, 3, Eigen::RowMajor> rotation(transform.M.data);
+    return std::make_pair(position, rotation);
+  }
+  return std::make_pair(Eigen::Vector3d::Zero(), Eigen::Matrix3d::Zero());
+}
+
 Eigen::MatrixXd KdlInterface::getHandJacobian(std::string contact_frame)
 {
   if (chains_.find(contact_frame) == chains_.end()) {
@@ -104,7 +128,7 @@ Eigen::MatrixXd KdlInterface::getGraspMap()
 {
   Eigen::MatrixXd grasp(6, num_constraints_);
   int col = 0;
-  for (auto contact : contact_frames_) {
+  for (const auto & contact : contact_frames_) {
     auto transform = chains_[contact].transform.Inverse();
     Eigen::Vector3d position(transform.p.data);
     Eigen::Matrix<double, 3, 3, Eigen::RowMajor> rotation(transform.M.data);
@@ -124,7 +148,7 @@ Eigen::MatrixXd KdlInterface::getMassMatrix()
     auto chain = chains_[contact];
     auto kdl_chain = KDL::Chain(chain.chain);
     // Remove duplicate contributions from segments shared by multiple chains
-    for (KDL::Segment segment : kdl_chain.segments) {
+    for (auto & segment : kdl_chain.segments) {
       if (!segments.insert(segment.getName()).second) {
         segment.setInertia(KDL::RigidBodyInertia());
       }
@@ -156,7 +180,7 @@ Eigen::VectorXd KdlInterface::getCoriolisVector()
     auto chain = chains_[contact];
     auto kdl_chain = KDL::Chain(chain.chain);
     // Remove duplicate contributions from segments shared by multiple chains
-    for (KDL::Segment segment : kdl_chain.segments) {
+    for (auto & segment : kdl_chain.segments) {
       if (!segments.insert(segment.getName()).second) {
         segment.setInertia(KDL::RigidBodyInertia());
       }
@@ -183,7 +207,7 @@ Eigen::VectorXd KdlInterface::getGravitationalVector(
     auto chain = chains_[contact];
     auto kdl_chain = KDL::Chain(chain.chain);
     // Remove duplicate contributions from segments shared by multiple chains
-    for (KDL::Segment segment : kdl_chain.segments) {
+    for (auto & segment : kdl_chain.segments) {
       if (!segments.insert(segment.getName()).second) {
         segment.setInertia(KDL::RigidBodyInertia());
       }
@@ -232,7 +256,7 @@ Eigen::Vector3d KdlInterface::getCenterOfMass()
         continue;
       }
       if (segments.insert(segment.getName()).second) {
-        solver.JntToCart(chain.joint_pos, transform, i);
+        solver.JntToCart(chain.joint_pos, transform, i + 1);
         mass += segment.getInertia().getMass();
         com += transform * segment.getInertia().getCOG() *
           segment.getInertia().getMass();
