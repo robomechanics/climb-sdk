@@ -1,5 +1,5 @@
 {
-  "name": "ROS2",
+  "name": "Climb-SDK",
   "dockerComposeFile": [
     "docker-compose.yml"
   ],

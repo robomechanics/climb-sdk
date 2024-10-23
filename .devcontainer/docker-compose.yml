@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: ROS2
+    container_name: Climb-SDK
     hostname: docker
     tty: true
     privileged: true
@@ -15,7 +15,7 @@ services:
       - XDG_RUNTIME_DIR=/run/user/0
     volumes:
       # Source code
-      - ..:/workspace/src
+      - ..:/workspace/src/climb-main
       # Build artifacts
       - ../.colcon/build/:/workspace/build
       - ../.colcon/install/:/workspace/install

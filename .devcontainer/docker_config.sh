@@ -2,7 +2,7 @@
 source /ros_entrypoint.sh
 
 # Source ROS2 workspace
-if [ -f install/local_setup.bash ]; then source install/local_setup.bash; fi
+if [ -f /workspace/install/local_setup.bash ]; then source /workspace/install/local_setup.bash; fi
 
 # Handle errors
 trap 'exec /bin/bash' ERR
