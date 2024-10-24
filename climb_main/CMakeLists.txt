@@ -7,9 +7,6 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Add location of external dependencies
-set(OsqpEigen_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../external/osqp-eigen/install/lib/cmake/OsqpEigen")
-
 # Find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -23,7 +20,7 @@ find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(orocos_kdl REQUIRED)
 find_package(kdl_parser REQUIRED)
 find_package(urdf REQUIRED)
-find_package(OsqpEigen REQUIRED)
+find_package(osqp)
 
 # Utilities library
 add_library(${PROJECT_NAME}_util SHARED
@@ -68,13 +65,15 @@ add_library(${PROJECT_NAME}_controller SHARED
   src/controller/contact_estimator.cpp
   src/controller/force_controller.cpp
   src/controller/force_estimator.cpp
+  src/controller/qp_interface.cpp
+  src/controller/osqp_interface.cpp
 )
 target_include_directories(${PROJECT_NAME}_controller PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(${PROJECT_NAME}_controller ${PROJECT_NAME}_kinematics
-  OsqpEigen::OsqpEigen)
+  osqp::osqp Eigen3::Eigen)
 ament_target_dependencies(${PROJECT_NAME}_controller climb_msgs)
 
 # Hardware node executable

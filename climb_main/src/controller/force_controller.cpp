@@ -1,6 +1,8 @@
 #include "climb_main/controller/force_controller.hpp"
 
-#include <OsqpEigen/OsqpEigen.h>
+#include <Eigen/Dense>
+#include <Eigen/SparseCore>
+#include <osqp.h>
 
 ForceController::ForceController(std::shared_ptr<KinematicsInterface> robot)
 : robot_(robot)
@@ -34,11 +36,6 @@ Eigen::VectorXd ForceController::update(const Eigen::VectorXd & force)
   f << Eigen::VectorXd::Zero(p), (q - q0) * normalization_ * 2, -1;
 
   // Constraint matrix
-  //
-  // Eigen::SparseMatrix<double> Ac(, p + n + 1);
-
-  OsqpEigen::Solver solver;
-  solver.settings()->setWarmStart(true);
 
   return Eigen::VectorXd();
 }

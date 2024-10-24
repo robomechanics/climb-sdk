@@ -4,7 +4,7 @@ A general-purpose codebase for robotic climbing, originally developed for the LO
 
 ## Installation
 
-### Native Installation on Ubuntu
+### Ubuntu
 
 Climb-SDK has been tested with ROS2 Iron on Ubuntu 22.04. The following setup steps are required prior to installation.
 
@@ -17,9 +17,8 @@ Once the required setup is complete, run the following commands to clone the rep
 ```
 cd ~/ros2_ws/src
 git clone https://github.com/robomechanics/climb-sdk.git
-cd climb-sdk
-chmod +x setup.sh && ./setup.sh
-cd ~/ros2_ws
+cd ..
+rosdep install --from-paths src -y --ignore-src
 colcon build --symlink-install
 source install/local_setup.bash
 ```
@@ -35,11 +34,9 @@ docker-compose up -d
 docker exec -it Climb-SDK bash
 ```
 
-Within the container, run the following commands to install dependencies and build packages.
+Within the container, run the following commands to build packages.
 
 ```
-cd /workspace/src/climb-sdk
-chmod +x setup.sh && ./setup.sh
 cd /workspace
 colcon build --symlink-install
 source install/local_setup.bash
@@ -52,7 +49,7 @@ exit
 docker-compose down
 ```
 
-### VS Code Dev Container
+### VS Code Integration
 
 To streamline development, Climb-SDK can be integrated with [Visual Studio Code](https://code.visualstudio.com/) as a [dev container](https://code.visualstudio.com/docs/devcontainers/containers) using Docker. Install both Docker and VS Code, and from within VS Code install the Dev Containers extension. Then simply clone this repository, open the `climb-sdk` folder in VS Code, and select "Reopen in Container" when prompted. The commands to install dependencies and build packages are the same as in the Docker Container section above.
 
