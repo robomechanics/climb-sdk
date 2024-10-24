@@ -4,7 +4,14 @@
 #include "climb_main/kinematics/kdl_interface.hpp"
 #include "climb_main/controller/force_estimator.hpp"
 #include "climb_main/controller/force_controller.hpp"
-#include <climb_main/controller/osqp_interface.hpp>
+#include "climb_main/controller/osqp_interface.hpp"
+
+#define EXPECT_NEAR_EIGEN(A, B, tol) \
+  ASSERT_EQ(A.rows(), B.rows()); \
+  ASSERT_EQ(A.cols(), B.cols()); \
+  EXPECT_TRUE(A.isApprox(B, tol)) << \
+    #A << " =" << std::endl << A << std::endl << \
+    #B << " =" << std::endl << B << std::endl
 
 const double PI = 3.14159265;
 const double TOL = 1e-3;
@@ -92,10 +99,8 @@ TEST_F(ControllerTest, ForceEstimator)
   Eigen::VectorXd forces_expected(6);
   forces_expected << sqrt(2) * 10, 0, sqrt(2) * 10,
     -sqrt(2) * 10, 0, sqrt(2) * 10;
-  ASSERT_EQ(forces.size(), 6);
-  EXPECT_TRUE(forces.isApprox(forces_expected, TOL)) <<
-    "Force Estimate without IMU\nExpected: \n" << forces_expected <<
-    "\nActual: \n" << forces;
+  EXPECT_NEAR_EIGEN(forces, forces_expected, TOL) <<
+    "Incorrect force estimate without IMU";
 
   // Estimate with IMU
   Imu imu;
@@ -106,10 +111,8 @@ TEST_F(ControllerTest, ForceEstimator)
   imu.linear_acceleration_covariance[4] = 1;
   imu.linear_acceleration_covariance[8] = 1;
   forces = estimator.update(imu);
-  ASSERT_EQ(forces.size(), 6);
-  EXPECT_TRUE(forces.isApprox(forces_expected, TOL)) <<
-    "Force Estimate with IMU\nExpected: \n" << forces_expected <<
-    "\nActual: \n" << forces;
+  EXPECT_NEAR_EIGEN(forces, forces_expected, TOL) <<
+    "Incorrect force estimate with IMU";
 }
 
 TEST_F(ControllerTest, ForceController)
@@ -140,58 +143,46 @@ TEST_F(ControllerTest, OsqpInterface)
   // Setup problem:
   // Minimize 1/2 (x^2 + 2y^2) + 4x + y
   // Subject to 0 <= x <= inf, 0 < y <= inf, 3 <= x + y <= inf
-  std::cout << "Begin test" << std::endl;
   std::unique_ptr<QpInterface> solver = std::make_unique<OsqpInterface>();
   Eigen::MatrixXd H(2, 2);
   H << 1, 0,
     0, 2;
-  Eigen::VectorXd f(2);
-  f << 4, 1;
+  Eigen::Vector2d f(4, 1);
   Eigen::MatrixXd A(3, 2);
   A << 1, 0,
     0, 1,
     1, 1;
-  Eigen::VectorXd lb(3);
-  lb << 0, 0, 3;
-  Eigen::VectorXd ub(3);
-  ub << std::numeric_limits<double>::infinity(),
+  Eigen::Vector3d lb(0, 0, 3);
+  Eigen::Vector3d ub(
     std::numeric_limits<double>::infinity(),
-    std::numeric_limits<double>::infinity();
+    std::numeric_limits<double>::infinity(),
+    std::numeric_limits<double>::infinity());
 
   // Solve without sparsity structure
-  std::cout << "About to solve" << std::endl;
   ASSERT_TRUE(solver->solve(H, f, A, lb, ub)) << "Dense solve failed";
-  std::cout << "Done solving" << std::endl;
-  Eigen::VectorXd solution = solver->getSolution();
+  Eigen::VectorXd sol = solver->getSolution();
   double cost = solver->getCost();
-  Eigen::VectorXd solution_expected(2);
-  solution_expected << 1, 2;
-  EXPECT_TRUE(solution.isApprox(solution_expected, TOL)) <<
-    "Dense solution\nExpected: \n" << solution_expected <<
-    "\nActual: \n" << solution;
+  Eigen::Vector2d sol_expected(1, 2);
+  EXPECT_NEAR_EIGEN(sol, sol_expected, TOL) << "Incorrect dense solution";
   double cost_expected = 10.5;
-  EXPECT_NEAR(cost, cost_expected, TOL) << "Dense solution cost is incorrect";
+  EXPECT_NEAR(cost, cost_expected, TOL) << "Incorrect dense solution cost";
 
   // Solve with sparsity structure
   Eigen::SparseMatrix<double> H_sparsity = H.sparseView();
   Eigen::SparseMatrix<double> A_sparsity = A.sparseView();
   ASSERT_TRUE(solver->solve(H, f, A, lb, ub, H_sparsity, A_sparsity)) <<
     "Sparse solve failed";
-  solution = solver->getSolution();
-  EXPECT_TRUE(solution.isApprox(solution_expected, TOL)) <<
-    "Sparse solution\nExpected: \n" << solution_expected <<
-    "\nActual: \n" << solution;
+  sol = solver->getSolution();
+  EXPECT_NEAR_EIGEN(sol, sol_expected, TOL) << "Incorrect sparse solution";
   cost = solver->getCost();
-  EXPECT_NEAR(cost, cost_expected, TOL) << "Sparse solution cost is incorrect";
+  EXPECT_NEAR(cost, cost_expected, TOL) << "Incorrect sparse solution cost";
 
   // Update problem
   ASSERT_TRUE(solver->update(H, f, A, lb, ub)) << "Update failed";
-  solution = solver->getSolution();
-  EXPECT_TRUE(solution.isApprox(solution_expected, TOL)) <<
-    "Updated solution\nExpected: \n" << solution_expected <<
-    "\nActual: \n" << solution;
+  sol = solver->getSolution();
+  EXPECT_NEAR_EIGEN(sol, sol_expected, TOL) << "Incorrect updated solution";
   cost = solver->getCost();
-  EXPECT_NEAR(cost, cost_expected, TOL) << "Updated solution cost is incorrect";
+  EXPECT_NEAR(cost, cost_expected, TOL) << "Incorrect updated solution cost";
 }
 
 int main(int argc, char ** argv)

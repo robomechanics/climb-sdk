@@ -3,6 +3,13 @@
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include "climb_main/kinematics/kdl_interface.hpp"
 
+#define EXPECT_NEAR_EIGEN(A, B, tol) \
+  ASSERT_EQ(A.rows(), B.rows()); \
+  ASSERT_EQ(A.cols(), B.cols()); \
+  EXPECT_TRUE(A.isApprox(B, tol)) << \
+    #A << " =" << std::endl << A << std::endl << \
+    #B << " =" << std::endl << B << std::endl
+
 const double PI = 3.14159265;
 const double TOL = 1e-6;
 
@@ -68,24 +75,19 @@ protected:
 TEST_F(KinematicsTest, Transform)
 {
   auto [p, R] = robot_->getTransform("left_foot");
-  Eigen::Vector3d p_expected;
-  p_expected << 1, 1, -1;
-  EXPECT_TRUE(p.isApprox(p_expected, TOL)) <<
-    "Left foot position\nExpected: \n" << p_expected << "\nActual: \n" << p;
+  Eigen::Vector3d p_expected(1, 1, -1);
+  EXPECT_NEAR_EIGEN(p, p_expected, TOL) << "Incorrect left foot position";
   Eigen::Matrix3d R_expected;
   R_expected << 0, 0, -1,
     0, 1, 0,
     1, 0, 0;
-  EXPECT_TRUE(R.isApprox(R_expected, TOL)) <<
-    "Left foot rotation\nExpected: \n" << R_expected << "\nActual: \n" << R;
+  EXPECT_NEAR_EIGEN(R, R_expected, TOL) << "Incorrect left foot rotation";
 }
 
 TEST_F(KinematicsTest, MixedJacobian)
 {
   Eigen::MatrixXd Jm = robot_->getMixedJacobian(true);
   Eigen::MatrixXd Jm_expected(6, 4);
-  ASSERT_EQ(Jm.rows(), Jm_expected.rows());
-  ASSERT_EQ(Jm.cols(), Jm_expected.cols());
   Jm_expected <<
     1, 0, 0, 0,
     0, 0, 0, 0,
@@ -93,16 +95,13 @@ TEST_F(KinematicsTest, MixedJacobian)
     0, 1, 0, 1,
     0, 0, 0, 0,
     0, 1, 0, 0;
-  EXPECT_TRUE(Jm.isApprox(Jm_expected, TOL)) <<
-    "Mixed Jacobian\nExpected: \n" << Jm_expected << "\nActual: \n" << Jm;
+  EXPECT_NEAR_EIGEN(Jm, Jm_expected, TOL) << "Incorrect mixed Jacobian";
 }
 
 TEST_F(KinematicsTest, HandJacobian)
 {
   Eigen::MatrixXd Jh = robot_->getHandJacobian();
   Eigen::MatrixXd Jh_expected(6, 4);
-  ASSERT_EQ(Jh.rows(), Jh_expected.rows());
-  ASSERT_EQ(Jh.cols(), Jh_expected.cols());
   Jh_expected <<
     1, 0, 1, 0,
     0, 0, 0, 0,
@@ -110,16 +109,13 @@ TEST_F(KinematicsTest, HandJacobian)
     0, 1, 0, 1,
     0, 0, 0, 0,
     0, 1, 0, 0;
-  EXPECT_TRUE(Jh.isApprox(Jh_expected, TOL)) <<
-    "Hand Jacobian\nExpected: \n" << Jh_expected << "\nActual: \n" << Jh;
+  EXPECT_NEAR_EIGEN(Jh, Jh_expected, TOL) << "Incorrect hand Jacobian";
 }
 
 TEST_F(KinematicsTest, GraspMap)
 {
   Eigen::MatrixXd G = robot_->getGraspMap();
   Eigen::MatrixXd G_expected(6, 6);
-  ASSERT_EQ(G.rows(), G_expected.rows());
-  ASSERT_EQ(G.cols(), G_expected.cols());
   G_expected <<
     0, 0, -1, 1, 0, 0,
     0, 1, 0, 0, 1, 0,
@@ -127,8 +123,7 @@ TEST_F(KinematicsTest, GraspMap)
     1, 1, 0, 0, 1, -1,
     -1, 0, 1, -1, 0, -1,
     0, 1, 1, 1, 1, 0;
-  EXPECT_TRUE(G.isApprox(G_expected, TOL)) <<
-    "Grasp Map\nExpected: \n" << G_expected << "\nActual: \n" << G;
+  EXPECT_NEAR_EIGEN(G, G_expected, TOL) << "Incorrect grasp map";
 }
 
 TEST_F(KinematicsTest, Inertial)
@@ -139,31 +134,22 @@ TEST_F(KinematicsTest, Inertial)
     0, 2, 0, 1,
     1, 0, 1, 0,
     0, 1, 0, 1;
-  ASSERT_EQ(M.rows(), M_expected.rows());
-  ASSERT_EQ(M.cols(), M_expected.cols());
-  EXPECT_TRUE(M.isApprox(M_expected, TOL)) <<
-    "Mass Matrix\nExpected: \n" << M_expected << "\nActual: \n" << M;
+  EXPECT_NEAR_EIGEN(M, M_expected, TOL) << "Incorrect mass matrix";
 }
 
 TEST_F(KinematicsTest, Coriolis)
 {
   Eigen::VectorXd C = robot_->getCoriolisVector();
-  Eigen::VectorXd C_expected(4);
-  C_expected << 0, 0, 0, 0;
-  ASSERT_EQ(C.size(), C_expected.size());
-  EXPECT_TRUE(C.isApprox(C_expected, TOL)) <<
-    "Coriolis Vector\nExpected: \n" << C_expected << "\nActual: \n" << C;
+  Eigen::Vector4d C_expected(0, 0, 0, 0);
+  EXPECT_NEAR_EIGEN(C, C_expected, TOL) << "Incorrect Coriolis vector";
 }
 
 TEST_F(KinematicsTest, Gravitational)
 {
   Eigen::VectorXd V =
     robot_->getGravitationalVector(Eigen::Vector3d(0, 0, -10));
-  Eigen::VectorXd V_expected(4);
-  V_expected << 10, 10, 10, 0;
-  ASSERT_EQ(V.size(), V_expected.size());
-  EXPECT_TRUE(V.isApprox(V_expected, TOL)) <<
-    "Gravitational Vector\nExpected: \n" << V_expected << "\nActual: \n" << V;
+  Eigen::Vector4d V_expected(10, 10, 10, 0);
+  EXPECT_NEAR_EIGEN(V, V_expected, TOL) << "Incorrect gravitational vector";
 
   Eigen::MatrixXd dVdg = robot_->getGravitationalMatrix();
   Eigen::MatrixXd dVdg_expected(4, 3);
@@ -171,23 +157,17 @@ TEST_F(KinematicsTest, Gravitational)
     -1, 0, -1,
     0, 0, -1,
     -1, 0, 0;
-  ASSERT_EQ(dVdg.rows(), 4);
-  ASSERT_EQ(dVdg.cols(), 3);
-  EXPECT_TRUE(dVdg.isApprox(dVdg_expected, TOL)) <<
-    "Gravitational Matrix\nExpected: \n" << dVdg_expected <<
-    "\nActual: \n" << dVdg;
+  EXPECT_NEAR_EIGEN(dVdg, dVdg_expected, TOL) << "Incorrect gravitational matrix";
 }
 
 TEST_F(KinematicsTest, CenterOfMass)
 {
   Eigen::Vector3d com = robot_->getCenterOfMass();
   Eigen::Vector3d com_expected(0.5, 0, -0.5);
-  EXPECT_TRUE(com.isApprox(com_expected, TOL)) <<
-    "Center of Mass\nExpected: \n" << com_expected << "\nActual: \n" << com;
+  EXPECT_NEAR_EIGEN(com, com_expected, TOL) << "Incorrect center of mass";
   double m = robot_->getMass();
   double m_expected = 4.0;
-  EXPECT_NEAR(m, m_expected, TOL) <<
-    "Mass\nExpected: " << m_expected << "\nActual: " << m;
+  EXPECT_NEAR(m, m_expected, TOL) << "Incorrect mass";
 }
 
 int main(int argc, char ** argv)
