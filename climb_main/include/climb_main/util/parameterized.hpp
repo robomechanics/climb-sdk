@@ -8,6 +8,13 @@ using rcl_interfaces::msg::ParameterDescriptor;
 using rclcpp::Parameter;
 using rclcpp::ParameterValue;
 
+struct ParameterDeclaration
+{
+  std::string name;
+  ParameterValue default_value;
+  ParameterDescriptor descriptor;
+};
+
 /**
  * @brief Interface to support ROS parameter handling
  */
@@ -20,9 +27,7 @@ public:
    * @brief Get a list of the node's requested parameters
    * @return List of parameters
    */
-  inline const std::vector<
-    std::tuple<std::string, ParameterValue, ParameterDescriptor>>
-  getParameters()
+  const std::vector<ParameterDeclaration> getParameters()
   {
     if (parameters_.empty()) {
       declareParameters();
@@ -43,14 +48,19 @@ public:
    * @brief Update the value of a parameter and discard the result
    * @param[in] name The name of the parameter
    * @param[in] value The new value of the parameter
-   * @tparam T Type of the parameter
+   * @tparam T Type of the parameter or ParameterValue
    */
   template<typename T>
-  inline void setParameter(const std::string & name, const T & value)
+  void setParameter(const std::string & name, const T & value)
   {
     SetParametersResult result;
     setParameter(Parameter(name, value), result);
   }
+
+  /**
+   * @brief Set all parameters to their default values
+   */
+  void defaultParameters();
 
 protected:
   /**
@@ -63,7 +73,7 @@ protected:
    * @param[in] name Name of the parameter
    * @param[in] default_value Default value of the parameter
    * @param[in] description Description of the parameter
-   * @tparam T Type of the parameter
+   * @tparam T Type of the parameter or ParameterValue
    */
   template<typename T>
   void declareParameter(
@@ -73,7 +83,8 @@ protected:
   {
     auto param_desc = rcl_interfaces::msg::ParameterDescriptor{};
     param_desc.description = description;
-    parameters_.emplace_back(name, default_value, param_desc);
+    parameters_.emplace_back(
+      ParameterDeclaration{name, ParameterValue(default_value), param_desc});
   }
 
   /**
@@ -84,7 +95,7 @@ protected:
    * @param[in] description Description of the parameter
    * @param[in] min Lower limit of the floating point parameter
    * @param[in] max Upper limit of the floating point parameter
-   * @tparam T Type of the parameter
+   * @tparam T Type of the parameter or ParameterValue
    *
    * Note that bounds are not currently enforced on double array parameters
    */
@@ -93,7 +104,7 @@ protected:
     const std::string & name,
     const T & default_value,
     const std::string & description,
-    const double & min, const double & max = std::numeric_limits<double>::max())
+    const double & min, const double & max = INFINITY)
   {
     auto param_desc = rcl_interfaces::msg::ParameterDescriptor{};
     param_desc.description = description;
@@ -101,7 +112,8 @@ protected:
     range.from_value = min;
     range.to_value = max;
     param_desc.floating_point_range.push_back(range);
-    parameters_.emplace_back(name, default_value, param_desc);
+    parameters_.emplace_back(
+      ParameterDeclaration{name, ParameterValue(default_value), param_desc});
   }
 
   /**
@@ -112,7 +124,7 @@ protected:
    * @param[in] description Description of the parameter
    * @param[in] min Lower limit of the integer parameter
    * @param[in] max Upper limit of the integer parameter
-   * @tparam T Type of the parameter
+   * @tparam T Type of the parameter or ParameterValue
    *
    * Note that bounds are not currently enforced on integer array parameters
    */
@@ -130,11 +142,11 @@ protected:
     range.to_value = max;
     range.step = 1;
     param_desc.integer_range.push_back(range);
-    parameters_.emplace_back(name, default_value, param_desc);
+    parameters_.emplace_back(
+      ParameterDeclaration{name, ParameterValue(default_value), param_desc});
   }
 
-  std::vector<std::tuple<std::string, ParameterValue, ParameterDescriptor>>
-  parameters_;    // List of declared parameters (name, default, description)
+  std::vector<ParameterDeclaration> parameters_;  // List of declared parameters
 };
 
 #endif  // PARAMETERIZED_HPP

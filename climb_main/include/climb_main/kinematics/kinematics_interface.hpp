@@ -71,7 +71,7 @@ public:
    * @param[in] child Name of child frame
    * @return Pair of position and rotation matrix of child frame in parent frame
    */
-  virtual inline std::pair<Eigen::Vector3d, Eigen::Matrix3d> getTransform(
+  virtual std::pair<Eigen::Vector3d, Eigen::Matrix3d> getTransform(
     std::string child) {return getTransform(body_frame_, child);}
 
   /**
@@ -171,7 +171,7 @@ public:
   /**
    * @return Total mass of the robot (kg)
    */
-  inline double getMass() const {return mass_;}
+  double getMass() const {return mass_;}
 
   /**
    * @brief Update joint states with latest data from robot
@@ -196,37 +196,37 @@ public:
   /**
    * @return True if the robot description has been loaded
    */
-  inline bool isInitialized() const {return initialized_;}
+  bool isInitialized() const {return initialized_;}
 
   /**
    * @return Number of joints
    */
-  inline int getNumJoints() const {return num_joints_;}
+  int getNumJoints() const {return num_joints_;}
 
   /**
    * @return Number of contact frames
    */
-  inline int getNumContacts() const {return num_contacts_;}
+  int getNumContacts() const {return num_contacts_;}
 
   /**
    * @return Number of contact constraints
    */
-  inline int getNumConstraints() const {return num_constraints_;}
+  int getNumConstraints() const {return num_constraints_;}
 
   /**
    * @return Vector of joint names
    */
-  inline std::vector<std::string> getJointNames() const {return joint_names_;}
+  std::vector<std::string> getJointNames() const {return joint_names_;}
 
   /**
    * @return Name of body frame
    */
-  inline std::string getBodyFrame() const {return body_frame_;}
+  std::string getBodyFrame() const {return body_frame_;}
 
   /**
    * @return Vector of contact frame names
    */
-  inline std::vector<std::string> getContactFrames() const
+  std::vector<std::string> getContactFrames() const
   {
     return contact_frames_;
   }
@@ -234,7 +234,7 @@ public:
   /**
    * @return Vector of end effector frame names
    */
-  inline std::vector<std::string> getEndEffectorFrames() const
+  std::vector<std::string> getEndEffectorFrames() const
   {
     return end_effector_frames_;
   }
@@ -242,7 +242,7 @@ public:
   /**
    * @return Wrench basis of the given contact frame
    */
-  inline Eigen::MatrixXd getWrenchBasis(std::string contact) const
+  Eigen::MatrixXd getWrenchBasis(std::string contact) const
   {
     auto it = wrench_bases_.find(contact);
     if (it == wrench_bases_.end()) {
@@ -254,7 +254,7 @@ public:
   /**
    * @return Vector of contact types
    */
-  inline std::vector<ContactType> getContactTypes() const
+  std::vector<ContactType> getContactTypes() const
   {
     return contact_types_;
   }
@@ -262,47 +262,47 @@ public:
   /**
    * @return Vector of joint positions (rad or m)
    */
-  inline Eigen::VectorXd getJointPosition() const {return joint_pos_;}
+  Eigen::VectorXd getJointPosition() const {return joint_pos_;}
 
   /**
    * @return Vector of joint velocities (rad/s or m/s)
    */
-  inline Eigen::VectorXd getJointVelocity() const {return joint_vel_;}
+  Eigen::VectorXd getJointVelocity() const {return joint_vel_;}
 
   /**
    * @return Vector of joint efforts (Nm or N)
    */
-  inline Eigen::VectorXd getJointEffort() const {return joint_eff_;}
+  Eigen::VectorXd getJointEffort() const {return joint_eff_;}
 
   /**
    * @return Vector of joint position lower bounds (rad or m)
    */
-  inline Eigen::VectorXd getJointPositionMin() const {return joint_pos_min_;}
+  Eigen::VectorXd getJointPositionMin() const {return joint_pos_min_;}
 
   /**
    * @return Vector of joint position upper bounds (rad or m)
    */
-  inline Eigen::VectorXd getJointPositionMax() const {return joint_pos_max_;}
+  Eigen::VectorXd getJointPositionMax() const {return joint_pos_max_;}
 
   /**
    * @return Vector of joint velocity lower bounds (rad/s or m/s)
    */
-  inline Eigen::VectorXd getJointVelocityMin() const {return joint_vel_min_;}
+  Eigen::VectorXd getJointVelocityMin() const {return joint_vel_min_;}
 
   /**
    * @return Vector of joint velocity upper bounds (rad/s or m/s)
    */
-  inline Eigen::VectorXd getJointVelocityMax() const {return joint_vel_max_;}
+  Eigen::VectorXd getJointVelocityMax() const {return joint_vel_max_;}
 
   /**
    * @return Vector of joint effort lower bounds (Nm or N)
    */
-  inline Eigen::VectorXd getJointEffortMin() const {return joint_eff_min_;}
+  Eigen::VectorXd getJointEffortMin() const {return joint_eff_min_;}
 
   /**
    * @return Vector of joint effort upper bounds (Nm or N)
    */
-  inline Eigen::VectorXd getJointEffortMax() const {return joint_eff_max_;}
+  Eigen::VectorXd getJointEffortMax() const {return joint_eff_max_;}
 
 protected:
   /**

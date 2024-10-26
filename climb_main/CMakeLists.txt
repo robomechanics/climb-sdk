@@ -60,20 +60,31 @@ target_link_libraries(${PROJECT_NAME}_kinematics ${PROJECT_NAME}_util
 ament_target_dependencies(${PROJECT_NAME}_kinematics kdl_parser sensor_msgs
 geometry_msgs urdf)
 
+# Optimization library
+add_library(${PROJECT_NAME}_optimization SHARED
+  src/optimization/qp_interface.cpp
+  src/optimization/osqp_interface.cpp
+  src/optimization/qp_problem.cpp
+)
+target_include_directories(${PROJECT_NAME}_optimization PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(${PROJECT_NAME}_optimization ${PROJECT_NAME}_util
+  osqp::osqp Eigen3::Eigen)
+
 # Controller library
 add_library(${PROJECT_NAME}_controller SHARED
   src/controller/contact_estimator.cpp
   src/controller/force_controller.cpp
   src/controller/force_estimator.cpp
-  src/controller/qp_interface.cpp
-  src/controller/osqp_interface.cpp
 )
 target_include_directories(${PROJECT_NAME}_controller PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(${PROJECT_NAME}_controller ${PROJECT_NAME}_kinematics
-  osqp::osqp Eigen3::Eigen)
+  ${PROJECT_NAME}_optimization ${PROJECT_NAME}_util Eigen3::Eigen)
 ament_target_dependencies(${PROJECT_NAME}_controller climb_msgs)
 
 # Hardware node executable
@@ -117,6 +128,11 @@ if(BUILD_TESTING)
   ament_add_gtest(${PROJECT_NAME}_controller_test test/controller_test.cpp)
   target_link_libraries(${PROJECT_NAME}_controller_test
     ${PROJECT_NAME}_controller)
+
+  # Optimization tests
+  ament_add_gtest(${PROJECT_NAME}_optimization_test test/optimization_test.cpp)
+  target_link_libraries(${PROJECT_NAME}_optimization_test
+    ${PROJECT_NAME}_optimization)
 
   install(DIRECTORY test/resources/
     DESTINATION share/${PROJECT_NAME}/test/resources

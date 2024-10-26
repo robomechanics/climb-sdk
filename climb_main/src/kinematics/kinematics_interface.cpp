@@ -79,8 +79,8 @@ bool KinematicsInterface::initialize(std::string & error_message)
   for (size_t i = 0; i < num_joints_; i++) {
     auto joint = urdf_model_.getJoint(joint_names_[i]);
     if (joint->type == urdf::Joint::CONTINUOUS) {
-      joint_pos_min_[i] = -std::numeric_limits<double>::infinity();
-      joint_pos_max_[i] = std::numeric_limits<double>::infinity();
+      joint_pos_min_[i] = -INFINITY;
+      joint_pos_max_[i] = INFINITY;
     } else {
       joint_pos_min_[i] = joint->limits->lower;
       joint_pos_max_[i] = joint->limits->upper;
@@ -91,10 +91,10 @@ bool KinematicsInterface::initialize(std::string & error_message)
       joint_eff_min_[i] = -joint->limits->effort;
       joint_eff_max_[i] = joint->limits->effort;
     } else {
-      joint_vel_min_[i] = -std::numeric_limits<double>::infinity();
-      joint_vel_max_[i] = std::numeric_limits<double>::infinity();
-      joint_eff_min_[i] = -std::numeric_limits<double>::infinity();
-      joint_eff_max_[i] = std::numeric_limits<double>::infinity();
+      joint_vel_min_[i] = -INFINITY;
+      joint_vel_max_[i] = INFINITY;
+      joint_eff_min_[i] = -INFINITY;
+      joint_eff_max_[i] = INFINITY;
     }
   }
 

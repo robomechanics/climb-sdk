@@ -35,7 +35,7 @@ public:
    * @brief Estimate contact force from the latest robot data
    * @return Vector of estimated forces
    */
-  inline Eigen::VectorXd update() {return update(robot_->getJointEffort());}
+  Eigen::VectorXd update() {return update(robot_->getJointEffort());}
 
   /**
    * @brief Estimate contact force from the given effort and IMU data
@@ -50,7 +50,7 @@ public:
    * @param[in] imu Latest IMU data
    * @return Vector of estimated forces
    */
-  inline Eigen::VectorXd update(const Imu & imu)
+  Eigen::VectorXd update(const Imu & imu)
   {
     return update(robot_->getJointEffort(), imu);
   }

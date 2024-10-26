@@ -19,8 +19,8 @@ public:
   bool enable(std::vector<int> ids) override;
   bool disable(std::vector<int> ids) override;
 
-  inline void declareParameters() override {}
-  inline void setParameter(
+  void declareParameters() override {}
+  void setParameter(
     [[maybe_unused]] const Parameter & param,
     [[maybe_unused]] SetParametersResult & result)
   override {}

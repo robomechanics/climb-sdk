@@ -4,7 +4,7 @@
 #include "climb_main/kinematics/kdl_interface.hpp"
 #include "climb_main/controller/force_estimator.hpp"
 #include "climb_main/controller/force_controller.hpp"
-#include "climb_main/controller/osqp_interface.hpp"
+#include "climb_main/optimization/osqp_interface.hpp"
 
 #define EXPECT_NEAR_EIGEN(A, B, tol) \
   ASSERT_EQ(A.rows(), B.rows()); \
@@ -14,7 +14,7 @@
     #B << " =" << std::endl << B << std::endl
 
 const double PI = 3.14159265;
-const double TOL = 1e-3;
+const double TOL = 1e-6;
 
 class ControllerTest : public testing::Test
 {
@@ -119,9 +119,10 @@ TEST_F(ControllerTest, ForceController)
 {
   // Initialize controller
   ForceController controller(robot_);
-  EndEffectorCommand command;
+  controller.defaultParameters();
 
   // Set end effector commands
+  EndEffectorCommand command;
   command.frame = {"left_contact", "right_contact"};
   command.mode = {
     EndEffectorCommand::MODE_STANCE, EndEffectorCommand::MODE_STANCE};
@@ -129,6 +130,7 @@ TEST_F(ControllerTest, ForceController)
 
   // Update controller output
   // Eigen::VectorXd displacement = controller.update(Eigen::VectorXd::Zero(6));
+  // EXPECT_NEAR_EIGEN(displacement, Eigen::VectorXd::Zero(4), TOL);
   // Eigen::VectorXd position = robot_->getJointPosition() + displacement;
   // Eigen::MatrixXd G = robot_->getGraspMap();
   // Eigen::MatrixXd J = robot_->getHandJacobian("left_contact");
@@ -136,53 +138,6 @@ TEST_F(ControllerTest, ForceController)
   // joint_state.name = {"left_hip", "right_hip", "left_knee", "right_knee"};
   // joint_state.position = std::vector<double>(position.data(), position.data() + position.size());
   // robot_->updateJointState(joint_state);
-}
-
-TEST_F(ControllerTest, OsqpInterface)
-{
-  // Setup problem:
-  // Minimize 1/2 (x^2 + 2y^2) + 4x + y
-  // Subject to 0 <= x <= inf, 0 < y <= inf, 3 <= x + y <= inf
-  std::unique_ptr<QpInterface> solver = std::make_unique<OsqpInterface>();
-  Eigen::MatrixXd H(2, 2);
-  H << 1, 0,
-    0, 2;
-  Eigen::Vector2d f(4, 1);
-  Eigen::MatrixXd A(3, 2);
-  A << 1, 0,
-    0, 1,
-    1, 1;
-  Eigen::Vector3d lb(0, 0, 3);
-  Eigen::Vector3d ub(
-    std::numeric_limits<double>::infinity(),
-    std::numeric_limits<double>::infinity(),
-    std::numeric_limits<double>::infinity());
-
-  // Solve without sparsity structure
-  ASSERT_TRUE(solver->solve(H, f, A, lb, ub)) << "Dense solve failed";
-  Eigen::VectorXd sol = solver->getSolution();
-  double cost = solver->getCost();
-  Eigen::Vector2d sol_expected(1, 2);
-  EXPECT_NEAR_EIGEN(sol, sol_expected, TOL) << "Incorrect dense solution";
-  double cost_expected = 10.5;
-  EXPECT_NEAR(cost, cost_expected, TOL) << "Incorrect dense solution cost";
-
-  // Solve with sparsity structure
-  Eigen::SparseMatrix<double> H_sparsity = H.sparseView();
-  Eigen::SparseMatrix<double> A_sparsity = A.sparseView();
-  ASSERT_TRUE(solver->solve(H, f, A, lb, ub, H_sparsity, A_sparsity)) <<
-    "Sparse solve failed";
-  sol = solver->getSolution();
-  EXPECT_NEAR_EIGEN(sol, sol_expected, TOL) << "Incorrect sparse solution";
-  cost = solver->getCost();
-  EXPECT_NEAR(cost, cost_expected, TOL) << "Incorrect sparse solution cost";
-
-  // Update problem
-  ASSERT_TRUE(solver->update(H, f, A, lb, ub)) << "Update failed";
-  sol = solver->getSolution();
-  EXPECT_NEAR_EIGEN(sol, sol_expected, TOL) << "Incorrect updated solution";
-  cost = solver->getCost();
-  EXPECT_NEAR(cost, cost_expected, TOL) << "Incorrect updated solution cost";
 }
 
 int main(int argc, char ** argv)

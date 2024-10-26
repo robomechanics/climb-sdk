@@ -16,15 +16,11 @@ ControllerNode::ControllerNode()
 
   // Declare parameters
   this->declare_parameter("tf_prefix", "");
-  for (const auto & [param, default_value, description] :
-    robot_->getParameters())
-  {
-    this->declare_parameter(param, default_value, description);
+  for (const auto & p : robot_->getParameters()) {
+    this->declare_parameter(p.name, p.default_value, p.descriptor);
   }
-  for (const auto & [param, default_value, description] :
-    force_estimator_->getParameters())
-  {
-    this->declare_parameter(param, default_value, description);
+  for (const auto & p : force_estimator_->getParameters()) {
+    this->declare_parameter(p.name, p.default_value, p.descriptor);
   }
 
   // Define publishers and subscribers

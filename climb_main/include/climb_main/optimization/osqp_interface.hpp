@@ -1,7 +1,7 @@
 #ifndef OSQP_INTERFACE_HPP
 #define OSQP_INTERFACE_HPP
 
-#include "climb_main/controller/qp_interface.hpp"
+#include "climb_main/optimization/qp_interface.hpp"
 #include <osqp.h>
 
 /**

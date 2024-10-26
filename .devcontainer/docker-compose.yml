@@ -15,7 +15,7 @@ services:
       - XDG_RUNTIME_DIR=/run/user/0
     volumes:
       # Source code
-      - ..:/workspace/src/climb-main
+      - ..:/workspace/src/climb-sdk
       # Build artifacts
       - ../.colcon/build/:/workspace/build
       - ../.colcon/install/:/workspace/install

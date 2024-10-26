@@ -63,7 +63,7 @@ public:
   /**
    * @brief Remove all actuators (removed actuators will be disabled)
    */
-  inline void removeActuators() {removeActuators(ids_);}
+  void removeActuators() {removeActuators(ids_);}
 
   /**
    * @brief Remove actuators corresponding to specific joints
@@ -75,7 +75,7 @@ public:
    * @param id Actuator ID
    * @return Actuator model ("" if ID not found)
    */
-  inline std::string getActuator(int id) const
+  std::string getActuator(int id) const
   {
     try {
       return models_by_id_.at(id);
@@ -88,7 +88,7 @@ public:
    * @brief Get actuator models indexed by actuator ID
    * @return Map of actuator IDs to actuator models
    */
-  inline std::unordered_map<int, std::string> getActuators() const
+  std::unordered_map<int, std::string> getActuators() const
   {
     return models_by_id_;
   }
@@ -98,7 +98,7 @@ public:
    * @param id Actuator ID
    * @return Gear ratio (0 if ID not found)
    */
-  inline double getRatio(int id) const
+  double getRatio(int id) const
   {
     try {
       return ratios_by_id_.at(id);
@@ -111,7 +111,7 @@ public:
    * @brief Get gear ratios indexed by actuator ID
    * @return Map of actuator IDs to gear ratios
    */
-  inline std::unordered_map<int, double> getRatios() const
+  std::unordered_map<int, double> getRatios() const
   {
     return ratios_by_id_;
   }
@@ -128,7 +128,7 @@ public:
    * @param id Actuator ID
    * @return Joint name ("" if ID not found)
    */
-  inline std::string getJoint(int id) const
+  std::string getJoint(int id) const
   {
     try {
       return joints_by_id_.at(id);
@@ -141,7 +141,7 @@ public:
    * @brief Get joint names indexed by actuator ID
    * @return Map of actuator IDs to joint names
    */
-  inline std::unordered_map<int, std::string> getJoints() const
+  std::unordered_map<int, std::string> getJoints() const
   {
     return joints_by_id_;
   }
@@ -151,7 +151,7 @@ public:
    * @param joint Joint name
    * @return Vector of corresponding actuator IDs (empty list if not found)
    */
-  inline std::vector<int> getId(std::string joint) const
+  std::vector<int> getId(std::string joint) const
   {
     try {
       return ids_by_joint_.at(joint);
@@ -164,7 +164,7 @@ public:
    * @brief Get all actuator IDs
    * @return Vector of actuator IDs
    */
-  inline std::vector<int> getIds() const {return ids_;}
+  std::vector<int> getIds() const {return ids_;}
 
   /**
    * @brief Enable actuators by ID
@@ -177,7 +177,7 @@ public:
    * @brief Enable all actuators
    * @return True on success
    */
-  inline bool enable() {return enable(ids_);}
+  bool enable() {return enable(ids_);}
 
   /**
    * @brief Disable actuators by ID
@@ -190,7 +190,7 @@ public:
    * @brief Disable all actuators
    * @return True on success
    */
-  inline bool disable() {return disable(ids_);}
+  bool disable() {return disable(ids_);}
 
   /**
    * @brief Read current actuator states

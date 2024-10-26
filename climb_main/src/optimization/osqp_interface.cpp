@@ -1,4 +1,4 @@
-#include "climb_main/controller/osqp_interface.hpp"
+#include "climb_main/optimization/osqp_interface.hpp"
 
 OsqpInterface::OsqpInterface()
 {

@@ -25,10 +25,8 @@ HardwareNode::HardwareNode()
   this->declare_parameter("actuator_models", std::vector<std::string>{});
   this->declare_parameter("joint_update_freq", 0.0);
   this->declare_parameter("actuator_update_freq", 0.0);
-  for (const auto & [param, default_value, description] :
-    interface_->getParameters())
-  {
-    this->declare_parameter(param, default_value, description);
+  for (const auto & p : interface_->getParameters()) {
+    this->declare_parameter(p.name, p.default_value, p.descriptor);
   }
 
   // Validate configuration

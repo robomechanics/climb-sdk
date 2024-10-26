@@ -75,7 +75,7 @@ protected:
 TEST_F(KinematicsTest, Transform)
 {
   auto [p, R] = robot_->getTransform("left_foot");
-  Eigen::Vector3d p_expected(1, 1, -1);
+  Eigen::Vector3d p_expected{1, 1, -1};
   EXPECT_NEAR_EIGEN(p, p_expected, TOL) << "Incorrect left foot position";
   Eigen::Matrix3d R_expected;
   R_expected << 0, 0, -1,
@@ -140,15 +140,15 @@ TEST_F(KinematicsTest, Inertial)
 TEST_F(KinematicsTest, Coriolis)
 {
   Eigen::VectorXd C = robot_->getCoriolisVector();
-  Eigen::Vector4d C_expected(0, 0, 0, 0);
+  Eigen::Vector4d C_expected{0, 0, 0, 0};
   EXPECT_NEAR_EIGEN(C, C_expected, TOL) << "Incorrect Coriolis vector";
 }
 
 TEST_F(KinematicsTest, Gravitational)
 {
   Eigen::VectorXd V =
-    robot_->getGravitationalVector(Eigen::Vector3d(0, 0, -10));
-  Eigen::Vector4d V_expected(10, 10, 10, 0);
+    robot_->getGravitationalVector(Eigen::Vector3d{0, 0, -10});
+  Eigen::Vector4d V_expected{10, 10, 10, 0};
   EXPECT_NEAR_EIGEN(V, V_expected, TOL) << "Incorrect gravitational vector";
 
   Eigen::MatrixXd dVdg = robot_->getGravitationalMatrix();
@@ -163,7 +163,7 @@ TEST_F(KinematicsTest, Gravitational)
 TEST_F(KinematicsTest, CenterOfMass)
 {
   Eigen::Vector3d com = robot_->getCenterOfMass();
-  Eigen::Vector3d com_expected(0.5, 0, -0.5);
+  Eigen::Vector3d com_expected{0.5, 0, -0.5};
   EXPECT_NEAR_EIGEN(com, com_expected, TOL) << "Incorrect center of mass";
   double m = robot_->getMass();
   double m_expected = 4.0;

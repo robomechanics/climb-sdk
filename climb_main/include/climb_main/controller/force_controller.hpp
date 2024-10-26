@@ -5,10 +5,11 @@
 
 #include "climb_main/util/parameterized.hpp"
 #include "climb_main/kinematics/kinematics_interface.hpp"
+#include "climb_main/optimization/qp_interface.hpp"
 
 using climb_msgs::msg::EndEffectorCommand;
 
-class ForceController : Parameterized
+class ForceController : public Parameterized
 {
 public:
   /**
@@ -65,6 +66,8 @@ private:
 
   // Robot kinematics interface
   std::shared_ptr<KinematicsInterface> robot_;
+  // QP solver
+  std::unique_ptr<QpInterface> solver_;
   // Commanded goal for each end-effector
   std::unordered_map<std::string, EndEffectorGoal> end_effector_goals_;
   // Obstacle constraints
@@ -75,8 +78,10 @@ private:
   double joint_step_;
   // Minimum height of body frame origin above ground plane
   double clearance_;
-  // Relative cost of joint displacement in N/rad or N/m
+  // Relative cost of joint displacement in 1/N^2
   double normalization_;
+  // Relative cost of end-effector error in 1/N
+  double tracking_;
 };
 
 #endif  // FORCE_CONTROLLER_HPP
