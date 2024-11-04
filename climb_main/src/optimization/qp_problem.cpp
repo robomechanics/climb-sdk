@@ -1,11 +1,11 @@
 #include "climb_main/optimization/qp_problem.hpp"
 
-QpProblem::QpProblem(std::map<std::string, int> var_sizes)
+QpProblem::QpProblem(std::vector<std::string> vars, std::vector<int> sizes)
 {
   N = 0;
-  for (const auto & var : var_sizes) {
-    vars_[var.first] = {var.second, N};
-    N += var.second;
+  for (size_t i = 0; i < vars.size(); i++) {
+    vars_[vars[i]] = {sizes[i], N};
+    N += sizes[i];
   }
   M = 0;
   H = Eigen::MatrixXd::Zero(N, N);
@@ -67,7 +67,7 @@ void QpProblem::addLinearConstraint(
     assert(vars_.find(vars[k]) != vars_.end());
     auto [n, i] = vars_[vars[k]];
     assert(A_in[k].cols() == n && A_in[k].rows() == m);
-    A.block(M, i, m, n) = A_in[k];
+    A.block(M, i, m, n) += A_in[k];
   }
   lb.segment(M, m) = lower;
   ub.segment(M, m) = upper;

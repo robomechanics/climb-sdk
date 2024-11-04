@@ -13,6 +13,7 @@
 
 #include "climb_main/kinematics/kinematics_interface.hpp"
 #include "climb_main/controller/force_estimator.hpp"
+#include "climb_main/controller/force_controller.hpp"
 
 using std_msgs::msg::String;
 using geometry_msgs::msg::WrenchStamped;
@@ -74,6 +75,8 @@ private:
   std::shared_ptr<KinematicsInterface> robot_;
   // Contact force estimator
   std::unique_ptr<ForceEstimator> force_estimator_;
+  // Contact force controller
+  std::unique_ptr<ForceController> force_controller_;
   // Joint command publisher
   rclcpp::Publisher<JointCommand>::SharedPtr joint_cmd_pub_;
   // Contact force publisher
@@ -89,6 +92,12 @@ private:
   // Parameter callback handle
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
     param_handle_;
+  // Debug flag
+  bool debug_;
+  // Maximum joint effort
+  double max_effort_;
+  // Simulated wrench for offline testing
+  Eigen::VectorXd sim_wrench_;
 };
 
 #endif  // CONTROLLER_NODE_HPP

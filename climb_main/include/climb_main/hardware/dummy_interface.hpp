@@ -19,11 +19,9 @@ public:
   bool enable(std::vector<int> ids) override;
   bool disable(std::vector<int> ids) override;
 
-  void declareParameters() override {}
+  void declareParameters() override;
   void setParameter(
-    [[maybe_unused]] const Parameter & param,
-    [[maybe_unused]] SetParametersResult & result)
-  override {}
+    const Parameter & param, SetParametersResult & result) override;
   using Parameterized::setParameter;
 
   ActuatorState readActuatorState() override;

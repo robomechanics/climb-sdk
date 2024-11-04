@@ -7,7 +7,23 @@
 class QpProblem
 {
 public:
-  QpProblem(std::map<std::string, int> var_sizes);
+  /**
+   * @brief Construct a new QP problem
+   * @param vars The names of the optimization variables
+   * @param sizes The sizes of the optimization variables
+   */
+  QpProblem(std::vector<std::string> vars, std::vector<int> sizes);
+
+  /**
+   * @brief Define an alias for a contiguous set of optimization variables
+   * @param name The name of the alias
+   * @param index The starting index of the alias
+   * @param size The number of elements in the alias
+   */
+  void addAlias(const std::string & name, int index, int size)
+  {
+    vars_[name] = {size, index};
+  }
 
   /**
    * @brief Add a quadratic cost term of the form: 1/2 (x-x0)' H (y-y0)
@@ -73,8 +89,8 @@ public:
    * @brief Add a linear constraint of the form: lb <= A x <= ub
    * @param vars The names of the variables
    * @param A_in The constraint matrix for each variable
-   * @param lb_in The lower bound of the constraint
-   * @param ub_in The upper bound of the constraint
+   * @param lb_in The lower bound of the constraint (or empty for -infinity)
+   * @param ub_in The upper bound of the constraint (or empty for infinity)
    */
   void addLinearConstraint(
     const std::vector<std::string> & vars,
@@ -83,10 +99,26 @@ public:
     const Eigen::VectorXd & ub_in);
 
   /**
+   * @brief Add a linear constraint of the form: A x = b
+   * @param vars The names of the variables
+   * @param A_in The constraint matrix for each variable
+   * @param b_in The value of the variable (or empty for zero)
+   */
+  void addLinearConstraint(
+    const std::vector<std::string> & vars,
+    const std::vector<Eigen::MatrixXd> & A_in,
+    const Eigen::VectorXd & b_in)
+  {
+    Eigen::VectorXd b =
+      b_in.size() ? b_in : Eigen::VectorXd::Zero(A_in[0].rows());
+    addLinearConstraint(vars, A_in, b, b);
+  }
+
+  /**
    * @brief Add a linear constraint of the form: lb <= x <= ub
    * @param var The name of the variable
-   * @param lb_in The lower bound of the constraint
-   * @param ub_in The upper bound of the constraint
+   * @param lb_in The lower bound of the constraint (or empty for -infinity)
+   * @param ub_in The upper bound of the constraint (or empty for infinity)
    */
   void addBounds(
     const std::string & var,
@@ -100,8 +132,8 @@ public:
   /**
    * @brief Add a linear constraint of the form: lb <= x <= ub
    * @param var The name of the variable
-   * @param lb_in The lower bound of the constraint
-   * @param ub_in The upper bound of the constraint
+   * @param lb_in The lower bound of the constraint (or empty for -infinity)
+   * @param ub_in The upper bound of the constraint (or empty for infinity)
    */
   void addBounds(
     const std::string & var,
@@ -122,7 +154,7 @@ public:
   int M;
 
 private:
-  struct var
+  struct Var
   {
     int size;
     int index;
@@ -148,7 +180,7 @@ private:
     return Eigen::VectorXd::Constant(n, INFINITY);
   }
 
-  std::map<std::string, var> vars_;
+  std::map<std::string, Var> vars_;
 };
 
 #endif  // QP_PROBLEM_HPP

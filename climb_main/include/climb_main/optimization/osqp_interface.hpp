@@ -40,11 +40,8 @@ public:
     const Eigen::VectorXd & lb,
     const Eigen::VectorXd & ub);
 
-  void declareParameters() override {}
-
   void setParameter(
-    [[maybe_unused]] const Parameter & param,
-    [[maybe_unused]] SetParametersResult & result) override {}
+    const Parameter & param, SetParametersResult & result) override;
 
   using QpInterface::setParameter;
 

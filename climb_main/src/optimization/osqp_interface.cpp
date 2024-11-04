@@ -29,13 +29,14 @@ bool OsqpInterface::solve(
   if (workspace_.setup(data_.get(), settings_.get()) != 0) {
     return initialized_ = false;
   }
+  initialized_ = true;
 
   // Solve problem
   osqp_solve(workspace_.get());
   solution_ = osqpToEigen(
     workspace_.get()->solution->x, workspace_.get()->data->n);
   cost_ = workspace_.get()->info->obj_val;
-  return initialized_ = true;
+  return workspace_.get()->info->status_val == OSQP_SOLVED;
 }
 
 bool OsqpInterface::update(
@@ -96,10 +97,10 @@ bool OsqpInterface::update(
 
   // Solve problem
   osqp_solve(workspace_.get());
-  solution_ = Eigen::Map<Eigen::VectorXd>(
-    workspace_.get()->solution->x, data_.q.size());
+  solution_ = Eigen::VectorXd::Map(
+    workspace_.get()->solution->x, data_.q.size()).eval();
   cost_ = workspace_.get()->info->obj_val;
-  return true;
+  return workspace_.get()->info->status_val == OSQP_SOLVED;
 }
 
 OsqpInterface::CscWrapper OsqpInterface::eigenToOSQP(
@@ -133,4 +134,12 @@ std::vector<c_float> OsqpInterface::eigenToOSQP(const Eigen::VectorXd & vec)
 Eigen::VectorXd OsqpInterface::osqpToEigen(const c_float * vec, c_int size)
 {
   return Eigen::Map<const Eigen::VectorXd>(vec, size);
+}
+
+void OsqpInterface::setParameter(
+  const Parameter & param, [[maybe_unused]] SetParametersResult & result)
+{
+  if (param.get_name() == "verbose") {
+    settings_->verbose = param.as_bool();
+  }
 }

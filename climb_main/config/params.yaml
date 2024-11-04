@@ -7,3 +7,18 @@
     ros__parameters:
       joint_update_freq: 0.0
       actuator_update_freq: 1.0
+      initial_effort: [-0.3, -0.3, -0.3, -0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      initial_position: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.5, -0.5, -0.5, -0.5, 0.0, 0.0]
+  controller:
+    ros__parameters:
+      joint_effort_filter_window: 2
+      joint_step: 0.005
+      mass_threshold: 0.5
+      verbose: False
+      debug: False
+      stiffness: 1000.0
+      microspine_max_force: 10.0
+      friction_coefficient: 0.5
+      clearance: 0.05
+      effort_limit: 1.0
+      sim_wrench: [13.0, 0.0, 0.0, 0.0, 0.0, 0.0]

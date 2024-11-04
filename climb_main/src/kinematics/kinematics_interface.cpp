@@ -5,7 +5,7 @@ KinematicsInterface::KinematicsInterface()
 }
 
 bool KinematicsInterface::loadRobotDescription(
-  std::string description, std::string & error_message)
+  const std::string & description, std::string & error_message)
 {
   initialized_ = false;
   if (!urdf_model_.initString(description)) {
@@ -98,11 +98,13 @@ bool KinematicsInterface::initialize(std::string & error_message)
     }
   }
 
-  // Compute total mass
+  // Compute mass properties
   mass_ = 0;
+  link_masses_.clear();
   for (const auto & link_pair : urdf_model_.links_) {
     if (link_pair.second->inertial) {
       mass_ += link_pair.second->inertial->mass;
+      link_masses_[link_pair.first] = link_pair.second->inertial->mass;
     }
   }
 
@@ -127,7 +129,8 @@ bool KinematicsInterface::initialize(std::string & error_message)
   return initialized_ = true;
 }
 
-Eigen::Matrix3d KinematicsInterface::getSkew(const Eigen::Vector3d & vector)
+Eigen::Matrix3d KinematicsInterface::getSkew(
+  const Eigen::Vector3d & vector) const
 {
   Eigen::Matrix3d skew;
   skew << 0, -vector(2), vector(1),
@@ -148,12 +151,12 @@ Eigen::Matrix<double, 6, 6> KinematicsInterface::getAdjoint(
   return adjoint;
 }
 
-Eigen::MatrixXd KinematicsInterface::getMixedJacobian(bool linear)
+Eigen::MatrixXd KinematicsInterface::getJacobian(bool linear)
 {
   int p = linear ? 3 : 6;
   Eigen::MatrixXd jac(p * num_contacts_, num_joints_);
   for (size_t i = 0; i < num_contacts_; i++) {
-    Eigen::MatrixXd jac_i = getMixedJacobian(contact_frames_[i], linear);
+    Eigen::MatrixXd jac_i = getJacobian(contact_frames_[i], linear);
     if (jac_i.size() == 0) {
       return Eigen::MatrixXd();
     }
@@ -175,6 +178,19 @@ Eigen::MatrixXd KinematicsInterface::getHandJacobian()
     row += jac_i.rows();
   }
   return jac;
+}
+
+Eigen::MatrixXd KinematicsInterface::getGraspMap()
+{
+  Eigen::MatrixXd grasp(6, num_constraints_);
+  int col = 0;
+  for (const auto & contact : contact_frames_) {
+    Eigen::MatrixXd block =
+      getAdjoint(contact, body_frame_).transpose() * wrench_bases_[contact];
+    grasp.block(0, col, 6, block.cols()) = block;
+    col += block.cols();
+  }
+  return grasp;
 }
 
 void KinematicsInterface::updateJointState(const JointState & state)
@@ -297,6 +313,8 @@ void KinematicsInterface::setParameter(
         contact_types.push_back(ContactType::TAIL);
       } else if (name == "magnetic wheel" || name == "magnetic_wheel") {
         contact_types.push_back(ContactType::MAGNET_WHEEL);
+      } else if (name == "friction") {
+        contact_types.push_back(ContactType::FRICTION);
       } else if (name == "default") {
         contact_types.push_back(ContactType::DEFAULT);
       } else {

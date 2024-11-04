@@ -118,21 +118,29 @@ if(BUILD_TESTING)
   # Hardware tests
   ament_add_gtest(${PROJECT_NAME}_hardware_test test/hardware_test.cpp)
   target_link_libraries(${PROJECT_NAME}_hardware_test ${PROJECT_NAME}_hardware)
+  target_include_directories(${PROJECT_NAME}_hardware_test PRIVATE include
+    test/util)
 
   # Kinematics tests
   ament_add_gtest(${PROJECT_NAME}_kinematics_test test/kinematics_test.cpp)
   target_link_libraries(${PROJECT_NAME}_kinematics_test
     ${PROJECT_NAME}_kinematics)
+  target_include_directories(${PROJECT_NAME}_kinematics_test PRIVATE include
+    test/util)
 
   # Controller tests
   ament_add_gtest(${PROJECT_NAME}_controller_test test/controller_test.cpp)
   target_link_libraries(${PROJECT_NAME}_controller_test
     ${PROJECT_NAME}_controller)
+  target_include_directories(${PROJECT_NAME}_controller_test PRIVATE include
+    test/util)
 
   # Optimization tests
   ament_add_gtest(${PROJECT_NAME}_optimization_test test/optimization_test.cpp)
   target_link_libraries(${PROJECT_NAME}_optimization_test
     ${PROJECT_NAME}_optimization)
+  target_include_directories(${PROJECT_NAME}_optimization_test PRIVATE include
+    test/util)
 
   install(DIRECTORY test/resources/
     DESTINATION share/${PROJECT_NAME}/test/resources

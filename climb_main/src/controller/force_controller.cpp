@@ -4,6 +4,7 @@
 #include <Eigen/SparseCore>
 #include <osqp.h>
 #include "climb_main/optimization/osqp_interface.hpp"
+#include "climb_main/optimization/qp_problem.hpp"
 
 ForceController::ForceController(std::shared_ptr<KinematicsInterface> robot)
 : robot_(robot)
@@ -11,7 +12,7 @@ ForceController::ForceController(std::shared_ptr<KinematicsInterface> robot)
   solver_ = std::make_unique<OsqpInterface>();
 }
 
-Eigen::VectorXd ForceController::update(const Eigen::VectorXd & force)
+bool ForceController::update(const Eigen::VectorXd & force)
 {
   // VARIABLES
   //   Joint displacement     (n joints)
@@ -22,122 +23,172 @@ Eigen::VectorXd ForceController::update(const Eigen::VectorXd & force)
   // CONSTRAINTS
   //   Joint angle            (n)
   //   Joint effort           (n)
-  //   Adhesion/tracking      (2m)
+  //   Adhesion/tracking      (0-2m)
   //   Equilibrium            (p)
-  //   Obstacle               (1)
+  //   Obstacle               (o)
 
   using Eigen::MatrixXd, Eigen::VectorXd, Eigen::SparseMatrix;
 
-  // Problem dimensions
-  int n = robot_->getNumJoints();       // Number of joints
-  int m = robot_->getNumConstraints();  // Number of contact constraints
-  int p = 6;                            // Number of body degrees of freedom
-  int N = n + p + m + 1;                // Number of optimization variables
-  int M = 2 * n + 2 * m + p + 1;        // Number of optimization constraints
-
   // Contact kinematics
-  MatrixXd J = robot_->getHandJacobian();   // Hand Jacobian (m x n)
-  MatrixXd G = robot_->getGraspMap();       // Grasp map (p x m)
+  int n = robot_->getNumJoints();           // Number of joints
+  int m = robot_->getNumConstraints();      // Number of contact constraints
+  int p = 6;                                // Number of body degrees of freedom
+  MatrixXd Jh = robot_->getHandJacobian();  // Hand Jacobian (m x n)
+  MatrixXd Gs = -robot_->getGraspMap();     // Self-manip grasp map (p x m)
   MatrixXd A(m, n + p);                     // Constraint matrix (m x (n + p))
-  A << J, G.transpose();
-  std::cout << "Ac\n" << A << std::endl;
+  A << Jh, -Gs.transpose();
   MatrixXd K =                              // Stiffness matrix (m x m)
     MatrixXd::Identity(m, m) * stiffness_;
-  std::cout << "K\n" << K << std::endl;
 
-  // Joint state vectors (n)
+  // Joint state vectors
   VectorXd q = robot_->getJointPosition();
   VectorXd q0 = VectorXd::Zero(n);
   VectorXd qmin = robot_->getJointPositionMin();
   VectorXd qmax = robot_->getJointPositionMax();
+  q = q.cwiseMin(qmax).cwiseMax(qmin);
+  VectorXd u = robot_->getJointEffort();
   VectorXd umin = robot_->getJointEffortMin();
   VectorXd umax = robot_->getJointEffortMax();
+  u = u.cwiseMin(umax).cwiseMax(umin);
 
-  // Quadratic cost matrix (N x N)
-  VectorXd Hvec = VectorXd::Ones(N) * normalization_;
-  Hvec.tail(1).setZero();
-  MatrixXd H = Hvec.asDiagonal();
-  std::cout << "H\n" << H << std::endl;
+  // Problem structure
+  QpProblem problem({"joint", "body", "error", "margin"}, {n, p, m, 1});
+  problem.addAlias("displacement", 0, n + p);
 
-  // Linear cost vector (N)
-  VectorXd f(N);
-  f << (q - q0) * normalization_,             // Joint home position offset
-    VectorXd::Zero(p),
-    VectorXd::Constant(m, tracking_),         // End-effector tracking
-    -1;                                       // Stability margin
-  std::cout << "f\n" << f << std::endl;
+  // Quadratic penalty on distance from home position
+  problem.addQuadraticCost("joint", normalization_, q0 - q);
+  problem.addQuadraticCost("error", normalization_, {});
 
-  // Joint position constraint matrix (n x n)
-  MatrixXd A_joint = MatrixXd::Identity(n, n);
-  std::cout << "A_joint\n" << A_joint << std::endl;
+  // Linear penalty on tracking error
+  problem.addLinearCost("error", tracking_);
 
-  // Joint effort constraint matrix ((n + p) x n)
-  MatrixXd A_effort = J.transpose() * K * A;
-  std::cout << "A_effort\n" << A_effort << std::endl;
+  // Maximize stability margin
+  problem.addLinearCost("margin", -1);
 
-  // End effector constraint matrix (2m x (n + p + m + 1))
-  MatrixXd A_end_effector(2 * m, N);
-  A_end_effector <<
-    -K * A, -MatrixXd::Identity(m, m) * tracking_, MatrixXd::Ones(m, 1),
-    K * A, -MatrixXd::Identity(m, m) * tracking_, MatrixXd::Ones(m, 1);
-  size_t row = 0;
+  // Respect joint limits and maximum displacement per timestep
+  problem.addBounds(
+    "joint",
+    (qmin - q).cwiseMax(-joint_step_), (qmax - q).cwiseMin(joint_step_));
+  problem.addBounds("body", -joint_step_, joint_step_);
+
+  // Respect joint effort limits
+  problem.addLinearConstraint(
+    {"displacement"}, {Jh.transpose() * K * A},
+    umin - u, umax - u);
+
+  // Mode-dependent constraints for each contact
+  int row = 0;
   for (auto frame : robot_->getContactFrames()) {
-    auto m_i = robot_->getWrenchBasis(frame).cols();  // Number of constraints
-    switch (end_effector_goals_[frame].mode) {
-      case EndEffectorCommand::MODE_FREE:
-      case EndEffectorCommand::MODE_TRANSITION:
-        A_end_effector.block(row, n + p + m, m_i, 1).setZero();
-        A_end_effector.block(row + m, n + p + m, m_i, 1).setZero();
-        break;
-      default:
-        // Ac_lower = robot_->getForceConstraintLower(frame);
-        A_end_effector.block(row, n + p, m_i, m).setZero();
-        A_end_effector.block(row + m, n + p, m_i, m).setZero();
-        // A_end_effector.block(row, 0, m_i, n + p) =
-        //   Ac_lower * A_end_effector.block(row, 0, m_i, n + p);
-        // A_end_effector.block(row, 0, m_i, n + p) =
-        //   Ac_upper * A_end_effector.block(row + m, 0, m_i, n + p);
-        break;
+    MatrixXd B_i = robot_->getWrenchBasis(frame);
+    auto m_i = B_i.cols();
+    MatrixXd A_i = A.block(row, 0, m_i, n + p);
+    MatrixXd K_i = K.block(row, row, m_i, m_i);
+    MatrixXd I_i = MatrixXd::Identity(m, m).block(row, 0, m_i, m);
+    VectorXd force_i = force.segment(row, m_i);
+    auto mode = end_effector_goals_[frame].mode;
+    if (mode == EndEffectorCommand::MODE_FREE) {
+      problem.addLinearConstraint(
+        // -displacement - error <= -setpoint
+        {"displacement", "error"}, {-K_i * A_i, -I_i},
+        {}, -K_i * B_i.transpose() * end_effector_goals_[frame].setpoint);
+      problem.addLinearConstraint(
+        // displacement - error <= setpoint
+        {"displacement", "error"}, {K_i * A_i, -I_i},
+        {}, K_i * B_i.transpose() * end_effector_goals_[frame].setpoint);
+    } else if (mode == EndEffectorCommand::MODE_TRANSITION) {
+      problem.addLinearConstraint(
+        // -displacement - error <= -setpoint
+        {"displacement", "error"}, {-K_i * A_i, -I_i},
+        {}, -B_i.transpose() * end_effector_goals_[frame].setpoint - force_i);
+      problem.addLinearConstraint(
+        // displacement - error <= setpoint
+        {"displacement", "error"}, {K_i * A_i, -I_i},
+        {}, B_i.transpose() * end_effector_goals_[frame].setpoint - force_i);
+    } else if (mode == EndEffectorCommand::MODE_CONTACT) {
+      auto constraint = getAdhesionConstraint(frame);
+      problem.addLinearConstraint(
+        // A_c * displacement <= b_c
+        {"displacement"},
+        {constraint.A * K_i * A_i},
+        {}, (constraint.b - constraint.A * force_i).cwiseMax(0));
+    } else if (mode == EndEffectorCommand::MODE_STANCE) {
+      auto constraint = getAdhesionConstraint(frame);
+      problem.addLinearConstraint(
+        // A_c * displacement + margin <= b_c
+        {"displacement", "margin"},
+        {constraint.A * K_i * A_i, VectorXd::Constant(constraint.b.size(), 1)},
+        {}, constraint.b - constraint.A * force_i);
     }
     row += m_i;
   }
-  std::cout << "A_end_effector\n" << A_end_effector << std::endl;
 
-  // Equilibrium constraint matrix (p x (n + p))
-  MatrixXd A_equilibrium = G * K * A;
-  std::cout << "A_equilibrium\n" << A_equilibrium << std::endl;
+  // Static equilibrium constraint
+  // Mapping from center of mass displacement to body torque
+  Eigen::Matrix3d gskew = robot_->getSkew(Gs.topRows(3) * force);
+  // Total mass of the robot
+  double total_mass = robot_->getMass();
+  // Mapping from joint velocity to center of mass velocity in body frame
+  MatrixXd J_mass = MatrixXd::Zero(3, n);
+  // Mapping from body twist to center of mass velocity in body frame
+  MatrixXd G_mass = MatrixXd::Zero(3, p);
+  for (auto [link, mass] : robot_->getLinkMasses()) {
+    auto frame = link + "_inertial";
+    if (mass > mass_threshold_) {
+      J_mass += mass / total_mass * robot_->getJacobian(frame, true);
+      G_mass.leftCols(3) += mass / total_mass * Eigen::Matrix3d::Identity();
+      G_mass.rightCols(3) +=
+        mass / total_mass * robot_->getSkew(robot_->getTransform(frame).first);
+    }
+  }
+  problem.addLinearConstraint(
+    {"displacement"}, {Gs.topRows(3) * K * A}, {});
+  problem.addLinearConstraint(
+    {"displacement", "joint", "body"},
+    {Gs.bottomRows(3) * K * A, gskew * J_mass, gskew * G_mass}, {});
 
-  // Obstacle constraint matrix (1 x (n + p))
-  MatrixXd A_obstacle = MatrixXd::Zero(1, n + p);
-  std::cout << "A_obstacle\n" << A_obstacle << std::endl;
+  // Obstacle collision constraints
+  for (const auto & obstacle : obstacles_) {
+    // Mapping from joint velocity to obstacle velocity in body frame
+    MatrixXd J_ob = robot_->getJacobian(obstacle.frame, true);
+    // Mapping from body twist to obstacle velocity in body frame
+    MatrixXd G_ob(3, p);
+    G_ob <<
+      Eigen::Matrix3d::Identity(),
+      robot_->getSkew(robot_->getTransform(obstacle.frame).first);
+    Eigen::RowVector3d normal(obstacle.normal);
+    // normal * x <= dist
+    problem.addLinearConstraint(
+      {"joint", "body"}, {normal * J_ob, normal * G_ob},
+      {}, VectorXd::Constant(1, obstacle.distance));
+  }
 
-  // Full constraint matrix (M x N)
-  MatrixXd A_full(M, N);
-  A_full <<
-    A_joint, MatrixXd::Zero(n, M - n),                // Joint angle
-    A_effort, MatrixXd::Zero(n, m + 1),               // Joint effort
-    A_end_effector,                                   // End effector
-    A_equilibrium, MatrixXd::Zero(p, m + 1),          // Equilibrium
-    A_obstacle, MatrixXd::Zero(1, m + 1);             // Obstacle
-  std::cout << "A_full\n" << A_full << std::endl;
-
-  // Constraint bounds
-  VectorXd lb = VectorXd::Constant(M, -INFINITY);
-  std::cout << "lb\n" << lb << std::endl;
-  VectorXd ub = VectorXd::Constant(M, INFINITY);
-  std::cout << "ub\n" << ub << std::endl;
-
-  // Solve QP (TODO: apply sparsity structure)
+  // Solve QP
   bool success;
   if (solver_->getInitialized()) {
-    success = solver_->update(H, f, A_full, lb, ub);
+    success = solver_->update(problem);
   } else {
-    success = solver_->solve(H, f, A_full, lb, ub);
+    success = solver_->solve(problem);
   }
+
+  // Store results
   if (success) {
-    return solver_->getSolution().head(n);
+    displacment_cmd_ = solver_->getSolution().head(n + p);
+    displacment_cmd_.head(n) =
+      displacment_cmd_.head(n).cwiseMin(qmax - q).cwiseMax(qmin - q);
+    margin_ = solver_->getSolution().tail(1)(0);
+    error_ = solver_->getSolution().segment(n + p, m).maxCoeff();
+  } else {
+    displacment_cmd_ = VectorXd::Zero(n + p);
+    margin_ = -INFINITY;
+    error_ = INFINITY;
   }
-  return VectorXd();
+  if (!position_cmd_.size()) {
+    position_cmd_ = q;
+  }
+  position_cmd_ += displacment_cmd_.head(n);
+  force_cmd_ = force + K * A * displacment_cmd_;
+  effort_cmd_ = u + Jh.transpose() * (force_cmd_ - force);
+  return success;
 }
 
 void ForceController::setEndEffectorCommand(const EndEffectorCommand & command)
@@ -184,37 +235,117 @@ void ForceController::setEndEffectorCommand(const EndEffectorCommand & command)
   }
 }
 
+void ForceController::setGroundConstraint()
+{
+  double h = 0;
+  int n = 0;
+  for (const auto & frame : robot_->getContactFrames()) {
+    if (end_effector_goals_.find(frame) == end_effector_goals_.end()) {
+      continue;
+    }
+    auto transform = robot_->getTransform(frame);
+    h += transform.first[2];
+    n++;
+  }
+  if (n == 0) {
+    return;
+  }
+  setObstacleConstraints(
+    {robot_->getBodyFrame()}, {{0, 0, -1}}, {-h / n - clearance_});
+}
+
 void ForceController::setObstacleConstraints(
   const std::vector<std::string> & frames,
-  const std::vector<Eigen::Vector3d> & displacements)
+  const std::vector<Eigen::Vector3d> & normals,
+  const std::vector<double> & distances)
 {
   obstacles_.clear();
   for (size_t i = 0; i < frames.size(); i++) {
-    if (i >= displacements.size()) {
+    if (i >= normals.size() || i >= distances.size()) {
       break;
     }
-    obstacles_.push_back({frames[i], displacements[i]});
+    obstacles_.push_back({frames[i], normals[i], distances[i]});
   }
+}
+
+ForceController::Constraint ForceController::getAdhesionConstraint(const std::string & frame) const
+{
+  Constraint constraint;
+  switch (robot_->getContactType(frame)) {
+    case KinematicsInterface::ContactType::MICROSPINE:
+      // X = normal force
+      // Y = lateral force
+      // Z = axial force
+      constraint.A = Eigen::MatrixXd(5, 3);
+      constraint.A <<
+        0, 0, 1,                                 // min axial force
+        0, 0, -1,                                // max axial force
+        0, -1, tan(microspine_yaw_angle_),       // min lateral force
+        0, 1, tan(microspine_yaw_angle_),        // max lateral force
+        -1, 0, tan(microspine_pitch_angle_);    // min normal force
+      constraint.b = Eigen::Vector<double, 5> {
+        -microspine_min_force_, microspine_max_force_, 0, 0, 0};
+      break;
+    case KinematicsInterface::ContactType::FRICTION:
+      constraint.A = Eigen::MatrixXd(5, 3);
+      constraint.A <<
+        -friction_coefficient_, 0, 1,
+        -friction_coefficient_, 0, -1,
+        -friction_coefficient_, 1, 0,
+        -friction_coefficient_, -1, 0,
+        -1, 0, 0;
+      constraint.b = Eigen::VectorXd::Zero(5);
+      break;
+    case KinematicsInterface::ContactType::TAIL:
+      constraint.A = Eigen::MatrixXd::Constant(1, 1, -1);
+      constraint.b = Eigen::VectorXd::Zero(1);
+      break;
+    case KinematicsInterface::ContactType::DEFAULT:
+      constraint.A.resize(0, 6);
+      constraint.b.resize(0);
+      break;
+    default:
+      throw std::runtime_error("Unsupported contact type");
+  }
+  return constraint;
 }
 
 void ForceController::declareParameters()
 {
   declareParameter(
-    "stiffness", 1.0,
+    "stiffness", 1000.0,
     "Expected compliance at the point of contact in N/m", 0.0);
   declareParameter(
-    "joint_step", 0.01,
+    "joint_step", 0.001,
     "Maximum joint displacement in rad or m", 0.0);
   declareParameter(
     "clearance", 0.0,
     "Minimum height of body frame origin above ground plane in m");
   declareParameter(
-    "normalization", 0.01,
+    "normalization", 0.0001,
     "Cost of joint and body displacement relative to stability margin " \
     "in 1/N^2", 0.0);
   declareParameter(
-    "tracking", 0.01,
+    "tracking", 1.0,
     "Cost of end-effector error relative to stability margin in 1/N", 0.0);
+  declareParameter(
+    "mass_threshold", 0.0,
+    "Minimum link mass for center of mass optimization in kg", 0.0);
+  declareParameter(
+    "microspine_pitch_angle", 0.35,
+    "Maximum out-of-plane loading angle of microspine gripper in rad");
+  declareParameter(
+    "microspine_yaw_angle", 0.785,
+    "Maximum in-plane loading angle of microspine gripper in rad");
+  declareParameter(
+    "microspine_min_force", 0.0,
+    "Minimum tangential force on microspine gripper in N");
+  declareParameter(
+    "microspine_max_force", 25.0,
+    "Maximum tangential force on microspine gripper in N");
+  declareParameter(
+    "friction_coefficient", 0.5,
+    "End effector coefficient of friction");
   for (const auto & param : solver_->getParameters()) {
     parameters_.push_back(param);
   }
@@ -232,6 +363,18 @@ void ForceController::setParameter(const Parameter & param, SetParametersResult 
     normalization_ = param.as_double();
   } else if (param.get_name() == "tracking") {
     tracking_ = param.as_double();
+  } else if (param.get_name() == "mass_threshold") {
+    mass_threshold_ = param.as_double();
+  } else if (param.get_name() == "microspine_pitch_angle") {
+    microspine_pitch_angle_ = param.as_double();
+  } else if (param.get_name() == "microspine_yaw_angle") {
+    microspine_yaw_angle_ = param.as_double();
+  } else if (param.get_name() == "friction_coefficient") {
+    friction_coefficient_ = param.as_double();
+  } else if (param.get_name() == "microspine_min_force") {
+    microspine_min_force_ = param.as_double();
+  } else if (param.get_name() == "microspine_max_force") {
+    microspine_max_force_ = param.as_double();
   }
   solver_->setParameter(param, result);
 }

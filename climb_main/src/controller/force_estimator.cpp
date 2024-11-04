@@ -12,21 +12,22 @@ Eigen::VectorXd ForceEstimator::update(const Eigen::VectorXd & effort)
   Eigen::VectorXd u = filterEffort(effort);
 
   // Compute robot kinematics
-  Eigen::MatrixXd J = robot_->getHandJacobian();
+  Eigen::MatrixXd Jh = robot_->getHandJacobian();
 
   // Set up linear system of equations
-  Eigen::MatrixXd A = -J.transpose();
+  Eigen::MatrixXd A = Jh.transpose();
+  Eigen::VectorXd b = u;
 
   // Apply gravity offset
   if (gravity_offset_) {
     Eigen::MatrixXd Gs = -robot_->getGraspMap();
     Eigen::MatrixXd dVdg = robot_->getGravitationalMatrix();
     double m = robot_->getMass();
-    A += dVdg * Gs.topRows(3) / m;
+    A -= dVdg * Gs.topRows(3) / m;
   }
 
   // Solve system (use SVD in case of singular A)
-  return A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(u);
+  return A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
 }
 
 Eigen::VectorXd ForceEstimator::update(
@@ -47,22 +48,20 @@ Eigen::VectorXd ForceEstimator::update(
   Eigen::VectorXd f_ext = g_to_f_ext * g;
 
   // Compute robot kinematics
-  Eigen::MatrixXd J = robot_->getHandJacobian();
+  Eigen::MatrixXd Jh = robot_->getHandJacobian();
   Eigen::MatrixXd Gs = -robot_->getGraspMap();
 
   // Set up linear system of equations
-  Eigen::MatrixXd A(J.cols() + Gs.rows(), Gs.cols());
-  A.block(0, 0, J.cols(), J.rows()) = -J.transpose();
-  A.block(J.cols(), 0, Gs.rows(), Gs.cols()) = Gs;
-  Eigen::VectorXd b = Eigen::VectorXd::Zero(J.cols() + Gs.rows());
-  b.head(J.cols()) = u;
-  b.tail(Gs.rows()) = f_ext;
+  Eigen::MatrixXd A(Jh.cols() + Gs.rows(), Gs.cols());
+  A << Jh.transpose(), -Gs;
+  Eigen::VectorXd b(Jh.cols() + Gs.rows());
+  b << u, f_ext;
 
   // Apply gravity offset
   if (gravity_offset_) {
     Eigen::MatrixXd N =
       robot_->getGravitationalVector(f_ext.head(3) / robot_->getMass());
-    b.head(J.cols()) -= N;
+    b.head(Jh.cols()) -= N;
   }
 
   // Solve fully or under-determined system (use SVD in case of singular A)
@@ -145,11 +144,11 @@ std::vector<WrenchStamped> ForceEstimator::forcesToMessages(
     Eigen::VectorXd wrench;
     if (i == contacts.size() - 1) {
       Eigen::MatrixXd Gs = -robot_->getGraspMap();
-      wrench = Gs * forces;
+      wrench = -Gs * forces;  // External wrench on body = -f_b = -Gs * f_c
     } else {
       Eigen::MatrixXd basis = robot_->getWrenchBasis(contacts[i]);
       Eigen::VectorXd f = forces(Eigen::seq(index, index + basis.cols() - 1));
-      wrench = basis * f;
+      wrench = -basis * f;    // Wrench of world on end effector = -B * f_c
       index += basis.cols();
     }
     message.wrench.force.x = wrench(0);
@@ -185,8 +184,8 @@ void ForceEstimator::setParameter(
   if (param.get_name() == "joint_effort_filter_window") {
     effort_window_ = param.as_int();
   } else if (param.get_name() == "joint_effort_variance") {
-    effort_variance_ = Eigen::Map<const Eigen::VectorXd>(
-      param.as_double_array().data(), param.as_double_array().size());
+    effort_variance_ = Eigen::VectorXd::Map(
+      param.as_double_array().data(), param.as_double_array().size()).eval();
   } else if (param.get_name() == "gravity") {
     g_ = param.as_double();
   } else if (param.get_name() == "gravity_offset") {

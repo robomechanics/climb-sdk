@@ -60,6 +60,9 @@ HardwareNode::HardwareNode()
     RCLCPP_WARN(this->get_logger(), "Failed to connect to hardware interface");
     interface_ = std::make_unique<DummyInterface>();
     updateActuators();
+    for (const auto & p : interface_->getParameters()) {
+      this->declare_parameter(p.name, p.default_value, p.descriptor);
+    }
     interface_->connect();
     interface_->enable();
     RCLCPP_INFO(this->get_logger(), "Switching to dummy interface");
@@ -87,7 +90,7 @@ void HardwareNode::update()
 
 void HardwareNode::jointCmdCallback(const JointCommand::SharedPtr msg)
 {
-  RCLCPP_INFO(this->get_logger(), "Received joint command");
+  // RCLCPP_INFO(this->get_logger(), "Received joint command");
   if (!interface_->validateJointCommand(*msg)) {
     RCLCPP_WARN(this->get_logger(), "Invalid joint command");
     return;
@@ -96,7 +99,7 @@ void HardwareNode::jointCmdCallback(const JointCommand::SharedPtr msg)
   if (!success) {
     RCLCPP_WARN(this->get_logger(), "Failed to send joint command");
   } else {
-    RCLCPP_INFO(this->get_logger(), "Sent joint command");
+    // RCLCPP_INFO(this->get_logger(), "Sent joint command");
   }
 }
 

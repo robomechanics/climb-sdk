@@ -5,15 +5,8 @@
 #include "climb_main/controller/force_estimator.hpp"
 #include "climb_main/controller/force_controller.hpp"
 #include "climb_main/optimization/osqp_interface.hpp"
+#include "util/test_utils.hpp"
 
-#define EXPECT_NEAR_EIGEN(A, B, tol) \
-  ASSERT_EQ(A.rows(), B.rows()); \
-  ASSERT_EQ(A.cols(), B.cols()); \
-  EXPECT_TRUE(A.isApprox(B, tol)) << \
-    #A << " =" << std::endl << A << std::endl << \
-    #B << " =" << std::endl << B << std::endl
-
-const double PI = 3.14159265;
 const double TOL = 1e-6;
 
 class ControllerTest : public testing::Test
@@ -27,7 +20,7 @@ protected:
     std::string urdf_path = package_path + "/test/resources/test_robot.urdf";
     std::ifstream urdf_file(urdf_path);
     if (!urdf_file.is_open()) {
-      GTEST_SKIP() << "Failed to open URDF file: " << urdf_path;
+      GTEST_FAIL() << "Failed to open URDF file: " << urdf_path;
     }
     std::string urdf(
       (std::istreambuf_iterator<char>(urdf_file)),
@@ -51,7 +44,7 @@ protected:
       "left_hip", "right_hip", "left_knee", "right_knee"});
     std::string error_message;
     if (!robot_->loadRobotDescription(urdf, error_message)) {
-      GTEST_SKIP() << error_message;
+      GTEST_FAIL() << error_message;
     }
 
     // Set joint configuration
@@ -95,7 +88,8 @@ TEST_F(ControllerTest, ForceEstimator)
   for (int i = 0; i < 3; i++) {
     estimator.update();
   }
-  Eigen::VectorXd forces = estimator.update();
+  Eigen::VectorXd forces_robot_on_world = estimator.update();
+  Eigen::VectorXd forces = -forces_robot_on_world;  // forces of world on robot
   Eigen::VectorXd forces_expected(6);
   forces_expected << sqrt(2) * 10, 0, sqrt(2) * 10,
     -sqrt(2) * 10, 0, sqrt(2) * 10;
@@ -110,7 +104,8 @@ TEST_F(ControllerTest, ForceEstimator)
   imu.linear_acceleration_covariance[0] = 1;
   imu.linear_acceleration_covariance[4] = 1;
   imu.linear_acceleration_covariance[8] = 1;
-  forces = estimator.update(imu);
+  forces_robot_on_world = estimator.update(imu);
+  forces = -forces_robot_on_world;
   EXPECT_NEAR_EIGEN(forces, forces_expected, TOL) <<
     "Incorrect force estimate with IMU";
 }
@@ -120,6 +115,9 @@ TEST_F(ControllerTest, ForceController)
   // Initialize controller
   ForceController controller(robot_);
   controller.defaultParameters();
+  controller.setParameter("mass_threshold", 1000.0);
+  controller.setParameter("verbose", true);
+  controller.setParameter("joint_step", 0.01);
 
   // Set end effector commands
   EndEffectorCommand command;
@@ -128,16 +126,16 @@ TEST_F(ControllerTest, ForceController)
     EndEffectorCommand::MODE_STANCE, EndEffectorCommand::MODE_STANCE};
   controller.setEndEffectorCommand(command);
 
-  // Update controller output
-  // Eigen::VectorXd displacement = controller.update(Eigen::VectorXd::Zero(6));
-  // EXPECT_NEAR_EIGEN(displacement, Eigen::VectorXd::Zero(4), TOL);
-  // Eigen::VectorXd position = robot_->getJointPosition() + displacement;
-  // Eigen::MatrixXd G = robot_->getGraspMap();
-  // Eigen::MatrixXd J = robot_->getHandJacobian("left_contact");
-  // JointState joint_state;
-  // joint_state.name = {"left_hip", "right_hip", "left_knee", "right_knee"};
-  // joint_state.position = std::vector<double>(position.data(), position.data() + position.size());
-  // robot_->updateJointState(joint_state);
+  // Update controller output (ignore link masses)
+  Eigen::Vector<double, 6> forces{-10, 0, -10, 10, 0, -10};
+  EXPECT_TRUE(controller.update(forces));
+
+  // Check for static equilibrium (ignore link masses)
+  Eigen::MatrixXd Gs = -robot_->getGraspMap();
+  Eigen::VectorXd gravity_wrench = -Gs * forces;
+  Eigen::VectorXd contact_wrench = Gs * controller.getContactForce();
+  EXPECT_NEAR_EIGEN(contact_wrench, -gravity_wrench, TOL) <<
+    "Static equilibrium constraint violated";
 }
 
 int main(int argc, char ** argv)

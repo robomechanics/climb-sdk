@@ -5,6 +5,7 @@
 #include <Eigen/Sparse>
 
 #include "climb_main/util/parameterized.hpp"
+#include "climb_main/optimization/qp_problem.hpp"
 
 /**
  * @brief Abstract interface for a quadratic program solver
@@ -58,6 +59,16 @@ public:
   }
 
   /**
+   * @brief Solve a quadratic program
+   * @param[in] problem Quadratic program problem definition
+   * @return True if a solution was found
+   */
+  bool solve(QpProblem & problem)
+  {
+    return solve(problem.H, problem.f, problem.A, problem.lb, problem.ub);
+  }
+
+  /**
    * @brief Solve the quadratic program with updated parameters
    * @param[in] H Quadratic cost matrix (empty if unchanged)
    * @param[in] f Linear cost vector (empty if unchanged)
@@ -77,6 +88,16 @@ public:
   }
 
   /**
+   * @brief Solve the quadratic program with updated parameters
+   * @param[in] problem Quadratic program problem definition
+   * @return True if a solution was found
+   */
+  bool update(QpProblem & problem)
+  {
+    return update(problem.H, problem.f, problem.A, problem.lb, problem.ub);
+  }
+
+  /**
    * @brief Get the solution of the last solve
    * @return Solution of the last solve or empty vector if no solution
    */
@@ -93,6 +114,8 @@ public:
    * @return True if the solve function has been called
    */
   bool getInitialized() const {return initialized_;}
+
+  virtual void declareParameters() override;
 
 protected:
   Eigen::VectorXd solution_;    // Solution of the last solve

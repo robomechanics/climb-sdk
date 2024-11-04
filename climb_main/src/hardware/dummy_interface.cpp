@@ -120,3 +120,37 @@ bool DummyInterface::writeJointCommand(JointCommand command)
   }
   return true;
 }
+
+void DummyInterface::declareParameters()
+{
+  declareParameter(
+    "initial_position", std::vector<double>(),
+    "Initial joint angles in rad or m");
+  declareParameter(
+    "initial_velocity", std::vector<double>(),
+    "Initial joint velocities in rad/s or m/s");
+  declareParameter(
+    "initial_effort", std::vector<double>(),
+    "Initial joint efforts in Nm or N");
+}
+
+void DummyInterface::setParameter(
+  const Parameter & param, [[maybe_unused]] SetParametersResult & result)
+{
+  if (param.get_name() == "initial_position") {
+    std::vector<double> positions = param.as_double_array();
+    for (size_t i = 0; i < positions.size() && i < ids_.size(); i++) {
+      position_[ids_[i]] = positions[i];
+    }
+  } else if (param.get_name() == "initial_velocity") {
+    std::vector<double> velocities = param.as_double_array();
+    for (size_t i = 0; i < velocities.size() && i < ids_.size(); i++) {
+      velocity_[ids_[i]] = velocities[i];
+    }
+  } else if (param.get_name() == "initial_effort") {
+    std::vector<double> efforts = param.as_double_array();
+    for (size_t i = 0; i < efforts.size() && i < ids_.size(); i++) {
+      effort_[ids_[i]] = efforts[i];
+    }
+  }
+}

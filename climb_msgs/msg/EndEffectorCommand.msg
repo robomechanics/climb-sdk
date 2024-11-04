@@ -15,7 +15,8 @@
 # Contact modes
 uint8 MODE_FREE = 0             # Not in contact: follow commanded twist
 uint8 MODE_TRANSITION = 1       # Changing contact mode: apply commanded wrench
-uint8 MODE_STANCE = 2           # Adhered to surface: maximize stability margin
+uint8 MODE_CONTACT = 2          # Contacting surface: obey guard constraints
+uint8 MODE_STANCE = 3           # Adhered to surface: maximize stability margin
 
 std_msgs/Header header          # Header with timestamp (frame_id is not used)
 string[] frame                  # Contact frame ID

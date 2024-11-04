@@ -3,3 +3,8 @@
 QpInterface::QpInterface()
 {
 }
+
+void QpInterface::declareParameters()
+{
+  declareParameter("verbose", false, "Enable solver output");
+}

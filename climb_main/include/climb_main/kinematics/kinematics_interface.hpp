@@ -23,7 +23,7 @@ public:
   /**
    * @brief Contact type between end-effector and the environment
    */
-  enum ContactType { DEFAULT, MICROSPINE, TAIL, MAGNET_WHEEL };
+  enum ContactType { DEFAULT, MICROSPINE, TAIL, MAGNET_WHEEL, FRICTION };
 
   /**
    * @brief Mapping of contact types to wrench basis specifications
@@ -34,7 +34,8 @@ public:
     {MICROSPINE, {1, 1, 1, 0, 0, 0}},
     {TAIL, {1, 0, 0, 0, 0, 0}},
     {MAGNET_WHEEL, {1, 1, 1, 0, 0, 0}},
-    {DEFAULT, {1, 1, 1, 1, 1, 1}}
+    {DEFAULT, {1, 1, 1, 1, 1, 1}},
+    {FRICTION, {1, 1, 1, 0, 0, 0}}
   };
 
   /**
@@ -55,7 +56,7 @@ public:
    * @return True if the robot description was successfully loaded
    */
   bool loadRobotDescription(
-    std::string description, std::string & error_message);
+    const std::string & description, std::string & error_message);
 
   /**
    * @brief Get transform from parent frame to child frame
@@ -64,7 +65,7 @@ public:
    * @return Pair of position and rotation matrix of child frame in parent frame
    */
   virtual std::pair<Eigen::Vector3d, Eigen::Matrix3d> getTransform(
-    std::string parent, std::string child) = 0;
+    const std::string & parent, const std::string & child) = 0;
 
   /**
    * @brief Get transform from body frame to child frame
@@ -72,7 +73,7 @@ public:
    * @return Pair of position and rotation matrix of child frame in parent frame
    */
   virtual std::pair<Eigen::Vector3d, Eigen::Matrix3d> getTransform(
-    std::string child) {return getTransform(body_frame_, child);}
+    const std::string & child) {return getTransform(body_frame_, child);}
 
   /**
    * @brief Compute Jacobian mapping joint velocities to end effector
@@ -80,7 +81,8 @@ public:
    * @param[in] contact_frame Name of contact frame
    * @return Jacobian matrix of size cols(wrench basis) x num_joints
    */
-  virtual Eigen::MatrixXd getHandJacobian(std::string contact_frame) = 0;
+  virtual Eigen::MatrixXd getHandJacobian(
+    const std::string & contact_frame) = 0;
 
   /**
    * @brief Compute Jacobian mapping joint velocities to end effector
@@ -90,16 +92,30 @@ public:
   virtual Eigen::MatrixXd getHandJacobian();
 
   /**
-   * @brief Compute Jacobian mapping joint velocities to end effector
-   * velocity with respect to the body in the body frame at the origin of the
-   * contact frame
-   * @param[in] contact_frame Name of end effector's contact frame
+   * @brief Compute Jacobian mapping joint velocities to child frame
+   * velocity with respect to the parent frame in the parent frame at the
+   * origin of the child frame
+   * @param[in] parent Name of parent frame
+   * @param[in] child Name of child frame
    * @param[in] linear True for linear axes, false for full twist
    * @return Jacobian matrix of size 3 x num_joints or 6 x num_joints
    */
-  virtual Eigen::MatrixXd getMixedJacobian(
-    std::string contact_frame,
+  virtual Eigen::MatrixXd getJacobian(
+    const std::string & parent, const std::string & child,
     bool linear = false) = 0;
+
+  /**
+   * @brief Compute Jacobian mapping joint velocities to child frame
+   * velocity with respect to the body frame in the body frame at the
+   * origin of the child frame
+   * @param[in] child Name of child frame
+   * @param[in] linear True for linear axes, false for full twist
+   * @return Jacobian matrix of size 3 x num_joints or 6 x num_joints
+   **/
+  Eigen::MatrixXd getJacobian(const std::string & child, bool linear = false)
+  {
+    return getJacobian(body_frame_, child, linear);
+  }
 
   /**
    * @brief Compute Jacobian mapping joint velocities to end effector
@@ -109,24 +125,49 @@ public:
    * @return Mixed Jacobian matrix of size (3 * num_contacts) x num_joints or
    * (6 * num_contacts) x num_joints
    */
-  virtual Eigen::MatrixXd getMixedJacobian(bool linear = false);
+  virtual Eigen::MatrixXd getJacobian(bool linear = false);
 
   /**
    * @brief Compute skew symmetric matrix for a 3D vector
    * @param[in] vector 3D vector
    * @return Skew symmetric matrix of size 3 x 3
    */
-  Eigen::Matrix3d getSkew(const Eigen::Vector3d & vector);
+  Eigen::Matrix3d getSkew(const Eigen::Vector3d & vector) const;
 
   /**
-   * @brief Compute adjoint mapping twist in child frame to twist in base frame
-   * @param[in] position Position of child frame in base frame
-   * @param[in] rotation Rotation of child frame in base frame
+   * @brief Compute adjoint mapping twist in child frame to twist in parent
+   * frame
+   * @param[in] position Position of child frame in parent frame
+   * @param[in] rotation Rotation of child frame in parent frame
    * @return Adjoint matrix of size 6 x 6
    */
-  Eigen::Matrix<double, 6, 6> getAdjoint(
+  virtual Eigen::Matrix<double, 6, 6> getAdjoint(
     const Eigen::Vector3d & position,
     const Eigen::Matrix3d & rotation);
+
+  /**
+   * @brief Compute adjoint mapping twist in child frame to twist in parent
+   * frame
+   * @param[in] parent Name of parent frame
+   * @param[in] child Name of child frame
+   * @return Adjoint matrix of size 6 x 6
+   */
+  virtual Eigen::Matrix<double, 6, 6> getAdjoint(
+    const std::string & parent, const std::string & child)
+  {
+    auto transform = getTransform(parent, child);
+    return getAdjoint(transform.first, transform.second);
+  }
+
+  /**
+   * @brief Compute adjoint mapping twist in child frame to twist in body frame
+   * @param[in] child Name of child frame
+   * @return Adjoint matrix of size 6 x 6
+   */
+  Eigen::Matrix<double, 6, 6> getAdjoint(const std::string & child)
+  {
+    return getAdjoint(body_frame_, child);
+  }
 
   /**
    * @brief Compute grasp map mapping contact forces on the end effectors in
@@ -167,11 +208,6 @@ public:
    * @return Center of mass of the robot in the body frame
    */
   virtual Eigen::Vector3d getCenterOfMass() = 0;
-
-  /**
-   * @return Total mass of the robot (kg)
-   */
-  double getMass() const {return mass_;}
 
   /**
    * @brief Update joint states with latest data from robot
@@ -240,9 +276,22 @@ public:
   }
 
   /**
+   * @return Total mass of the robot (kg)
+   */
+  double getMass() const {return mass_;}
+
+  /**
+   * @return Mapping of link names to masses (kg)
+   */
+  std::unordered_map<std::string, double> getLinkMasses() const
+  {
+    return link_masses_;
+  }
+
+  /**
    * @return Wrench basis of the given contact frame
    */
-  Eigen::MatrixXd getWrenchBasis(std::string contact) const
+  Eigen::MatrixXd getWrenchBasis(const std::string & contact) const
   {
     auto it = wrench_bases_.find(contact);
     if (it == wrench_bases_.end()) {
@@ -257,6 +306,19 @@ public:
   std::vector<ContactType> getContactTypes() const
   {
     return contact_types_;
+  }
+
+  /**
+   * @return Contact type of the given contact frame
+   */
+  ContactType getContactType(const std::string & contact) const
+  {
+    auto it = std::find(
+      contact_frames_.begin(), contact_frames_.end(), contact);
+    if (it == contact_frames_.end()) {
+      return DEFAULT;
+    }
+    return contact_types_[it - contact_frames_.begin()];
   }
 
   /**
@@ -328,6 +390,8 @@ protected:
   std::vector<ContactType> contact_types_;
   // End effector frame names
   std::vector<std::string> end_effector_frames_;
+  // Link masses
+  std::unordered_map<std::string, double> link_masses_;
   // Wrench basis for each contact frame
   std::unordered_map<std::string, Eigen::Matrix<double, 6, Eigen::Dynamic>>
   wrench_bases_;

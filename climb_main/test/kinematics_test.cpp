@@ -2,15 +2,8 @@
 #include <fstream>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include "climb_main/kinematics/kdl_interface.hpp"
+#include "util/test_utils.hpp"
 
-#define EXPECT_NEAR_EIGEN(A, B, tol) \
-  ASSERT_EQ(A.rows(), B.rows()); \
-  ASSERT_EQ(A.cols(), B.cols()); \
-  EXPECT_TRUE(A.isApprox(B, tol)) << \
-    #A << " =" << std::endl << A << std::endl << \
-    #B << " =" << std::endl << B << std::endl
-
-const double PI = 3.14159265;
 const double TOL = 1e-6;
 
 class KinematicsTest : public testing::Test
@@ -24,7 +17,7 @@ protected:
     std::string urdf_path = package_path + "/test/resources/test_robot.urdf";
     std::ifstream urdf_file(urdf_path);
     if (!urdf_file.is_open()) {
-      GTEST_SKIP() << "Failed to open URDF file: " << urdf_path;
+      GTEST_FAIL() << "Failed to open URDF file: " << urdf_path;
     }
     std::string urdf(
       (std::istreambuf_iterator<char>(urdf_file)),
@@ -48,7 +41,7 @@ protected:
       "left_hip", "right_hip", "left_knee", "right_knee"});
     std::string error_message;
     if (!robot_->loadRobotDescription(urdf, error_message)) {
-      GTEST_SKIP() << error_message;
+      GTEST_FAIL() << error_message;
     }
 
     // Set joint configuration
@@ -86,7 +79,7 @@ TEST_F(KinematicsTest, Transform)
 
 TEST_F(KinematicsTest, MixedJacobian)
 {
-  Eigen::MatrixXd Jm = robot_->getMixedJacobian(true);
+  Eigen::MatrixXd Jm = robot_->getJacobian(true);
   Eigen::MatrixXd Jm_expected(6, 4);
   Jm_expected <<
     1, 0, 0, 0,

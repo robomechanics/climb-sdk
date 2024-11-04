@@ -1,20 +1,7 @@
 #include <gtest/gtest.h>
 #include "climb_main/optimization/osqp_interface.hpp"
 #include "climb_main/optimization/qp_problem.hpp"
-
-#define EXPECT_NEAR_EIGEN(A, B, tol) \
-  ASSERT_EQ(A.rows(), B.rows()); \
-  ASSERT_EQ(A.cols(), B.cols()); \
-  EXPECT_TRUE(A.isApprox(B, tol)) << \
-    #A << " =" << std::endl << A << std::endl << \
-    #B << " =" << std::endl << B << std::endl
-
-#define EXPECT_EQ_EIGEN(A, B) \
-  ASSERT_EQ(A.rows(), B.rows()); \
-  ASSERT_EQ(A.cols(), B.cols()); \
-  EXPECT_TRUE(A == B) << \
-    #A << " =" << std::endl << A << std::endl << \
-    #B << " =" << std::endl << B << std::endl
+#include "util/test_utils.hpp"
 
 const double TOL = 1e-3;
 
@@ -64,7 +51,7 @@ TEST(OptimizerTest, OsqpInterface)
 
 TEST(OptimizerTest, QpProblem)
 {
-  QpProblem problem({{"x", 2}, {"y", 3}, {"z", 1}});
+  QpProblem problem({{"x", "y", "z"}, {2, 3, 1}});
   problem.addQuadraticCost("y", 5, {});
   problem.addLinearCost("y", Eigen::Vector3d{1, 2, 3});
   problem.addLinearCost("y", Eigen::Vector3d{1, 2, 3});
