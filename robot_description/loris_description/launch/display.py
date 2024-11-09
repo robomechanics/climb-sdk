@@ -4,6 +4,7 @@ Simple launch file to display a robot URDF file.
 Optional Launch Arguments:
     urdf: Robot description file in urdf/ directory
     rviz: Rviz configuration file in rviz/ directory
+    xacro_args: Additional arguments for xacro (e.g. 'param:=value')
 """
 
 from launch import LaunchDescription
@@ -17,10 +18,11 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.parameter_descriptions import ParameterValue
 
-# Package definitions
+# Package name and default values
 PACKAGE = "loris_description"
-URDF = "loris.urdf.xacro"
-RVIZ = "display.rviz"
+DEFAULT_URDF = "loris.urdf.xacro"
+DEFAULT_RVIZ = "display.rviz"
+DEFAULT_XACRO_ARGS = ""
 
 # Find resource paths
 pkg = FindPackageShare(PACKAGE)
@@ -28,20 +30,27 @@ urdf_path = PathJoinSubstitution([pkg, "urdf", LaunchConfiguration("urdf")])
 rviz_path = PathJoinSubstitution([pkg, "rviz", LaunchConfiguration("rviz")])
 
 # Generate URDF from XACRO
-description = ParameterValue(Command(["xacro ", urdf_path]), value_type=str)
+description = ParameterValue(
+    Command(["xacro ", urdf_path, " ", LaunchConfiguration("xacro_args")]),
+    value_type=str)
 
 
 def generate_launch_description():
     # Declare launch arguments
     urdf_arg = DeclareLaunchArgument(
         "urdf",
-        default_value=URDF,
+        default_value=DEFAULT_URDF,
         description="Robot description file"
     )
     rviz_arg = DeclareLaunchArgument(
         "rviz",
-        default_value=RVIZ,
+        default_value=DEFAULT_RVIZ,
         description="Rviz configuration file"
+    )
+    xacro_args_arg = DeclareLaunchArgument(
+        "xacro_args",
+        default_value=DEFAULT_XACRO_ARGS,
+        description="Xacro arguments (e.g. 'param:=value')"
     )
 
     # Declare ROS nodes
@@ -70,6 +79,7 @@ def generate_launch_description():
         # Launch arguments
         urdf_arg,
         rviz_arg,
+        xacro_args_arg,
 
         # ROS nodes
         robot_state_publisher,
