@@ -11,7 +11,7 @@ Optional Launch Arguments:
 """
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.substitutions import (
     LaunchConfiguration,
     Command,
@@ -21,6 +21,7 @@ from launch.substitutions import (
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.parameter_descriptions import ParameterValue
+from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
 
 # Find launch arguments
 robot = LaunchConfiguration("robot")
@@ -39,6 +40,7 @@ global_config_path = PathJoinSubstitution([main_pkg, "config", global_config])
 robot_config_path = PathJoinSubstitution([robot_pkg, "config", robot_config])
 urdf_path = PathJoinSubstitution([robot_pkg, "urdf", urdf])
 rviz_path = PathJoinSubstitution([robot_pkg, "rviz", rviz])
+camera_launch_path = PathJoinSubstitution([main_pkg, "launch", "camera.xml"])
 
 # Generate URDF from XACRO
 description = ParameterValue(Command(["xacro ", urdf_path]), value_type=str)
@@ -115,6 +117,19 @@ def generate_launch_description():
         output="screen"
     )
 
+    # Camera setup
+    camera = IncludeLaunchDescription(
+        XMLLaunchDescriptionSource(camera_launch_path),
+        launch_arguments = {
+            'rviz': 'False'
+        }.items()
+    )
+    camera_transform = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        arguments = ['--frame-id', 'camera_link', '--child-frame-id', 'loris/camera_link']
+    )
+
     return LaunchDescription([
         # Launch arguments
         robot_arg,
@@ -128,5 +143,10 @@ def generate_launch_description():
         robot_state_publisher,
         hardware,
         controller,
-        rviz2
+        rviz2,
+
+        # Camera
+        camera,
+        camera_transform,
+        # world_transform
     ])

@@ -1,11 +1,12 @@
 Panels:
   - Class: rviz_common/Displays
-    Help Height: 78
+    Help Height: 85
     Name: Displays
     Property Tree Widget:
-      Expanded: ~
+      Expanded:
+        - /Global Options1
       Splitter Ratio: 0.5
-    Tree Height: 558
+    Tree Height: 518
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -23,7 +24,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: Map Cloud
 Visualization Manager:
   Class: ""
   Displays:
@@ -50,9 +51,37 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
+        camera_accel_frame:
+          Value: true
+        camera_accel_optical_frame:
+          Value: true
+        camera_color_frame:
+          Value: true
+        camera_color_optical_frame:
+          Value: true
+        camera_depth_frame:
+          Value: true
+        camera_depth_optical_frame:
+          Value: true
+        camera_gyro_frame:
+          Value: true
+        camera_gyro_optical_frame:
+          Value: true
+        camera_imu_frame:
+          Value: true
+        camera_imu_optical_frame:
+          Value: true
+        camera_link:
+          Value: true
         loris/body_front:
           Value: true
         loris/body_rear:
+          Value: true
+        loris/camera:
+          Value: true
+        loris/camera_link:
+          Value: true
+        loris/camera_mount:
           Value: true
         loris/gripper_1:
           Value: true
@@ -70,6 +99,8 @@ Visualization Manager:
           Value: true
         loris/lower_limb_4:
           Value: true
+        loris/mast:
+          Value: true
         loris/root:
           Value: true
         loris/shoulder_1:
@@ -81,8 +112,6 @@ Visualization Manager:
         loris/shoulder_4:
           Value: true
         loris/tail:
-          Value: true
-        loris/tail_contact:
           Value: true
         loris/tail_tip:
           Value: true
@@ -102,43 +131,70 @@ Visualization Manager:
           Value: true
         loris/wrist_4:
           Value: true
+        map:
+          Value: true
+        odom:
+          Value: true
       Marker Scale: 0.20000000298023224
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: false
       Tree:
-        loris/root:
-          loris/body_front:
-            loris/body_rear:
-              loris/shoulder_3:
-                loris/upper_limb_3:
-                  loris/lower_limb_3:
-                    loris/wrist_3:
-                      loris/gripper_3:
-                        {}
-              loris/shoulder_4:
-                loris/upper_limb_4:
-                  loris/lower_limb_4:
-                    loris/wrist_4:
-                      loris/gripper_4:
-                        {}
-              loris/tail:
-                loris/tail_tip:
-                  loris/tail_contact:
-                    {}
-            loris/shoulder_1:
-              loris/upper_limb_1:
-                loris/lower_limb_1:
-                  loris/wrist_1:
-                    loris/gripper_1:
-                      {}
-            loris/shoulder_2:
-              loris/upper_limb_2:
-                loris/lower_limb_2:
-                  loris/wrist_2:
-                    loris/gripper_2:
-                      {}
+        map:
+          {}
+        odom:
+          camera_link:
+            camera_accel_frame:
+              camera_accel_optical_frame:
+                {}
+            camera_color_frame:
+              camera_color_optical_frame:
+                {}
+            camera_depth_frame:
+              camera_depth_optical_frame:
+                {}
+            camera_gyro_frame:
+              camera_gyro_optical_frame:
+                {}
+              camera_imu_frame:
+                {}
+            camera_imu_optical_frame:
+              {}
+            loris/camera_link:
+              loris/camera:
+                loris/camera_mount:
+                  loris/mast:
+                    loris/root:
+                      loris/body_front:
+                        loris/body_rear:
+                          loris/shoulder_3:
+                            loris/upper_limb_3:
+                              loris/lower_limb_3:
+                                loris/wrist_3:
+                                  loris/gripper_3:
+                                    {}
+                          loris/shoulder_4:
+                            loris/upper_limb_4:
+                              loris/lower_limb_4:
+                                loris/wrist_4:
+                                  loris/gripper_4:
+                                    {}
+                          loris/tail:
+                            loris/tail_tip:
+                              {}
+                        loris/shoulder_1:
+                          loris/upper_limb_1:
+                            loris/lower_limb_1:
+                              loris/wrist_1:
+                                loris/gripper_1:
+                                  {}
+                        loris/shoulder_2:
+                          loris/upper_limb_2:
+                            loris/lower_limb_2:
+                              loris/wrist_2:
+                                loris/gripper_2:
+                                  {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -165,6 +221,20 @@ Visualization Manager:
           Show Trail: false
           Value: true
         body_rear:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        camera:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        camera_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        camera_mount:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -209,6 +279,11 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        mast:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         root:
           Alpha: 1
           Show Axes: false
@@ -238,10 +313,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        tail_contact:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
         tail_tip:
           Alpha: 1
           Show Axes: false
@@ -285,7 +356,7 @@ Visualization Manager:
       Mass Properties:
         Inertia: false
         Mass: false
-      Name: RobotModel
+      Name: Robot Model
       TF Prefix: loris
       Update Interval: 0
       Value: true
@@ -404,10 +475,122 @@ Visualization Manager:
       Torque Arrow Scale: 0.05000000074505806
       Torque Color: 204; 204; 51
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: Point Cloud
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.009999999776482582
+      Style: Points
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /voxel_cloud
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: Keypoints
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 3
+      Style: Points
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /rtabmap/odom_local_map
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rtabmap_rviz_plugins/MapCloud
+      Cloud decimation: 4
+      Cloud from scan: false
+      Cloud max depth (m): 4
+      Cloud min depth (m): 0
+      Cloud voxel size (m): 0.009999999776482582
+      Color: 255; 255; 255
+      Color Transformer: RGB8
+      Download graph: false
+      Download map: false
+      Download namespace: rtabmap
+      Enabled: true
+      Filter ceiling (m): 0
+      Filter floor (m): 0
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: Map Cloud
+      Node filtering angle (degrees): 30
+      Node filtering radius (m): 0
+      Position Transformer: XYZ
+      Size (Pixels): 3
+      Size (m): 0.009999999776482582
+      Style: Points
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /rtabmap/mapData
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: loris/root
+    Fixed Frame: map
     Frame Rate: 30
   Name: root
   Tools:
@@ -450,25 +633,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 2.947028160095215
+      Distance: 1.8583102226257324
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0
-        Y: 0
-        Z: 0
+        X: -0.008587714284658432
+        Y: 0.05244173854589462
+        Z: 0.11101674288511276
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3447968065738678
+      Pitch: 0.11979614943265915
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.018564224243164
+      Yaw: 2.6035616397857666
     Saved: ~
 Window Geometry:
   Displays:
@@ -476,7 +659,7 @@ Window Geometry:
   Height: 849
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd000000040000000000000156000002b7fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed0000043800000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003b000002b7000000c700fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f000002b7fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003b000002b7000000a000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000005ab0000003efc0100000002fb0000000800540069006d00650100000000000005ab0000025300fffffffb0000000800540069006d006501000000000000045000000000000000000000033a000002b700000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd000000040000000000000161000002a2fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000006e00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed0000043800000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730100000047000002a2000000f100fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f000002a2fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730100000047000002a2000000c200fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000005ab00000040fc0100000002fb0000000800540069006d00650100000000000005ab0000038100fffffffb0000000800540069006d006501000000000000045000000000000000000000032d000002a200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -487,4 +670,4 @@ Window Geometry:
     collapsed: false
   Width: 1451
   X: 140
-  Y: 20
+  Y: 34
