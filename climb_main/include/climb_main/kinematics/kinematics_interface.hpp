@@ -26,6 +26,11 @@ public:
   enum ContactType { DEFAULT, MICROSPINE, TAIL, MAGNET_WHEEL, FRICTION };
 
   /**
+   * @brief Wrist type for end-effector
+   */
+  enum WristType { FIXED, FREE, SPRING, GRAVITY };
+
+  /**
    * @brief Mapping of contact types to wrench basis specifications
    * Axes are ordered as [Fx, Fy, Fz, Tx, Ty, Tz]
    * A value of 1 indicates the axis is included in the basis
@@ -309,6 +314,14 @@ public:
   }
 
   /**
+   * @return Vector of wrist types
+   */
+  std::vector<WristType> getWristTypes() const
+  {
+    return wrist_types_;
+  }
+
+  /**
    * @return Contact type of the given contact frame
    */
   ContactType getContactType(const std::string & contact) const
@@ -316,9 +329,22 @@ public:
     auto it = std::find(
       contact_frames_.begin(), contact_frames_.end(), contact);
     if (it == contact_frames_.end()) {
-      return DEFAULT;
+      return ContactType::DEFAULT;
     }
     return contact_types_[it - contact_frames_.begin()];
+  }
+
+  /**
+   * @return Wrist type of the given contact frame
+   */
+  WristType getWristType(const std::string & contact) const
+  {
+    auto it = std::find(
+      contact_frames_.begin(), contact_frames_.end(), contact);
+    if (it == contact_frames_.end()) {
+      return WristType::FIXED;
+    }
+    return wrist_types_[it - contact_frames_.begin()];
   }
 
   /**
@@ -386,8 +412,10 @@ protected:
   std::string body_frame_;
   // Contact frame names
   std::vector<std::string> contact_frames_;
-  // End effector types
+  // End effector contact types
   std::vector<ContactType> contact_types_;
+  // End effector wrist types
+  std::vector<WristType> wrist_types_;
   // End effector frame names
   std::vector<std::string> end_effector_frames_;
   // Link masses

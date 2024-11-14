@@ -120,14 +120,14 @@ def generate_launch_description():
     # Camera setup
     camera = IncludeLaunchDescription(
         XMLLaunchDescriptionSource(camera_launch_path),
-        launch_arguments = {
+        launch_arguments={
             'rviz': 'False'
         }.items()
     )
     camera_transform = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        arguments = ['--frame-id', 'camera_link', '--child-frame-id', 'loris/camera_link']
+        arguments=['--frame-id', 'camera_link', '--child-frame-id', 'loris/camera_link']
     )
 
     return LaunchDescription([
@@ -147,6 +147,5 @@ def generate_launch_description():
 
         # Camera
         camera,
-        camera_transform,
-        # world_transform
+        camera_transform
     ])

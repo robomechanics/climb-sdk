@@ -8,8 +8,12 @@ ControllerNode::ControllerNode()
 {
   // Initialize kinematics model, estimators, and controller
   robot_ = std::make_shared<KdlInterface>();
+  contact_estimator_ = std::make_unique<ContactEstimator>(robot_);
   force_estimator_ = std::make_unique<ForceEstimator>(robot_);
   force_controller_ = std::make_unique<ForceController>(robot_);
+  Eigen::VectorXd initial_pos(14);
+  initial_pos << 0, 0, 0, 0, 0, 0, 0, 0, -0.5, -0.5, -0.5, -0.5, 0, 0;
+  force_controller_->reset(initial_pos);
 
   // Subscribe to parameter changes
   param_handle_ = this->add_on_set_parameters_callback(
@@ -21,6 +25,9 @@ ControllerNode::ControllerNode()
   this->declare_parameter("effort_limit", 0.0);
   this->declare_parameter("sim_wrench", std::vector<double>());
   for (const auto & p : robot_->getParameters()) {
+    this->declare_parameter(p.name, p.default_value, p.descriptor);
+  }
+  for (const auto & p : contact_estimator_->getParameters()) {
     this->declare_parameter(p.name, p.default_value, p.descriptor);
   }
   for (const auto & p : force_estimator_->getParameters()) {
@@ -47,6 +54,10 @@ ControllerNode::ControllerNode()
 
 void ControllerNode::update()
 {
+  // Update contact frames
+  auto frames = contact_estimator_->update(-sim_wrench_.topRows(3));
+  robot_->updateContactFrames(frames);
+
   // Estimate contact forces
   Eigen::VectorXd forces = force_estimator_->update();
 
@@ -126,8 +137,14 @@ void ControllerNode::update()
         "Force displacement: " <<
           (force_controller_->getContactForce() - forces).transpose());
     }
-  } else {
-    force_controller_->reset();
+  }
+
+  // Publish contact frames
+  for (auto & frame : frames) {
+    frame.header.stamp = this->get_clock()->now();
+    frame.header.frame_id = name_ + "/" + frame.header.frame_id;
+    frame.child_frame_id = name_ + "/" + frame.child_frame_id;
+    tf_broadcaster_->sendTransform(frame);
   }
 
   // Publish contact forces
@@ -176,7 +193,8 @@ void ControllerNode::jointCallback(const JointState::SharedPtr msg)
   update();
 }
 
-void ControllerNode::endEffectorCmdCallback(const EndEffectorCommand::SharedPtr msg)
+void ControllerNode::endEffectorCmdCallback(
+  const EndEffectorCommand::SharedPtr msg)
 {
   force_controller_->setEndEffectorCommand(*msg);
 }
@@ -205,6 +223,7 @@ rcl_interfaces::msg::SetParametersResult ControllerNode::parameterCallback(
     }
     bool initialized = robot_->isInitialized();
     robot_->setParameter(param, result);
+    contact_estimator_->setParameter(param, result);
     force_estimator_->setParameter(param, result);
     force_controller_->setParameter(param, result);
     if (!initialized && robot_->isInitialized()) {

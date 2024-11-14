@@ -12,6 +12,7 @@
 #include "climb_msgs/msg/end_effector_command.hpp"
 
 #include "climb_main/kinematics/kinematics_interface.hpp"
+#include "climb_main/controller/contact_estimator.hpp"
 #include "climb_main/controller/force_estimator.hpp"
 #include "climb_main/controller/force_controller.hpp"
 
@@ -73,6 +74,8 @@ private:
   std::string name_;
   // Kinematics interface
   std::shared_ptr<KinematicsInterface> robot_;
+  // Contact frame transform estimator
+  std::unique_ptr<ContactEstimator> contact_estimator_;
   // Contact force estimator
   std::unique_ptr<ForceEstimator> force_estimator_;
   // Contact force controller

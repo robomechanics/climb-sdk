@@ -28,7 +28,13 @@ public:
   ForceController(std::shared_ptr<KinematicsInterface> robot);
 
   /**
-   * @brief Reset the controller setpoint
+   * @brief Reset the controller setpoint to a specified joint position
+   * @param[in] position Initial joint position
+   */
+  void reset(Eigen::VectorXd position) {position_cmd_ = position;}
+
+  /**
+   * @brief Reset the controller setpoint to the current joint position
    */
   void reset() {position_cmd_ = {};}
 

@@ -20,7 +20,7 @@ find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(orocos_kdl REQUIRED)
 find_package(kdl_parser REQUIRED)
 find_package(urdf REQUIRED)
-find_package(osqp)
+find_package(osqp REQUIRED)
 
 # Utilities library
 add_library(${PROJECT_NAME}_util SHARED
@@ -44,7 +44,7 @@ target_include_directories(${PROJECT_NAME}_hardware PUBLIC
 )
 target_link_libraries(${PROJECT_NAME}_hardware ${PROJECT_NAME}_util)
 ament_target_dependencies(${PROJECT_NAME}_hardware dynamixel_sdk climb_msgs
-sensor_msgs)
+  sensor_msgs)
 
 # Kinematics library
 add_library(${PROJECT_NAME}_kinematics SHARED
@@ -58,7 +58,7 @@ target_include_directories(${PROJECT_NAME}_kinematics PUBLIC
 target_link_libraries(${PROJECT_NAME}_kinematics ${PROJECT_NAME}_util
   Eigen3::Eigen orocos-kdl)
 ament_target_dependencies(${PROJECT_NAME}_kinematics kdl_parser sensor_msgs
-geometry_msgs urdf)
+  geometry_msgs urdf)
 
 # Optimization library
 add_library(${PROJECT_NAME}_optimization SHARED
@@ -78,6 +78,7 @@ add_library(${PROJECT_NAME}_controller SHARED
   src/controller/contact_estimator.cpp
   src/controller/force_controller.cpp
   src/controller/force_estimator.cpp
+  src/controller/contact_estimator.cpp
 )
 target_include_directories(${PROJECT_NAME}_controller PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -85,7 +86,7 @@ target_include_directories(${PROJECT_NAME}_controller PUBLIC
 )
 target_link_libraries(${PROJECT_NAME}_controller ${PROJECT_NAME}_kinematics
   ${PROJECT_NAME}_optimization ${PROJECT_NAME}_util Eigen3::Eigen)
-ament_target_dependencies(${PROJECT_NAME}_controller climb_msgs)
+ament_target_dependencies(${PROJECT_NAME}_controller climb_msgs sensor_msgs)
 
 # Hardware node executable
 add_executable(hardware_node src/hardware_node.cpp)
@@ -95,7 +96,7 @@ target_link_libraries(hardware_node ${PROJECT_NAME}_hardware)
 # Controller node executable
 add_executable(controller_node src/controller_node.cpp)
 ament_target_dependencies(controller_node rclcpp std_msgs sensor_msgs
-geometry_msgs climb_msgs tf2 tf2_ros)
+  geometry_msgs climb_msgs tf2 tf2_ros)
 target_link_libraries(controller_node ${PROJECT_NAME}_controller)
 
 # Install ROS nodes

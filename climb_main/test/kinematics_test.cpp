@@ -26,19 +26,27 @@ protected:
     robot_ = std::make_unique<KdlInterface>();
 
     // Set parameters
-    robot_->setParameter("body_frame", "root");
+    rcl_interfaces::msg::SetParametersResult result;
+    result.successful = true;
+    robot_->setParameter("body_frame", "root", result);
     robot_->setParameter(
       "end_effector_frames", std::vector<std::string> {
-      "left_foot", "right_foot"});
+      "left_foot", "right_foot"}, result);
     robot_->setParameter(
       "contact_frames", std::vector<std::string> {
-      "left_contact", "right_contact"});
+      "left_contact", "right_contact"}, result);
     robot_->setParameter(
       "contact_types", std::vector<std::string> {
-      "microspine", "microspine"});
+      "microspine", "microspine"}, result);
+    robot_->setParameter(
+      "wrist_types", std::vector<std::string> {
+      "fixed", "fixed"}, result);
     robot_->setParameter(
       "joint_names", std::vector<std::string> {
-      "left_hip", "right_hip", "left_knee", "right_knee"});
+      "left_hip", "right_hip", "left_knee", "right_knee"}, result);
+    if (!result.successful) {
+      GTEST_FAIL() << "Failed to set parameters: " << result.reason;
+    }
     std::string error_message;
     if (!robot_->loadRobotDescription(urdf, error_message)) {
       GTEST_FAIL() << error_message;

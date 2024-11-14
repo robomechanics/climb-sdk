@@ -159,7 +159,7 @@ bool ForceController::update(const Eigen::VectorXd & force)
     // normal * x <= dist
     problem.addLinearConstraint(
       {"joint", "body"}, {normal * J_ob, normal * G_ob},
-      {}, VectorXd::Constant(1, obstacle.distance));
+      {}, VectorXd::Constant(1, std::max(0.0, obstacle.distance)));
   }
 
   // Solve QP
@@ -181,6 +181,7 @@ bool ForceController::update(const Eigen::VectorXd & force)
     displacment_cmd_ = VectorXd::Zero(n + p);
     margin_ = -INFINITY;
     error_ = INFINITY;
+
   }
   if (!position_cmd_.size()) {
     position_cmd_ = q;
@@ -197,8 +198,10 @@ void ForceController::setEndEffectorCommand(const EndEffectorCommand & command)
   for (size_t i = 0; i < command.frame.size(); i++) {
     std::string frame = command.frame[i];
     EndEffectorGoal goal;
-    if (i < command.frame.size()) {
+    if (i < command.mode.size()) {
       goal.mode = command.mode[i];
+    } else {
+      goal.mode = EndEffectorCommand::MODE_FREE;
     }
     switch (goal.mode) {
       case EndEffectorCommand::MODE_FREE:

@@ -39,6 +39,10 @@ bool KinematicsInterface::initialize(std::string & error_message)
     error_message = "Contact types and contact frames must have same length";
     return false;
   }
+  if (wrist_types_.size() != num_contacts_) {
+    error_message = "Wrist types and contact frames must have same length";
+    return false;
+  }
 
   // Validate parameters (they may have been set before URDF model was loaded)
   SetParametersResult result;
@@ -223,7 +227,10 @@ void KinematicsInterface::declareParameters()
     "Name of each contact frame");
   declareParameter(
     "contact_types", std::vector<std::string>(),
-    "Type of each end-effector");
+    "Type of each end-effector contact");
+  declareParameter(
+    "wrist_types", std::vector<std::string>(),
+    "Type of each end-effector wrist");
   declareParameter(
     "joint_names", std::vector<std::string>(),
     "Names of each joint in preferred order");
@@ -326,6 +333,29 @@ void KinematicsInterface::setParameter(
     // Update value and attempt to initialize if parameter has changed
     if (contact_types_ != contact_types) {
       contact_types_ = contact_types;
+      initialize(result.reason);
+    }
+  } else if (param.get_name() == "wrist_types") {
+    // Validate parameter
+    std::vector<WristType> wrist_types;
+    for (const auto & name : param.as_string_array()) {
+      if (name == "fixed") {
+        wrist_types.push_back(WristType::FIXED);
+      } else if (name == "free") {
+        wrist_types.push_back(WristType::FREE);
+      } else if (name == "gravity") {
+        wrist_types.push_back(WristType::GRAVITY);
+      } else if (name == "spring") {
+        wrist_types.push_back(WristType::SPRING);
+      } else {
+        result.successful = false;
+        result.reason = "Invalid wrist type: " + name;
+        return;
+      }
+    }
+    // Update value and attempt to initialize if parameter has changed
+    if (wrist_types_ != wrist_types) {
+      wrist_types_ = wrist_types;
       initialize(result.reason);
     }
   }

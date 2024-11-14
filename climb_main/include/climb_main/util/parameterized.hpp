@@ -45,16 +45,35 @@ public:
     const Parameter & param, SetParametersResult & result) = 0;
 
   /**
-   * @brief Update the value of a parameter and discard the result
+   * @brief Update the value of a parameter
    * @param[in] name The name of the parameter
    * @param[in] value The new value of the parameter
+   * @param[out] result Result of the update (only modified if parameter is
+   * present but value is rejected)
    * @tparam T Type of the parameter or ParameterValue
    */
   template<typename T>
-  void setParameter(const std::string & name, const T & value)
+  void setParameter(
+    const std::string & name, const T & value,
+    SetParametersResult & result)
+  {
+    setParameter(Parameter(name, value), result);
+  }
+
+  /**
+   * @brief Update the value of a parameter
+   * @param[in] name The name of the parameter
+   * @param[in] value The new value of the parameter
+   * @tparam T Type of the parameter or ParameterValue
+   * @return False if the parameter was rejected
+   */
+  template<typename T>
+  bool setParameter(const std::string & name, const T & value)
   {
     SetParametersResult result;
+    result.successful = true;
     setParameter(Parameter(name, value), result);
+    return result.successful;
   }
 
   /**
