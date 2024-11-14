@@ -55,21 +55,33 @@ To streamline development, Climb-SDK can be integrated with [Visual Studio Code]
 
 ## Usage
 
-The full control stack can be launched with:
+`climber_base.launch.py` launches the hardware stack and user interface. This enables joint-level control of the robot.
 
 ```
-ros2 launch climb_main climber.py
+ros2 launch climb_main climber_base.launch.py
 ```
 
-The robot can be launched in a Gazebo simulation with:
+`climber_control.launch.py` additionally launches the low-level control stack. This enables a climbing gait with teleoperated or blind foothold selection.
 
 ```
-ros2 launch climb_sim sim.py
+ros2 launch climb_main climber_control.launch.py
+```
+
+`climber_plan.launch.py` launches the full planning stack. This enables fully autonomous climbing using the depth camera.
+
+```
+ros2 launch climb_main climber_plan.launch.py
+```
+
+`sim.launch.py` in the `climb_sim` package launches a Gazebo simulation of the robot.
+
+```
+ros2 launch climb_sim sim.launch.py
 ```
 
 ### Serial Port Pass-Through
 
-To control the robot over USB from a Windows host computer, the serial port must be passed through to the WSL2 distribution or Docker container. This can be done using [USB/IP](https://learn.microsoft.com/en-us/windows/wsl/connect-usb).
+To directly control the robot over USB from a Windows host computer, the serial port must be passed through to the WSL2 distribution or Docker container. This can be done using [USB/IP](https://learn.microsoft.com/en-us/windows/wsl/connect-usb).
 
 Note that this procedure requires a [WSL2](https://documentation.ubuntu.com/wsl/en/latest/guides/install-ubuntu-wsl2/) distribution to be installed and running in parallel even if using a Docker container.
 

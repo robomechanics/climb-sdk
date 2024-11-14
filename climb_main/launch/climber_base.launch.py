@@ -1,5 +1,5 @@
 """
-Primary launch file to start up the robot, controller, and planners.
+Launch file to start up the robot hardware stack and user interface.
 
 Optional Launch Arguments:
     robot: Name of the robot model
@@ -11,7 +11,7 @@ Optional Launch Arguments:
 """
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument
 from launch.substitutions import (
     LaunchConfiguration,
     Command,
@@ -21,7 +21,6 @@ from launch.substitutions import (
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.parameter_descriptions import ParameterValue
-from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
 
 # Find launch arguments
 robot = LaunchConfiguration("robot")
@@ -30,6 +29,7 @@ global_config = LaunchConfiguration("global_config")
 robot_config = LaunchConfiguration("robot_config")
 urdf = LaunchConfiguration("urdf")
 rviz = LaunchConfiguration("rviz")
+xacro_args = LaunchConfiguration("xacro_args")
 
 # Find ROS packages
 main_pkg = FindPackageShare("climb_main")
@@ -40,14 +40,15 @@ global_config_path = PathJoinSubstitution([main_pkg, "config", global_config])
 robot_config_path = PathJoinSubstitution([robot_pkg, "config", robot_config])
 urdf_path = PathJoinSubstitution([robot_pkg, "urdf", urdf])
 rviz_path = PathJoinSubstitution([robot_pkg, "rviz", rviz])
-camera_launch_path = PathJoinSubstitution([main_pkg, "launch", "camera.xml"])
 
 # Generate URDF from XACRO
-description = ParameterValue(Command(["xacro ", urdf_path]), value_type=str)
+description = ParameterValue(
+    Command(["xacro ", urdf_path, " ", xacro_args]),
+    value_type=str)
 
 
 def generate_launch_description():
-    # Declare launch arguments
+    # Launch arguments
     robot_arg = DeclareLaunchArgument(
         "robot",
         default_value="loris",
@@ -78,8 +79,13 @@ def generate_launch_description():
         default_value=[robot, TextSubstitution(text=".rviz")],
         description="Rviz configuration file in {robot}_description/rviz/"
     )
+    xacro_args_arg = DeclareLaunchArgument(
+        "xacro_args",
+        default_value="wrist_joint:=fixed",
+        description="Xacro arguments of the form 'param:=value')"
+    )
 
-    # Declare ROS nodes
+    # Robot hardware stack
     robot_state_publisher = Node(
         package="robot_state_publisher",
         namespace=namespace,
@@ -90,7 +96,7 @@ def generate_launch_description():
         parameters=[{
             "robot_description": description,
             "frame_prefix": [namespace, TextSubstitution(text="/")]
-        }, global_config_path, global_config_path]
+        }, global_config_path]
     )
     hardware = Node(
         package="climb_main",
@@ -100,15 +106,8 @@ def generate_launch_description():
         output="screen",
         parameters=[global_config_path, robot_config_path]
     )
-    controller = Node(
-        package="climb_main",
-        namespace=namespace,
-        executable="controller_node",
-        name="controller",
-        output="screen",
-        parameters=[{"tf_prefix": namespace},
-                    global_config_path, robot_config_path]
-    )
+
+    # User interface
     rviz2 = Node(
         package="rviz2",
         executable="rviz2",
@@ -117,35 +116,15 @@ def generate_launch_description():
         output="screen"
     )
 
-    # Camera setup
-    camera = IncludeLaunchDescription(
-        XMLLaunchDescriptionSource(camera_launch_path),
-        launch_arguments={
-            'rviz': 'False'
-        }.items()
-    )
-    camera_transform = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        arguments=['--frame-id', 'camera_link', '--child-frame-id', 'loris/camera_link']
-    )
-
     return LaunchDescription([
-        # Launch arguments
         robot_arg,
         namespace_arg,
         global_config_arg,
         robot_config_arg,
         urdf_arg,
         rviz_arg,
-
-        # ROS nodes
+        xacro_args_arg,
         robot_state_publisher,
         hardware,
-        controller,
         rviz2,
-
-        # Camera
-        camera,
-        camera_transform
     ])

@@ -11,10 +11,12 @@ trap 'exec /bin/bash' ERR
 alias gz='ign gazebo'
 
 # Aliases for frequently used ROS2 launch files
-alias climber='ros2 launch climb_main climber.py'
-alias sim='ros2 launch climb_sim sim.py'
+alias climber_base='ros2 launch climb_main climber_base.launch.py'
+alias climber='ros2 launch climb_main climber_control.launch.py'
+alias climber_plan='ros2 launch climb_main climber_plan.launch.py'
+alias sim='ros2 launch climb_sim sim.launch.py'
 display() {
-    ros2 launch "$1_description" display.py
+    ros2 launch "$1_description" display.launch.py
 }
 
 # Shortcut to build ROS2 packages

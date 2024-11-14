@@ -18,14 +18,11 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.parameter_descriptions import ParameterValue
 
-# Package name and default values
-PACKAGE = "loris_description"
-DEFAULT_URDF = "loris.urdf.xacro"
-DEFAULT_RVIZ = "display.rviz"
-DEFAULT_XACRO_ARGS = ""
+# Name of the robot
+ROBOT = "loris"
 
 # Find resource paths
-pkg = FindPackageShare(PACKAGE)
+pkg = FindPackageShare(ROBOT + "_description")
 urdf_path = PathJoinSubstitution([pkg, "urdf", LaunchConfiguration("urdf")])
 rviz_path = PathJoinSubstitution([pkg, "rviz", LaunchConfiguration("rviz")])
 
@@ -39,17 +36,17 @@ def generate_launch_description():
     # Declare launch arguments
     urdf_arg = DeclareLaunchArgument(
         "urdf",
-        default_value=DEFAULT_URDF,
+        default_value=ROBOT + ".urdf.xacro",
         description="Robot description file"
     )
     rviz_arg = DeclareLaunchArgument(
         "rviz",
-        default_value=DEFAULT_RVIZ,
+        default_value="display.rviz",
         description="Rviz configuration file"
     )
     xacro_args_arg = DeclareLaunchArgument(
         "xacro_args",
-        default_value=DEFAULT_XACRO_ARGS,
+        default_value="",
         description="Xacro arguments (e.g. 'param:=value')"
     )
 

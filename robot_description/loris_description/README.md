@@ -10,23 +10,23 @@ For further details, please refer to the following publication:
 
 ## Usage
 
-The `loris_description` package contains a `display.py` launch file that will display the robot geometry in `rviz` with an interface for changing joint angles.
+The `loris_description` package contains a `display.launch.py` launch file that will display the robot geometry in `rviz` with an interface for changing joint angles.
 
 ```
-ros2 launch loris_description display.py
+ros2 launch loris_description display.launch.py
 ```
 
 Optional Xacro arguments can be included as follows:
 
 ```
-ros2 launch loris_description display.py xacro_args:='param1:=value1 param2:=value2'
+ros2 launch loris_description display.launch.py xacro_args:='param1:=value1 param2:=value2'
 ```
 
 The following Xacro arguments are supported:
 
 | Parameter        | Description                                                                  |
 | :--------------- | :--------------------------------------------------------------------------- |
-| floating_wrist   | Represent each wrist as 1 floating joint instead of 3 passive joints if true |
+| wrist_joint      | Represent wrist as `floating` joint, `fixed` joint, or 3 `revolute` joints   |
 | camera_height    | Camera mounting height (m from body origin to pitch axis)                    |
 | camera_pitch     | Camera mounting pitch (deg downward from horizontal)                         |
 | gripper_offset   | Gripper angle offset (deg outward from centerline)                           |

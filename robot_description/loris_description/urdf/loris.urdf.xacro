@@ -24,9 +24,9 @@
 -->
 
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="loris">
-  <!-- Represent wrist as 1 floating joint instead of 3 passive joints -->
-  <xacro:arg name="floating_wrist" default="false" />
-  <xacro:property name="floating_wrist" value="$(arg floating_wrist)" />
+  <!-- Represent wrist as floating joint, fixed joint, or 3 revolute joints -->
+  <xacro:arg name="wrist_joint" default="revolute" />
+  <xacro:property name="wrist_joint" value="$(arg wrist_joint)" />
 
   <!-- Camera mounting height (m from body origin to pitch axis) -->
   <xacro:arg name="camera_height" default="0.28" />
@@ -261,7 +261,9 @@
     </collision>
   </link>
   <joint name="camera_pitch_joint" type="fixed">
-    <origin xyz="-0.0120 0 0" rpy="0 ${-camera_pitch * deg} 0" />
+    <origin xyz="${-0.0120 * cos(camera_pitch * deg)} 0
+      ${-0.0120 * sin(camera_pitch * deg)}"
+      rpy="0 ${-camera_pitch * deg} 0" />
     <parent link="camera" />
     <child link="camera_mount" />
   </joint>
@@ -299,7 +301,7 @@
       </visual>
       <collision>
         <geometry>
-          <mesh filename="${collision}/shoulder.STL" scale="1 ${reflect} 1" />
+          <mesh filename="${collision}/shoulder.STL" />
         </geometry>
       </collision>
     </link>
@@ -327,7 +329,7 @@
       </visual>
       <collision>
         <geometry>
-          <mesh filename="${collision}/upper_limb.STL" scale="1 ${reflect} 1" />
+          <mesh filename="${collision}/upper_limb.STL" />
         </geometry>
       </collision>
     </link>
@@ -355,7 +357,7 @@
       </visual>
       <collision>
         <geometry>
-          <mesh filename="${collision}/lower_limb.STL" scale="1 ${reflect} 1" />
+          <mesh filename="${collision}/lower_limb.STL" />
         </geometry>
       </collision>
     </link>
@@ -395,13 +397,21 @@
       </visual>
       <collision>
         <geometry>
-          <mesh filename="${collision}/gripper.STL" scale="1 ${reflect} 1" />
+          <mesh filename="${collision}/gripper.STL" />
         </geometry>
       </collision>
     </link>
 
     <!-- Wrist Ball Joint (Floating Joint) -->
-    <xacro:if value="${floating_wrist}">
+    <xacro:if value="${wrist_joint == 'floating'}">
+      <joint name="gripper_joint_${id}" type="floating">
+        <parent link="wrist_${id}" />
+        <child link="gripper_${id}" />
+      </joint>
+    </xacro:if>
+
+    <!-- Wrist Ball Joint (Fixed Joint) -->
+    <xacro:if value="${wrist_joint == 'fixed'}">
       <joint name="gripper_joint_${id}" type="fixed">
         <parent link="wrist_${id}" />
         <child link="gripper_${id}" />
@@ -409,14 +419,24 @@
     </xacro:if>
 
     <!-- Wrist Ball Joint (3-Axis Joint) -->
-    <xacro:unless  value="${floating_wrist}">
-      <link name="wrist_yaw_${id}" />
+    <xacro:if value="${wrist_joint == 'revolute'}">
+      <link name="wrist_yaw_${id}">
+        <inertial>
+          <xacro:inertial mass="0.0001"
+            ixx="0.0000001" iyy="0.0000001" izz="0.0000001" />
+        </inertial>
+      </link>
       <joint name="wrist_yaw_joint_${id}" type="continuous">
         <parent link="wrist_${id}" />
         <child link="wrist_yaw_${id}" />
         <axis xyz="1 0 0" />
       </joint>
-      <link name="wrist_pitch_${id}" />
+      <link name="wrist_pitch_${id}">
+        <inertial>
+          <xacro:inertial mass="0.0001"
+            ixx="0.0000001" iyy="0.0000001" izz="0.0000001" />
+        </inertial>
+      </link>
       <joint name="wrist_pitch_joint_${id}" type="revolute">
         <parent link="wrist_yaw_${id}" />
         <child link="wrist_pitch_${id}" />
@@ -431,7 +451,7 @@
         <limit lower="${-35 * deg}" upper="${35 * deg}"
           effort="0" velocity="0"/>
       </joint>
-    </xacro:unless>
+    </xacro:if>
   </xacro:macro>
 
   <!-- Limbs -->
