@@ -1,12 +1,15 @@
 #ifndef HARDWARE_NODE_HPP
 #define HARDWARE_NODE_HPP
 
+#include <vector>
+#include <string>
+
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 
-#include "climb_msgs/msg/actuator_state.hpp"
-#include "climb_msgs/msg/joint_command.hpp"
-#include "climb_msgs/srv/actuator_command.hpp"
+#include <climb_msgs/msg/actuator_state.hpp>
+#include <climb_msgs/msg/joint_command.hpp>
+#include <climb_msgs/srv/actuator_command.hpp>
 
 #include "climb_main/hardware/hardware_interface.hpp"
 
@@ -36,6 +39,34 @@ public:
   void update();
 
 private:
+  /**
+   * @brief Send commanded values to the joint actuators
+   * @param[in] msg Message containing joint commands
+   */
+  void jointCmdCallback(const JointCommand::SharedPtr msg);
+
+  /**
+   * @brief Send commands to the actuators
+   * @param[in] request Request containing actuator commands
+   * @param[out] response Response containing command results
+   */
+  void actuatorCmdCallback(
+    const ActuatorCommand::Request::SharedPtr request,
+    ActuatorCommand::Response::SharedPtr response);
+
+  /**
+   * @brief Update modified parameters
+   * @param[in] parameters Modified parameter values
+   * @return Result of the parameter update
+   */
+  rcl_interfaces::msg::SetParametersResult parameterCallback(
+    const std::vector<rclcpp::Parameter> & parameters);
+
+  /**
+   * @brief Update actuators in the hardware interface
+   */
+  void updateActuators();
+
   // Hardware interface
   std::unique_ptr<HardwareInterface> interface_;
   // Joint state publisher
@@ -64,34 +95,6 @@ private:
   rclcpp::Time last_joint_update_;
   // Time of last actuator state update
   rclcpp::Time last_actuator_update_;
-
-  /**
-   * @brief Send commanded values to the joint actuators
-   * @param[in] msg Message containing joint commands
-   */
-  void jointCmdCallback(const JointCommand::SharedPtr msg);
-
-  /**
-   * @brief Send commands to the actuators
-   * @param[in] request Request containing actuator commands
-   * @param[out] response Response containing command results
-   */
-  void actuatorCmdCallback(
-    const ActuatorCommand::Request::SharedPtr request,
-    ActuatorCommand::Response::SharedPtr response);
-
-  /**
-   * @brief Update modified parameters
-   * @param[in] parameters Modified parameter values
-   * @return Result of the parameter update
-   */
-  rcl_interfaces::msg::SetParametersResult parameterCallback(
-    const std::vector<rclcpp::Parameter> & parameters);
-
-  /**
-   * @brief Update actuators in the hardware interface
-   */
-  void updateActuators();
 };
 
 #endif  // HARDWARE_NODE_HPP

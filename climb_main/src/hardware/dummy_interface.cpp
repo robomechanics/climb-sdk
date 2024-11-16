@@ -99,16 +99,24 @@ JointState DummyInterface::readJointState()
 
 bool DummyInterface::writeJointCommand(JointCommand command)
 {
-  if (!isConnected() || !validateJointCommand(command)) {
+  if (!isConnected()) {
     return false;
   }
   for (size_t j = 0; j < command.name.size(); j++) {
+    size_t num_actuators = getId(command.name[j]).size();
     for (int id : getId(command.name[j])) {
-      if (command.mode[j] == JointCommand::MODE_POSITION) {
-        position_[id] = command.position[j];
-        velocity_[id] = command.velocity.size() ? command.velocity[j] : 0;
-        effort_[id] = (command.effort.size() ? command.effort[j] : 0) /
-          getId(command.name[j]).size();
+      if (j >= command.mode.size() ||
+        command.mode[j] == JointCommand::MODE_POSITION)
+      {
+        if (j < command.position.size()) {
+          position_[id] = command.position[j];
+        }
+        if (j < command.velocity.size()) {
+          velocity_[id] = command.velocity[j];
+        }
+        if (j < command.effort.size()) {
+          effort_[id] = command.effort[j] / num_actuators;
+        }
       } else if (command.mode[j] == JointCommand::MODE_VELOCITY) {
         velocity_[id] = command.velocity[j];
         effort_[id] = (command.effort.size() ? command.effort[j] : 0) /

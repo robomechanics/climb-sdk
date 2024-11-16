@@ -9,10 +9,10 @@
 # Torque mode:
 #   Apply commanded effort (ignore position/velocity)
 #
+# Mode array may be left empty to indicate that all joints are in position mode.
+# Position, velocity, or effort arrays may be left empty to indicate no change.
 # Max velocity/effort is a limit on the absolute value of velocity/effort.
 # Zero values for max velocity/effort indicates no limit.
-# Vectors may be left empty if all elements are ignored.
-# Empty limit vectors are treated as all zeros (i.e. no limit).
 
 uint8 MODE_POSITION = 0     # Position mode
 uint8 MODE_VELOCITY = 1     # Velocity mode

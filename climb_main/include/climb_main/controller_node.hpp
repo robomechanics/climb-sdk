@@ -4,14 +4,13 @@
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 
-#include <std_msgs/msg/string.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
 #include "climb_msgs/msg/joint_command.hpp"
 #include "climb_msgs/msg/end_effector_state.hpp"
 #include "climb_msgs/msg/end_effector_command.hpp"
 
-#include "climb_main/kinematics/kinematics_interface.hpp"
+#include "climb_main/kinematics/kinematics_node.hpp"
 #include "climb_main/controller/contact_estimator.hpp"
 #include "climb_main/controller/force_estimator.hpp"
 #include "climb_main/controller/force_controller.hpp"
@@ -30,7 +29,7 @@ using climb_msgs::msg::EndEffectorCommand;
  * Publishers: joint_states, contact_forces, tf contact frames
  * Parameters: tf_prefix
  */
-class ControllerNode : public rclcpp::Node
+class ControllerNode : public KinematicsNode
 {
 public:
   /**
@@ -45,16 +44,10 @@ public:
 
 private:
   /**
-   * @brief Update the kinematics model with the provided robot description
-   * @param[in] msg Message containing robot description
-   */
-  void descriptionCallback(const String::SharedPtr msg);
-
-  /**
    * @brief Update joint state with the latest data
    * @param[in] msg Message containing joint state
    */
-  void jointCallback(const JointState::SharedPtr msg);
+  void jointCallback(const JointState::SharedPtr msg) override;
 
   /**
    * @brief Update controller with the latest end effector command
@@ -68,12 +61,10 @@ private:
    * @return Result of the parameter update
    */
   rcl_interfaces::msg::SetParametersResult parameterCallback(
-    const std::vector<rclcpp::Parameter> & parameters);
+    const std::vector<rclcpp::Parameter> & parameters) override;
 
   // TF prefix
   std::string name_;
-  // Kinematics interface
-  std::shared_ptr<KinematicsInterface> robot_;
   // Contact frame transform estimator
   std::unique_ptr<ContactEstimator> contact_estimator_;
   // Contact force estimator
@@ -84,10 +75,6 @@ private:
   rclcpp::Publisher<JointCommand>::SharedPtr joint_cmd_pub_;
   // Contact force publisher
   std::vector<rclcpp::Publisher<WrenchStamped>::SharedPtr> contact_force_pubs_;
-  // Robot description subscriber
-  rclcpp::Subscription<String>::SharedPtr description_sub_;
-  // Joint state subscriber
-  rclcpp::Subscription<JointState>::SharedPtr joint_sub_;
   // Contact command subscriber
   rclcpp::Subscription<EndEffectorCommand>::SharedPtr ee_cmd_sub_;
   // TF broadcaster

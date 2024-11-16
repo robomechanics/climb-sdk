@@ -115,6 +115,22 @@ def generate_launch_description():
         arguments=["-d", rviz_path, "--ros-args", "--log-level", "error"],
         output="screen"
     )
+    teleop = Node(
+        package="climb_main",
+        namespace=namespace,
+        executable="teleop_node",
+        name="teleop",
+        output="screen",
+        parameters=[global_config_path, robot_config_path],
+        remappings=[('/loris/key_input', '/key_input')]
+    )
+    key_input = Node(
+        package="climb_main",
+        executable="key_input_node",
+        name="key_input",
+        output="screen",
+        prefix="xterm -T 'Climb-SDK' -fa 'Monospace' -fs 14 -e"
+    )
 
     return LaunchDescription([
         robot_arg,
@@ -127,4 +143,6 @@ def generate_launch_description():
         robot_state_publisher,
         hardware,
         rviz2,
+        teleop,
+        key_input
     ])

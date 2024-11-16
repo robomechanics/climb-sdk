@@ -426,64 +426,61 @@ JointState DynamixelInterface::readJointState()
 
 bool DynamixelInterface::writeJointCommand(JointCommand command)
 {
-  // Validate joint command
-  if (!validateJointCommand(command)) {
-    return false;
-  }
-
-  // Group actuators by operating mode
-  std::vector<int> ids_pos, ids_vel, ids_eff;
-  std::vector<double> p_pos;
-  std::vector<double> v_pos, v_vel;
-  std::vector<double> e_pos, e_vel, e_eff;
+  // Group actuators by mode for sync write
+  std::vector<int> pos, vel, vel_max, eff, eff_max;
+  std::vector<double> ids_pos, ids_vel, ids_vel_max, ids_eff, ids_eff_max;
   for (size_t j = 0; j < command.name.size(); j++) {
-    if (command.mode[j] == JointCommand::MODE_POSITION ||
-      command.mode.size() == 0)
-    {
-      for (int id : getId(command.name[j])) {
-        ids_pos.push_back(id);
-        p_pos.push_back(command.position[j]);
-        v_pos.push_back(command.velocity.size() ? command.velocity[j] : 0);
-        e_pos.push_back(
-          command.effort.size() ?
-          command.effort[j] / getId(command.name[j]).size() : 0);
-      }
-    } else if (command.mode[j] == JointCommand::MODE_VELOCITY) {
-      for (int id : getId(command.name[j])) {
-        ids_vel.push_back(id);
-        v_vel.push_back(command.velocity[j]);
-        e_vel.push_back(
-          command.effort.size() ?
-          command.effort[j] / getId(command.name[j]).size() : 0);
-      }
-    } else if (command.mode[j] == JointCommand::MODE_EFFORT) {
-      for (int id : getId(command.name[j])) {
-        ids_eff.push_back(id);
-        e_eff.push_back(
-          command.effort[j] / getId(command.name[j]).size());
+    size_t num_actuators = getId(command.name[j]).size();
+    for (int id : getId(command.name[j])) {
+      if (j >= command.mode.size() ||
+        command.mode[j] == JointCommand::MODE_POSITION)
+      {
+        if (j < command.position.size()) {
+          pos.push_back(id);
+          ids_pos.push_back(command.position[j]);
+        }
+        if (j < command.velocity.size()) {
+          vel_max.push_back(id);
+          ids_vel_max.push_back(command.velocity[j]);
+        }
+        if (j < command.effort.size()) {
+          eff_max.push_back(id);
+          ids_eff_max.push_back(command.effort[j] / num_actuators);
+        }
+      } else if (command.mode[j] == JointCommand::MODE_VELOCITY) {
+        if (j < command.velocity.size()) {
+          vel.push_back(id);
+          ids_vel.push_back(command.velocity[j]);
+        }
+        if (j < command.effort.size()) {
+          eff_max.push_back(id);
+          ids_eff_max.push_back(command.effort[j] / num_actuators);
+        }
+      } else if (command.mode[j] == JointCommand::MODE_EFFORT) {
+        if (j < command.effort.size()) {
+          eff.push_back(id);
+          ids_eff.push_back(command.effort[j] / num_actuators);
+        }
       }
     }
   }
 
+  // Write commands
   bool success = true;
-
-  // Write to actuators in position mode
   if (ids_pos.size()) {
-    success = success && writePosition(ids_pos, p_pos);
-    success = success && writeVelocity(ids_pos, v_pos, true);
-    success = success && writeEffort(ids_pos, e_pos, true);
+    success = success && writePosition(pos, ids_pos);
   }
-
-  // Write to actuators in velocity mode
   if (ids_vel.size()) {
-    success = success && writeVelocity(ids_vel, v_vel);
-    success = success && writeEffort(ids_vel, e_vel, true);
+    success = success && writeVelocity(vel, ids_vel);
   }
-
-  // Write to actuators in effort mode
+  if (ids_vel_max.size()) {
+    success = success && writeVelocity(vel_max, ids_vel_max, true);
+  }
   if (ids_eff.size()) {
-    success = success && writeEffort(ids_eff, e_eff);
+    success = success && writeEffort(eff, ids_eff);
   }
-
+  if (ids_eff_max.size()) {
+    success = success && writeEffort(eff_max, ids_eff_max, true);
+  }
   return success;
 }

@@ -211,13 +211,6 @@ public:
    */
   virtual bool writeJointCommand(JointCommand command) = 0;
 
-  /**
-   * @brief Ensure a joint command is valid
-   * @param command Joint command to validate
-   * @return True if command is valid
-   */
-  bool validateJointCommand(const JointCommand & command);
-
 protected:
   // Actuator IDs
   std::vector<int> ids_;

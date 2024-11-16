@@ -75,38 +75,6 @@ TEST_F(HardwareTest, DummyReadWrite)
   EXPECT_EQ(joint_state.effort, std::vector<double>({3.0, 4.0}));
 }
 
-TEST_F(HardwareTest, CommandValidation)
-{
-  JointCommand command;
-  EXPECT_EQ(dxl_->validateJointCommand(command), false)
-    << "Empty command is invalid";
-  command.name = {"j1", "j2"};
-  command.mode = {JointCommand::MODE_POSITION, JointCommand::MODE_POSITION};
-  command.position = {1.0, 2.0};
-  EXPECT_EQ(dxl_->validateJointCommand(command), false)
-    << "Joints must exist";
-  command.name = {"j2", "j3"};
-  EXPECT_EQ(dxl_->validateJointCommand(command), true)
-    << "Velocity/effort limits are optional in position mode";
-  command.mode = {JointCommand::MODE_VELOCITY, JointCommand::MODE_VELOCITY};
-  EXPECT_EQ(dxl_->validateJointCommand(command), false)
-    << "Velocity limits are required in velocity mode";
-  command.velocity = {1.0, 2.0};
-  command.position = {};
-  EXPECT_EQ(dxl_->validateJointCommand(command), true)
-    << "Position is optional in velocity mode";
-  command.mode = {JointCommand::MODE_EFFORT, JointCommand::MODE_POSITION};
-  command.effort = {1.0, 2.0};
-  EXPECT_EQ(dxl_->validateJointCommand(command), false)
-    << "Position is required in position mode";
-  command.position = {1.0, 2.0};
-  EXPECT_EQ(dxl_->validateJointCommand(command), true)
-    << "Velocity is optional in effort mode";
-  command.effort = {1.0};
-  EXPECT_EQ(dxl_->validateJointCommand(command), false)
-    << "Lengths must match";
-}
-
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);

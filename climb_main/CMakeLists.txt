@@ -21,6 +21,7 @@ find_package(orocos_kdl REQUIRED)
 find_package(kdl_parser REQUIRED)
 find_package(urdf REQUIRED)
 find_package(osqp REQUIRED)
+find_package(keyboard_handler REQUIRED)
 
 # Utilities library
 add_library(${PROJECT_NAME}_util SHARED
@@ -50,6 +51,7 @@ ament_target_dependencies(${PROJECT_NAME}_hardware dynamixel_sdk climb_msgs
 add_library(${PROJECT_NAME}_kinematics SHARED
   src/kinematics/kinematics_interface.cpp
   src/kinematics/kdl_interface.cpp
+  src/kinematics/kinematics_node.cpp
 )
 target_include_directories(${PROJECT_NAME}_kinematics PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -88,6 +90,15 @@ target_link_libraries(${PROJECT_NAME}_controller ${PROJECT_NAME}_kinematics
   ${PROJECT_NAME}_optimization ${PROJECT_NAME}_util Eigen3::Eigen)
 ament_target_dependencies(${PROJECT_NAME}_controller climb_msgs sensor_msgs)
 
+# Teleop library
+add_library(${PROJECT_NAME}_teleop SHARED
+  src/teleop/key_input_parser.cpp
+)
+target_include_directories(${PROJECT_NAME}_teleop PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
 # Hardware node executable
 add_executable(hardware_node src/hardware_node.cpp)
 ament_target_dependencies(hardware_node rclcpp sensor_msgs climb_msgs)
@@ -99,10 +110,30 @@ ament_target_dependencies(controller_node rclcpp std_msgs sensor_msgs
   geometry_msgs climb_msgs tf2 tf2_ros)
 target_link_libraries(controller_node ${PROJECT_NAME}_controller)
 
+# Teleop node executable
+add_executable(teleop_node src/teleop_node.cpp)
+ament_target_dependencies(teleop_node rclcpp sensor_msgs climb_msgs)
+target_include_directories(teleop_node PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(teleop_node ${PROJECT_NAME}_kinematics
+  ${PROJECT_NAME}_teleop)
+
+# Key input node executable
+add_executable(key_input_node src/key_input_node.cpp)
+ament_target_dependencies(key_input_node rclcpp climb_msgs keyboard_handler)
+target_include_directories(key_input_node PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
 # Install ROS nodes
 install(TARGETS
   hardware_node
   controller_node
+  teleop_node
+  key_input_node
   DESTINATION lib/${PROJECT_NAME})
 
 # Add tests and test dependencies

@@ -90,16 +90,9 @@ void HardwareNode::update()
 
 void HardwareNode::jointCmdCallback(const JointCommand::SharedPtr msg)
 {
-  // RCLCPP_INFO(this->get_logger(), "Received joint command");
-  if (!interface_->validateJointCommand(*msg)) {
-    RCLCPP_WARN(this->get_logger(), "Invalid joint command");
-    return;
-  }
   bool success = interface_->writeJointCommand(*msg);
   if (!success) {
     RCLCPP_WARN(this->get_logger(), "Failed to send joint command");
-  } else {
-    // RCLCPP_INFO(this->get_logger(), "Sent joint command");
   }
 }
 

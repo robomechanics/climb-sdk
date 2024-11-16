@@ -19,6 +19,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/JointCommand.msg"
   "msg/EndEffectorCommand.msg"
   "srv/ActuatorCommand.srv"
+  "srv/KeyInput.srv"
   DEPENDENCIES std_msgs geometry_msgs
 )
 
