@@ -216,6 +216,28 @@ void KinematicsInterface::updateJointState(const JointState & state)
   }
 }
 
+void KinematicsInterface::clampJointCommand(JointCommand & command)
+{
+  for (size_t i = 0; i < command.name.size(); i++) {
+    auto j = std::find(joint_names_.begin(), joint_names_.end(), command.name[i]);
+    if (j != joint_names_.end()) {
+      const size_t index = std::distance(joint_names_.begin(), j);
+      if (command.position.size() > i) {
+        command.position[i] = std::max(
+          joint_pos_min_[index], std::min(joint_pos_max_[index], command.position[i]));
+      }
+      if (command.velocity.size() > i) {
+        command.velocity[i] = std::max(
+          joint_vel_min_[index], std::min(joint_vel_max_[index], command.velocity[i]));
+      }
+      if (command.effort.size() > i) {
+        command.effort[i] = std::max(
+          joint_eff_min_[index], std::min(joint_eff_max_[index], command.effort[i]));
+      }
+    }
+  }
+}
+
 void KinematicsInterface::declareParameters()
 {
   declareParameter("body_frame", "base_link", "Name of the body frame");

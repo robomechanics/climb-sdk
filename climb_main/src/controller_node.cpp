@@ -99,6 +99,7 @@ void ControllerNode::update()
     }
 
     // Publish joint command
+    robot_->clampJointCommand(cmd_msg);
     joint_cmd_pub_->publish(cmd_msg);
 
     // Log controller results

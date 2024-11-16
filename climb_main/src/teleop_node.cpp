@@ -93,6 +93,7 @@ void TeleopNode::setJoint(
       return;
     }
   }
+  robot_->clampJointCommand(command);
   joint_cmd_pub_->publish(command);
 }
 

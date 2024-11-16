@@ -8,10 +8,12 @@
 #include <urdf/model.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
+#include <climb_msgs/msg/joint_command.hpp>
 
 #include "climb_main/util/parameterized.hpp"
 
 using sensor_msgs::msg::JointState;
+using climb_msgs::msg::JointCommand;
 using geometry_msgs::msg::TransformStamped;
 
 /**
@@ -226,6 +228,12 @@ public:
    */
   virtual void updateContactFrames(
     const std::vector<TransformStamped> & transforms) = 0;
+
+  /**
+   * @brief Apply joint limits to a joint command message
+   * @param[in, out] command Joint command
+   */
+  void clampJointCommand(JointCommand & command);
 
   void declareParameters() override;
 

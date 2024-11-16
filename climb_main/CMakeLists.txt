@@ -60,7 +60,7 @@ target_include_directories(${PROJECT_NAME}_kinematics PUBLIC
 target_link_libraries(${PROJECT_NAME}_kinematics ${PROJECT_NAME}_util
   Eigen3::Eigen orocos-kdl)
 ament_target_dependencies(${PROJECT_NAME}_kinematics kdl_parser sensor_msgs
-  geometry_msgs urdf)
+  geometry_msgs climb_msgs urdf)
 
 # Optimization library
 add_library(${PROJECT_NAME}_optimization SHARED
