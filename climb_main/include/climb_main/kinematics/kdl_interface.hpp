@@ -35,7 +35,7 @@ public:
     const std::string & parent, const std::string & child,
     bool linear) override;
   Eigen::MatrixXd getJacobian(bool linear) override;
-  Eigen::MatrixXd getGraspMap() override;
+  Eigen::Matrix<double, 6, Eigen::Dynamic> getGraspMap() override;
 
   Eigen::MatrixXd getMassMatrix() override;
   Eigen::VectorXd getCoriolisVector() override;
@@ -81,6 +81,7 @@ private:
    * @param parent Name of parent frame
    * @param child Name of child frame
    * @return Chain from parent to child frame
+   * @throws std::invalid_argument if chain cannot be found
    */
   Chain getChain(const std::string & parent, const std::string & child);
 

@@ -246,7 +246,7 @@ KeyInputParser::Response KeyInputParser::processKeyInput(
     return Response{response, false};
   }
   if (realtime) {
-    return this->input(tokens.front().front());
+    return this->input(input.front());
   }
   return execute(tokens);
 }

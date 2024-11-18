@@ -75,6 +75,7 @@ public:
    * axial (along preferred gripper loading direction)
    * @param[in] frame Name of the end-effector frame
    * @return Adhesion constraint for the end-effector's contact force
+   * @throws std::invalid_argument if the contact type is not supported
    */
   Constraint getAdhesionConstraint(const std::string & frame) const;
 

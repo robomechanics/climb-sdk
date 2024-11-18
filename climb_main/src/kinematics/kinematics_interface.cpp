@@ -184,7 +184,7 @@ Eigen::MatrixXd KinematicsInterface::getHandJacobian()
   return jac;
 }
 
-Eigen::MatrixXd KinematicsInterface::getGraspMap()
+Eigen::Matrix<double, 6, Eigen::Dynamic> KinematicsInterface::getGraspMap()
 {
   Eigen::MatrixXd grasp(6, num_constraints_);
   int col = 0;
@@ -200,40 +200,55 @@ Eigen::MatrixXd KinematicsInterface::getGraspMap()
 void KinematicsInterface::updateJointState(const JointState & state)
 {
   for (size_t i = 0; i < state.name.size(); i++) {
-    auto j = std::find(joint_names_.begin(), joint_names_.end(), state.name[i]);
-    if (j != joint_names_.end()) {
-      const size_t index = std::distance(joint_names_.begin(), j);
-      if (state.position.size() > i) {
-        joint_pos_[index] = state.position[i];
-      }
-      if (state.velocity.size() > i) {
-        joint_vel_[index] = state.velocity[i];
-      }
-      if (state.effort.size() > i) {
-        joint_eff_[index] = state.effort[i];
-      }
+    auto j = getJointIndex(state.name[i]);
+    if (j == -1) {
+      continue;
+    }
+    if (state.position.size() > i) {
+      joint_pos_[j] = state.position[i];
+    }
+    if (state.velocity.size() > i) {
+      joint_vel_[j] = state.velocity[i];
+    }
+    if (state.effort.size() > i) {
+      joint_eff_[j] = state.effort[i];
     }
   }
 }
 
-void KinematicsInterface::clampJointCommand(JointCommand & command)
+int KinematicsInterface::getContactIndex(const std::string & contact) const
+{
+  auto c = std::find(contact_frames_.begin(), contact_frames_.end(), contact);
+  if (c == contact_frames_.end()) {
+    throw std::invalid_argument("Contact frame " + contact + " not found");
+  }
+  return std::distance(contact_frames_.begin(), c);
+}
+
+int KinematicsInterface::getJointIndex(const std::string & joint) const
+{
+  auto j = std::find(joint_names_.begin(), joint_names_.end(), joint);
+  if (j == joint_names_.end()) {
+    throw std::invalid_argument("Joint " + joint + " not found");
+  }
+  return std::distance(joint_names_.begin(), j);
+}
+
+void KinematicsInterface::clampJointCommand(JointCommand & command) const
 {
   for (size_t i = 0; i < command.name.size(); i++) {
-    auto j = std::find(joint_names_.begin(), joint_names_.end(), command.name[i]);
-    if (j != joint_names_.end()) {
-      const size_t index = std::distance(joint_names_.begin(), j);
-      if (command.position.size() > i) {
-        command.position[i] = std::max(
-          joint_pos_min_[index], std::min(joint_pos_max_[index], command.position[i]));
-      }
-      if (command.velocity.size() > i) {
-        command.velocity[i] = std::max(
-          joint_vel_min_[index], std::min(joint_vel_max_[index], command.velocity[i]));
-      }
-      if (command.effort.size() > i) {
-        command.effort[i] = std::max(
-          joint_eff_min_[index], std::min(joint_eff_max_[index], command.effort[i]));
-      }
+    auto j = getJointIndex(command.name[i]);
+    if (command.position.size() > i) {
+      command.position[i] = std::max(
+        joint_pos_min_[j], std::min(joint_pos_max_[j], command.position[i]));
+    }
+    if (command.velocity.size() > i) {
+      command.velocity[i] = std::max(
+        joint_vel_min_[j], std::min(joint_vel_max_[j], command.velocity[i]));
+    }
+    if (command.effort.size() > i) {
+      command.effort[i] = std::max(
+        joint_eff_min_[j], std::min(joint_eff_max_[j], command.effort[i]));
     }
   }
 }

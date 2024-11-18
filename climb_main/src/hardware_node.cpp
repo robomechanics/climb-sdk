@@ -40,8 +40,8 @@ HardwareNode::HardwareNode()
   joint_cmd_sub_ = this->create_subscription<JointCommand>(
     "joint_commands", 1,
     std::bind(&HardwareNode::jointCmdCallback, this, _1));
-  actuator_cmd_srv_ = this->create_service<ActuatorCommand>(
-    "actuator_command",
+  actuator_cmd_srv_ = this->create_service<ActuatorEnable>(
+    "actuator_enable",
     std::bind(&HardwareNode::actuatorCmdCallback, this, _1, _2));
 
   // Attempt connection to robot
@@ -97,8 +97,8 @@ void HardwareNode::jointCmdCallback(const JointCommand::SharedPtr msg)
 }
 
 void HardwareNode::actuatorCmdCallback(
-  const ActuatorCommand::Request::SharedPtr request,
-  ActuatorCommand::Response::SharedPtr response)
+  const ActuatorEnable::Request::SharedPtr request,
+  ActuatorEnable::Response::SharedPtr response)
 {
   std::vector<int> ids;
   if (request->id.empty()) {

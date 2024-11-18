@@ -308,7 +308,7 @@ ForceController::Constraint ForceController::getAdhesionConstraint(const std::st
       constraint.b.resize(0);
       break;
     default:
-      throw std::runtime_error("Unsupported contact type");
+      throw std::invalid_argument("Unsupported contact type");
   }
   return constraint;
 }

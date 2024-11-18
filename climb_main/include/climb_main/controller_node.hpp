@@ -7,7 +7,7 @@
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
 #include "climb_msgs/msg/joint_command.hpp"
-#include "climb_msgs/msg/end_effector_state.hpp"
+#include "climb_msgs/msg/contact_state.hpp"
 #include "climb_msgs/msg/end_effector_command.hpp"
 
 #include "climb_main/kinematics/kinematics_node.hpp"
@@ -19,15 +19,14 @@ using std_msgs::msg::String;
 using geometry_msgs::msg::WrenchStamped;
 using sensor_msgs::msg::JointState;
 using climb_msgs::msg::JointCommand;
-using climb_msgs::msg::EndEffectorState;
+using climb_msgs::msg::ContactState;
 using climb_msgs::msg::EndEffectorCommand;
 
 /**
  * @brief ROS node that determines optimal joint commands to maximize adhesion
  *
- * Subscribers: joint_commands, joint_states, robot_description
- * Publishers: joint_states, contact_forces, tf contact frames
- * Parameters: tf_prefix
+ * Subscribers: end_effector_commands, joint_states, robot_description
+ * Publishers: joint_commands, contact_states, contact_forces, tf contact frames
  */
 class ControllerNode : public KinematicsNode
 {

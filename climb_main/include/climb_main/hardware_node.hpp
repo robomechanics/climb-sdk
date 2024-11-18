@@ -9,21 +9,21 @@
 
 #include <climb_msgs/msg/actuator_state.hpp>
 #include <climb_msgs/msg/joint_command.hpp>
-#include <climb_msgs/srv/actuator_command.hpp>
+#include <climb_msgs/srv/actuator_enable.hpp>
 
 #include "climb_main/hardware/hardware_interface.hpp"
 
 using sensor_msgs::msg::JointState;
 using climb_msgs::msg::JointCommand;
 using climb_msgs::msg::ActuatorState;
-using climb_msgs::srv::ActuatorCommand;
+using climb_msgs::srv::ActuatorEnable;
 
 /**
  * @brief ROS node that interfaces with the robot's physical actuators
  *
  * Subscribers: joint_commands
  * Publishers: joint_states, actuator_states
- * Services: actuator_command
+ * Services: actuator_enable
  */
 class HardwareNode : public rclcpp::Node
 {
@@ -51,8 +51,8 @@ private:
    * @param[out] response Response containing command results
    */
   void actuatorCmdCallback(
-    const ActuatorCommand::Request::SharedPtr request,
-    ActuatorCommand::Response::SharedPtr response);
+    const ActuatorEnable::Request::SharedPtr request,
+    ActuatorEnable::Response::SharedPtr response);
 
   /**
    * @brief Update modified parameters
@@ -76,7 +76,7 @@ private:
   // Joint command subscriber
   rclcpp::Subscription<JointCommand>::SharedPtr joint_cmd_sub_;
   // Actuator command service (enable/disable)
-  rclcpp::Service<ActuatorCommand>::SharedPtr actuator_cmd_srv_;
+  rclcpp::Service<ActuatorEnable>::SharedPtr actuator_cmd_srv_;
   // Parameter callback handle
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
     param_handle_;

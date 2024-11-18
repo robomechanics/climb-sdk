@@ -9,6 +9,11 @@
 
 using climb_msgs::srv::KeyInput;
 
+/**
+ * @brief ROS node that parses keyboard input and displays the response
+ *
+ * Clients: key_input
+ */
 class KeyInputNode : public rclcpp::Node
 {
 public:

@@ -149,8 +149,7 @@ public:
    * @return Adjoint matrix of size 6 x 6
    */
   virtual Eigen::Matrix<double, 6, 6> getAdjoint(
-    const Eigen::Vector3d & position,
-    const Eigen::Matrix3d & rotation);
+    const Eigen::Vector3d & position, const Eigen::Matrix3d & rotation);
 
   /**
    * @brief Compute adjoint mapping twist in child frame to twist in parent
@@ -181,7 +180,7 @@ public:
    * the contact wrench basis to wrench on the body
    * @return Grasp map matrix of size 6 x num_constraints
    */
-  virtual Eigen::MatrixXd getGraspMap() = 0;
+  virtual Eigen::Matrix<double, 6, Eigen::Dynamic> getGraspMap() = 0;
 
   /**
    * @brief Compute mass matrix in joint space of the robot
@@ -233,7 +232,7 @@ public:
    * @brief Apply joint limits to a joint command message
    * @param[in, out] command Joint command
    */
-  void clampJointCommand(JointCommand & command);
+  void clampJointCommand(JointCommand & command) const;
 
   void declareParameters() override;
 
@@ -243,162 +242,237 @@ public:
   using Parameterized::setParameter;
 
   /**
-   * @return True if the robot description has been loaded
+   * @brief Determine if the robot description has been loaded
    */
   bool isInitialized() const {return initialized_;}
 
   /**
-   * @return Number of joints
+   * @brief Get the number of joints
    */
   int getNumJoints() const {return num_joints_;}
 
   /**
-   * @return Number of contact frames
+   * @brief Get the number of contact frames
    */
   int getNumContacts() const {return num_contacts_;}
 
   /**
-   * @return Number of contact constraints
+   * @brief Get the total number of contact constraints
    */
   int getNumConstraints() const {return num_constraints_;}
 
   /**
-   * @return Vector of joint names
+   * @brief Get the number of constraints for a contact frame by name
+   * @throws std::invalid_argument if the contact frame is not found
    */
-  std::vector<std::string> getJointNames() const {return joint_names_;}
+  int getNumConstraints(const std::string & contact)
+  {return getWrenchBasis(contact).cols();}
 
   /**
-   * @return Name of body frame
+   * @brief Get the name of the body frame
    */
   std::string getBodyFrame() const {return body_frame_;}
 
   /**
-   * @return Vector of contact frame names
+   * @brief Get the vector of contact frame names
    */
   std::vector<std::string> getContactFrames() const
-  {
-    return contact_frames_;
-  }
+  {return contact_frames_;}
 
   /**
-   * @return Vector of end effector frame names
+   * @brief Get the vector of end effector frame names
    */
   std::vector<std::string> getEndEffectorFrames() const
-  {
-    return end_effector_frames_;
-  }
+  {return end_effector_frames_;}
 
   /**
-   * @return Total mass of the robot (kg)
+   * @brief Get the total mass of the robot (kg)
    */
   double getMass() const {return mass_;}
 
   /**
-   * @return Mapping of link names to masses (kg)
+   * @brief Get the mapping of link names to masses (kg)
    */
   std::unordered_map<std::string, double> getLinkMasses() const
-  {
-    return link_masses_;
-  }
+  {return link_masses_;}
 
   /**
-   * @return Wrench basis of the given contact frame
+   * @brief Get the mass of a link by name (kg)
    */
-  Eigen::MatrixXd getWrenchBasis(const std::string & contact) const
+  double getLinkMass(const std::string & link) const
   {
-    auto it = wrench_bases_.find(contact);
-    if (it == wrench_bases_.end()) {
-      return Eigen::MatrixXd();
-    }
-    return it->second;
+    auto it = link_masses_.find(link);
+    return it == link_masses_.end() ? 0 : it->second;
   }
 
   /**
-   * @return Vector of contact types
+   * @brief Get the vector of contact types
    */
   std::vector<ContactType> getContactTypes() const
-  {
-    return contact_types_;
-  }
+  {return contact_types_;}
 
   /**
-   * @return Vector of wrist types
+   * @brief Get the vector of wrist types
    */
   std::vector<WristType> getWristTypes() const
-  {
-    return wrist_types_;
-  }
+  {return wrist_types_;}
 
   /**
-   * @return Contact type of the given contact frame
+   * @brief Get the mapping of contact frames to wrench bases
+   */
+  std::unordered_map<std::string, Eigen::Matrix<double, 6, Eigen::Dynamic>>
+  getWrenchBases() const
+  {return wrench_bases_;}
+
+  /**
+   * @brief Get the index of a contact frame by name
+   * @throws std::invalid_argument if the contact frame is not found
+   */
+  int getContactIndex(const std::string & contact) const;
+
+  /**
+   * @brief Get the contact type of a contact frame by name
+   * @throws std::invalid_argument if the contact frame is not found
    */
   ContactType getContactType(const std::string & contact) const
-  {
-    auto it = std::find(
-      contact_frames_.begin(), contact_frames_.end(), contact);
-    if (it == contact_frames_.end()) {
-      return ContactType::DEFAULT;
-    }
-    return contact_types_[it - contact_frames_.begin()];
-  }
+  {return contact_types_.at(getContactIndex(contact));}
 
   /**
-   * @return Wrist type of the given contact frame
+   * @brief Get the wrist type of a contact frame by name
+   * @throws std::invalid_argument if the contact frame is not found
    */
   WristType getWristType(const std::string & contact) const
+  {return wrist_types_.at(getContactIndex(contact));}
+
+  /**
+   * @brief Get the wrench basis of a contact frame by name
+   * @throws std::invalid_argument if the contact frame is not found
+   */
+  Eigen::Matrix<double, 6, Eigen::Dynamic> getWrenchBasis(
+    const std::string & contact) const
   {
-    auto it = std::find(
-      contact_frames_.begin(), contact_frames_.end(), contact);
-    if (it == contact_frames_.end()) {
-      return WristType::FIXED;
-    }
-    return wrist_types_[it - contact_frames_.begin()];
+    getContactIndex(contact);   // Check frame exists
+    return wrench_bases_.at(contact);
   }
 
   /**
-   * @return Vector of joint positions (rad or m)
+   * @brief Get the vector of joint names
+   */
+  std::vector<std::string> getJointNames() const {return joint_names_;}
+
+  /**
+   * @brief Get the vector of joint positions (rad or m)
    */
   Eigen::VectorXd getJointPosition() const {return joint_pos_;}
 
   /**
-   * @return Vector of joint velocities (rad/s or m/s)
+   * @brief Get the vector of joint velocities (rad/s or m/s)
    */
   Eigen::VectorXd getJointVelocity() const {return joint_vel_;}
 
   /**
-   * @return Vector of joint efforts (Nm or N)
+   * @brief Get the vector of joint efforts (Nm or N)
    */
   Eigen::VectorXd getJointEffort() const {return joint_eff_;}
 
   /**
-   * @return Vector of joint position lower bounds (rad or m)
+   * @brief Get the vector of joint position lower bounds (rad or m)
    */
   Eigen::VectorXd getJointPositionMin() const {return joint_pos_min_;}
 
   /**
-   * @return Vector of joint position upper bounds (rad or m)
+   * @brief Get the vector of joint position upper bounds (rad or m)
    */
   Eigen::VectorXd getJointPositionMax() const {return joint_pos_max_;}
 
   /**
-   * @return Vector of joint velocity lower bounds (rad/s or m/s)
+   * @brief Get the vector of joint velocity lower bounds (rad/s or m/s)
    */
   Eigen::VectorXd getJointVelocityMin() const {return joint_vel_min_;}
 
   /**
-   * @return Vector of joint velocity upper bounds (rad/s or m/s)
+   * @brief Get the vector of joint velocity upper bounds (rad/s or m/s)
    */
   Eigen::VectorXd getJointVelocityMax() const {return joint_vel_max_;}
 
   /**
-   * @return Vector of joint effort lower bounds (Nm or N)
+   * @brief Get the vector of joint effort lower bounds (Nm or N)
    */
   Eigen::VectorXd getJointEffortMin() const {return joint_eff_min_;}
 
   /**
-   * @return Vector of joint effort upper bounds (Nm or N)
+   * @brief Get the vector of joint effort upper bounds (Nm or N)
    */
   Eigen::VectorXd getJointEffortMax() const {return joint_eff_max_;}
+
+  /**
+   * @brief Get the index of a joint by name
+   * @throws std::invalid_argument if the joint is not found
+   */
+  int getJointIndex(const std::string & joint) const;
+
+  /**
+   * @brief Get the position of a joint by name (rad or m)
+   * @throws std::invalid_argument if the joint is not found
+   */
+  double getJointPosition(const std::string & joint) const
+  {return joint_pos_[getJointIndex(joint)];}
+
+  /**
+   * @brief Get the velocity of a joint by name (rad/s or m/s)
+   * @throws std::invalid_argument if the joint is not found
+   */
+  double getJointVelocity(const std::string & joint) const
+  {return joint_vel_[getJointIndex(joint)];}
+
+  /**
+   * @brief Get the effort of a joint by name (Nm or N)
+   * @throws std::invalid_argument if the joint is not found
+   */
+  double getJointEffort(const std::string & joint) const
+  {return joint_eff_[getJointIndex(joint)];}
+
+  /**
+   * @brief Get the position lower bound of a joint by name (rad or m)
+   * @throws std::invalid_argument if the joint is not found
+   */
+  double getJointPositionMin(const std::string & joint) const
+  {return joint_pos_min_[getJointIndex(joint)];}
+
+  /**
+   * @brief Get the position upper bound of a joint by name (rad or m)
+   * @throws std::invalid_argument if the joint is not found
+   */
+  double getJointPositionMax(const std::string & joint) const
+  {return joint_pos_max_[getJointIndex(joint)];}
+
+  /**
+   * @brief Get the velocity lower bound of a joint by name (rad/s or m/s)
+   * @throws std::invalid_argument if the joint is not found
+   */
+  double getJointVelocityMin(const std::string & joint) const
+  {return joint_vel_min_[getJointIndex(joint)];}
+
+  /**
+   * @brief Get the velocity upper bound of a joint by name (rad/s or m/s)
+   * @throws std::invalid_argument if the joint is not found
+   */
+  double getJointVelocityMax(const std::string & joint) const
+  {return joint_vel_max_[getJointIndex(joint)];}
+
+  /**
+   * @brief Get the effort lower bound of a joint by name (Nm or N)
+   * @throws std::invalid_argument if the joint is not found
+   */
+  double getJointEffortMin(const std::string & joint) const
+  {return joint_eff_min_[getJointIndex(joint)];}
+
+  /**
+   * @brief Get the effort upper bound of a joint by name (Nm or N)
+   * @throws std::invalid_argument if the joint is not found
+   */
+  double getJointEffortMax(const std::string & joint) const
+  {return joint_eff_max_[getJointIndex(joint)];}
 
 protected:
   /**

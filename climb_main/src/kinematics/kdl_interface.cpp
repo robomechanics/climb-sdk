@@ -129,7 +129,7 @@ Eigen::MatrixXd KdlInterface::getJacobian(bool linear)
   return jac;
 }
 
-Eigen::MatrixXd KdlInterface::getGraspMap()
+Eigen::Matrix<double, 6, Eigen::Dynamic> KdlInterface::getGraspMap()
 {
   if (matrices_.find("grasp") != matrices_.end()) {
     return matrices_["grasp"];
