@@ -42,7 +42,6 @@ bool ForceController::update(const Eigen::VectorXd & force)
 
   // Joint state vectors
   VectorXd q = robot_->getJointPosition();
-  VectorXd q0 = VectorXd::Zero(n);
   VectorXd qmin = robot_->getJointPositionMin();
   VectorXd qmax = robot_->getJointPositionMax();
   q = q.cwiseMin(qmax).cwiseMax(qmin);
@@ -50,20 +49,26 @@ bool ForceController::update(const Eigen::VectorXd & force)
   VectorXd umin = robot_->getJointEffortMin();
   VectorXd umax = robot_->getJointEffortMax();
   u = u.cwiseMin(umax).cwiseMax(umin);
+  if (!position_cmd_.size()) {
+    reset(q);
+  }
+  if (!configuration_.size()) {
+    configuration_ = Eigen::VectorXd::Zero(n);
+  }
 
   // Problem structure
   QpProblem problem({"joint", "body", "error", "margin"}, {n, p, m, 1});
   problem.addAlias("displacement", 0, n + p);
 
   // Quadratic penalty on distance from home position
-  problem.addQuadraticCost("joint", normalization_, q0 - q);
-  problem.addQuadraticCost("error", normalization_, {});
+  problem.addQuadraticCost("joint", normalization_, configuration_ - q);
+  problem.addQuadraticCost("body", normalization_, {});
 
   // Linear penalty on tracking error
   problem.addLinearCost("error", tracking_);
 
   // Maximize stability margin
-  problem.addLinearCost("margin", -1);
+  problem.addLinearCost("margin", -stiffness_);
 
   // Respect joint limits and maximum displacement per timestep
   problem.addBounds(
@@ -89,20 +94,20 @@ bool ForceController::update(const Eigen::VectorXd & force)
     if (mode == EndEffectorCommand::MODE_FREE) {
       problem.addLinearConstraint(
         // -displacement - error <= -setpoint
-        {"displacement", "error"}, {-K_i * A_i, -I_i},
+        {"displacement", "error"}, {-K_i * A_i, -K_i * I_i},
         {}, -K_i * B_i.transpose() * end_effector_goals_[frame].setpoint);
       problem.addLinearConstraint(
         // displacement - error <= setpoint
-        {"displacement", "error"}, {K_i * A_i, -I_i},
+        {"displacement", "error"}, {K_i * A_i, -K_i * I_i},
         {}, K_i * B_i.transpose() * end_effector_goals_[frame].setpoint);
     } else if (mode == EndEffectorCommand::MODE_TRANSITION) {
       problem.addLinearConstraint(
         // -displacement - error <= -setpoint
-        {"displacement", "error"}, {-K_i * A_i, -I_i},
+        {"displacement", "error"}, {-K_i * A_i, -K_i * I_i},
         {}, -B_i.transpose() * end_effector_goals_[frame].setpoint - force_i);
       problem.addLinearConstraint(
         // displacement - error <= setpoint
-        {"displacement", "error"}, {K_i * A_i, -I_i},
+        {"displacement", "error"}, {K_i * A_i, -K_i * I_i},
         {}, B_i.transpose() * end_effector_goals_[frame].setpoint - force_i);
     } else if (mode == EndEffectorCommand::MODE_CONTACT) {
       auto constraint = getAdhesionConstraint(frame);
@@ -111,13 +116,16 @@ bool ForceController::update(const Eigen::VectorXd & force)
         {"displacement"},
         {constraint.A * K_i * A_i},
         {}, (constraint.b - constraint.A * force_i).cwiseMax(0));
+      problem.addLinearConstraint({"error"}, {I_i}, {});
     } else if (mode == EndEffectorCommand::MODE_STANCE) {
       auto constraint = getAdhesionConstraint(frame);
       problem.addLinearConstraint(
         // A_c * displacement + margin <= b_c
         {"displacement", "margin"},
-        {constraint.A * K_i * A_i, VectorXd::Constant(constraint.b.size(), 1)},
-        {}, constraint.b - constraint.A * force_i);
+        {constraint.A * K_i * A_i,
+          VectorXd::Constant(constraint.b.size(), stiffness_)},
+        {}, (constraint.b - constraint.A * force_i));
+      problem.addLinearConstraint({"error"}, {I_i}, {});
     }
     row += m_i;
   }
@@ -175,16 +183,12 @@ bool ForceController::update(const Eigen::VectorXd & force)
     displacment_cmd_ = solver_->getSolution().head(n + p);
     displacment_cmd_.head(n) =
       displacment_cmd_.head(n).cwiseMin(qmax - q).cwiseMax(qmin - q);
-    margin_ = solver_->getSolution().tail(1)(0);
+    margin_ = solver_->getSolution().tail(1)(0) * stiffness_;
     error_ = solver_->getSolution().segment(n + p, m).maxCoeff();
   } else {
     displacment_cmd_ = VectorXd::Zero(n + p);
     margin_ = -INFINITY;
     error_ = INFINITY;
-
-  }
-  if (!position_cmd_.size()) {
-    position_cmd_ = q;
   }
   position_cmd_ += displacment_cmd_.head(n);
   force_cmd_ = force + K * A * displacment_cmd_;
@@ -327,10 +331,10 @@ void ForceController::declareParameters()
   declareParameter(
     "normalization", 0.0001,
     "Cost of joint and body displacement relative to stability margin " \
-    "in 1/N^2", 0.0);
+    "in N/rad and N/m", 0.0);
   declareParameter(
     "tracking", 1.0,
-    "Cost of end-effector error relative to stability margin in 1/N", 0.0);
+    "Cost of end-effector error relative to stability margin in N/rad", 0.0);
   declareParameter(
     "mass_threshold", 0.0,
     "Minimum link mass for center of mass optimization in kg", 0.0);

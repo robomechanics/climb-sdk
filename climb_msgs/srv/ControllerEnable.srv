@@ -1,0 +1,8 @@
+# Enable or disable a controller
+#
+# Re-enabling a controller will reset the controller state
+
+std_msgs/Header header          # Header with timestamp (frame_id is not used)
+bool enable                     # If controller should be enabled or disabled
+---
+bool success                    # If command was carried out successfully

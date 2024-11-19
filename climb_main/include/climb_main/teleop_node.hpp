@@ -5,6 +5,8 @@
 #include <vector>
 #include <rclcpp/rclcpp.hpp>
 #include <climb_msgs/srv/key_input.hpp>
+#include <climb_msgs/srv/actuator_enable.hpp>
+#include <climb_msgs/srv/controller_enable.hpp>
 #include <climb_msgs/msg/joint_command.hpp>
 #include <climb_msgs/msg/end_effector_command.hpp>
 #include <geometry_msgs/msg/twist.hpp>
@@ -13,6 +15,8 @@
 #include "climb_main/kinematics/kinematics_node.hpp"
 
 using climb_msgs::srv::KeyInput;
+using climb_msgs::srv::ActuatorEnable;
+using climb_msgs::srv::ControllerEnable;
 using climb_msgs::msg::JointCommand;
 using climb_msgs::msg::EndEffectorCommand;
 using sensor_msgs::msg::JointState;
@@ -22,6 +26,7 @@ using geometry_msgs::msg::Twist;
  * @brief ROS node that publishes teleop commands
  *
  * Services: key_input
+ * Clients: actuator_enable, controller_enable
  * Subscribers: joint_states, robot_description
  * Publishers: joint_commands, end_effector_commands
  */
@@ -92,6 +97,10 @@ private:
   rclcpp::Publisher<JointCommand>::SharedPtr joint_cmd_pub_;
   // End effector command publisher
   rclcpp::Publisher<EndEffectorCommand>::SharedPtr ee_cmd_pub_;
+  // Actuator enable client
+  rclcpp::Client<ActuatorEnable>::SharedPtr actuator_enable_client_;
+  // Controller enable client
+  rclcpp::Client<ControllerEnable>::SharedPtr controller_enable_client_;
   // Poses
   std::map<std::string, std::vector<double>> configurations_;
   // Joint setpoints

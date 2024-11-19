@@ -1,4 +1,4 @@
-# Command a set of actuators or joints to enter a specific state
+# Enable or disable a set of actuators
 #
 # Either id or joint can be provided but not both. If neither is provided, 
 # the command will be applied to all actuators.

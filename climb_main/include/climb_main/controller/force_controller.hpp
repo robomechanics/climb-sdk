@@ -69,6 +69,13 @@ public:
     const std::vector<double> & distances);
 
   /**
+   * @brief Set the nominal joint configuration for the controller
+   * @param[in] configuration Nominal joint configuration
+   */
+  void setNominalConfiguration(const Eigen::VectorXd & configuration)
+  {configuration_ = configuration;}
+
+  /**
    * @brief Get the adhesion constraint for a given contact force
    * @details Coordinate system: X is normal (pressing against surface), Y is
    * lateral (perpendicular to preferred gripper loading direction), and Z is
@@ -163,6 +170,8 @@ private:
   std::unordered_map<std::string, EndEffectorGoal> end_effector_goals_;
   // Obstacle constraints
   std::vector<ObstacleConstraint> obstacles_;
+  // Nominal joint configuration
+  Eigen::VectorXd configuration_;
   // Commanded joint and body displacements
   Eigen::VectorXd displacment_cmd_;
   // Commanded joint positions

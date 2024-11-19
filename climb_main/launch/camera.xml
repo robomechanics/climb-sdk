@@ -25,7 +25,7 @@
 
     <!-- Include rtabmap_ros launch file with custom arguments -->
     <include file="$(find-pkg-share rtabmap_launch)/launch/rtabmap.launch.py">
-        <arg name="args" value="--delete_db_on_start"/>
+        <arg name="args" value="--delete_db_on_start --Grid/CellSize 0.01"/>
         <arg name="rgb_topic" value="/camera/color/image_raw"/>
         <arg name="depth_topic" value="/camera/aligned_depth_to_color/image_raw"/>
         <arg name="camera_info_topic" value="/camera/color/camera_info"/>
@@ -33,7 +33,6 @@
         <arg name="rtabmapviz" value="false"/>
         <arg name="frame_id" value="camera_link" />
         <arg name="namespace" value="rtabmap" />
-        <arg name="initial_pose" value="0 0 0 0 0.3 0" />
     </include>
 
     <!-- Include robot_localization UKF template -->

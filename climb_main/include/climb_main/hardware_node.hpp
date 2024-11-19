@@ -75,7 +75,7 @@ private:
   rclcpp::Publisher<ActuatorState>::SharedPtr actuator_pub_;
   // Joint command subscriber
   rclcpp::Subscription<JointCommand>::SharedPtr joint_cmd_sub_;
-  // Actuator command service (enable/disable)
+  // Actuator enable/disable service
   rclcpp::Service<ActuatorEnable>::SharedPtr actuator_cmd_srv_;
   // Parameter callback handle
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr

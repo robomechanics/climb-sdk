@@ -17,15 +17,18 @@ TeleopNode::TeleopNode()
     }
   }
   // Define parameters
-  this->declare_parameter("joint_step", 0.02);
-  this->declare_parameter("linear_step", 0.002);
-  this->declare_parameter("angular_step", 0.02);
+  this->declare_parameter("joint_step", 0.02);    // rad
+  this->declare_parameter("linear_step", 0.002);  // m
+  this->declare_parameter("angular_step", 0.02);  // rad
   // Define commands
   addCommands();
-  // Initialize service
+  // Initialize service, clients, and publishers
   key_input_service_ = this->create_service<KeyInput>(
     "key_input", std::bind(&TeleopNode::keyCallback, this, _1, _2));
-  // Initialize publishers
+  actuator_enable_client_ =
+    this->create_client<ActuatorEnable>("actuator_enable");
+  controller_enable_client_ =
+    this->create_client<ControllerEnable>("controller_enable");
   joint_cmd_pub_ = this->create_publisher<JointCommand>("joint_commands", 1);
 }
 
@@ -49,6 +52,39 @@ void TeleopNode::addCommands()
         poses.push_back(name);
       }
       return poses;
+    });
+  // Enable motors
+  this->key_input_parser_.defineCommand(
+    "[enable|disable]",
+    [this](const std::vector<std::string> & tokens) {
+      auto request = std::make_shared<ActuatorEnable::Request>();
+      request->enable = tokens.at(0) == "enable";
+      auto result = actuator_enable_client_->async_send_request(request);
+      auto status = result.wait_for(std::chrono::seconds(1));
+      if (status == std::future_status::ready) {
+        auto response = result.get();
+        if (response->success) {
+          return KeyInputParser::Response{
+            request->enable ? "Enabled" : "Disabled", false};
+        } else {
+          return KeyInputParser::Response{
+            request->enable ? "Failed to enable" : "Failed to disable", false};
+        }
+      } else {
+        return KeyInputParser::Response{
+          "Hardware node is not responding", false};
+      }
+      return KeyInputParser::Response{
+        request->enable ? "Enabled" : "Disabled", false};
+    });
+  this->key_input_parser_.defineCommand(
+    "control [on|off]",
+    [this](const std::vector<std::string> & tokens) {
+      auto request = std::make_shared<ControllerEnable::Request>();
+      request->enable = tokens.at(1) == "on";
+      auto result = controller_enable_client_->async_send_request(request);
+      return KeyInputParser::Response{
+        request->enable ? "Control on" : "Control off", false};
     });
   // Set joint state
   key_input_parser_.defineCommand(
@@ -290,7 +326,7 @@ void TeleopNode::moveBody(Twist twist)
     twist.angular.x, twist.angular.y, twist.angular.z;
   Eigen::VectorXd displacements =
     Jh.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(
-      Gs.transpose() * twist_vec);
+    Gs.transpose() * twist_vec);
   moveJoints(displacements);
 }
 
