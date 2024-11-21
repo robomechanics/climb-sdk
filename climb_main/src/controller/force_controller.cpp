@@ -12,6 +12,12 @@ ForceController::ForceController(std::shared_ptr<KinematicsInterface> robot)
   solver_ = std::make_unique<OsqpInterface>();
 }
 
+void ForceController::reset()
+{
+  end_effector_goals_.clear();
+  position_cmd_ = robot_->getJointPosition();
+}
+
 bool ForceController::update(const Eigen::VectorXd & force)
 {
   // VARIABLES
@@ -39,6 +45,16 @@ bool ForceController::update(const Eigen::VectorXd & force)
   A << Jh, -Gs.transpose();
   MatrixXd K =                              // Stiffness matrix (m x m)
     MatrixXd::Identity(m, m) * stiffness_;
+  int ind = 0;
+  for (const auto & frame : robot_->getContactFrames()) {
+    int c = robot_->getNumConstraints(frame);
+    if (end_effector_goals_.find(frame) != end_effector_goals_.end() &&
+      end_effector_goals_.at(frame).mode == EndEffectorCommand::MODE_FREE)
+    {
+      K.diagonal().segment(ind, c).setZero();
+    }
+    ind += c;
+  }
 
   // Joint state vectors
   VectorXd q = robot_->getJointPosition();
@@ -49,9 +65,6 @@ bool ForceController::update(const Eigen::VectorXd & force)
   VectorXd umin = robot_->getJointEffortMin();
   VectorXd umax = robot_->getJointEffortMax();
   u = u.cwiseMin(umax).cwiseMax(umin);
-  if (!position_cmd_.size()) {
-    reset(q);
-  }
   if (!configuration_.size()) {
     configuration_ = Eigen::VectorXd::Zero(n);
   }
@@ -90,16 +103,28 @@ bool ForceController::update(const Eigen::VectorXd & force)
     MatrixXd K_i = K.block(row, row, m_i, m_i);
     MatrixXd I_i = MatrixXd::Identity(m, m).block(row, 0, m_i, m);
     VectorXd force_i = force.segment(row, m_i);
-    auto mode = end_effector_goals_[frame].mode;
+    uint8_t mode;
+    if (end_effector_goals_.find(frame) != end_effector_goals_.end()) {
+      mode = end_effector_goals_[frame].mode;
+    } else {
+      switch (robot_->getContactType(frame)) {
+        case KinematicsInterface::ContactType::TAIL:
+          mode = EndEffectorCommand::MODE_CONTACT;
+          break;
+        default:
+          mode = EndEffectorCommand::MODE_STANCE;
+          break;
+      }
+    }
     if (mode == EndEffectorCommand::MODE_FREE) {
       problem.addLinearConstraint(
         // -displacement - error <= -setpoint
-        {"displacement", "error"}, {-K_i * A_i, -K_i * I_i},
-        {}, -K_i * B_i.transpose() * end_effector_goals_[frame].setpoint);
+        {"displacement", "error"}, {-A_i, -I_i},
+        {}, -B_i.transpose() * end_effector_goals_[frame].setpoint);
       problem.addLinearConstraint(
         // displacement - error <= setpoint
-        {"displacement", "error"}, {K_i * A_i, -K_i * I_i},
-        {}, K_i * B_i.transpose() * end_effector_goals_[frame].setpoint);
+        {"displacement", "error"}, {A_i, -I_i},
+        {}, B_i.transpose() * end_effector_goals_[frame].setpoint);
     } else if (mode == EndEffectorCommand::MODE_TRANSITION) {
       problem.addLinearConstraint(
         // -displacement - error <= -setpoint
@@ -180,18 +205,21 @@ bool ForceController::update(const Eigen::VectorXd & force)
 
   // Store results
   if (success) {
-    displacment_cmd_ = solver_->getSolution().head(n + p);
-    displacment_cmd_.head(n) =
-      displacment_cmd_.head(n).cwiseMin(qmax - q).cwiseMax(qmin - q);
+    displacement_cmd_ = solver_->getSolution().head(n + p);
+    displacement_cmd_.head(n) =
+      displacement_cmd_.head(n).cwiseMin(qmax - q).cwiseMax(qmin - q);
     margin_ = solver_->getSolution().tail(1)(0) * stiffness_;
     error_ = solver_->getSolution().segment(n + p, m).maxCoeff();
   } else {
-    displacment_cmd_ = VectorXd::Zero(n + p);
+    displacement_cmd_ = VectorXd::Zero(n + p);
     margin_ = -INFINITY;
     error_ = INFINITY;
   }
-  position_cmd_ += displacment_cmd_.head(n);
-  force_cmd_ = force + K * A * displacment_cmd_;
+  if (!position_cmd_.size()) {
+    position_cmd_ = q;
+  }
+  position_cmd_ += displacement_cmd_.head(n);
+  force_cmd_ = force + K * A * displacement_cmd_;
   effort_cmd_ = u + Jh.transpose() * (force_cmd_ - force);
   return success;
 }
@@ -242,23 +270,11 @@ void ForceController::setEndEffectorCommand(const EndEffectorCommand & command)
   }
 }
 
-void ForceController::setGroundConstraint()
+void ForceController::setGroundConstraint(
+  const Eigen::Vector3d & normal, double distance)
 {
-  double h = 0;
-  int n = 0;
-  for (const auto & frame : robot_->getContactFrames()) {
-    if (end_effector_goals_.find(frame) == end_effector_goals_.end()) {
-      continue;
-    }
-    auto transform = robot_->getTransform(frame);
-    h += transform.first[2];
-    n++;
-  }
-  if (n == 0) {
-    return;
-  }
   setObstacleConstraints(
-    {robot_->getBodyFrame()}, {{0, 0, -1}}, {-h / n - clearance_});
+    {robot_->getBodyFrame()}, {normal}, {distance - clearance_});
 }
 
 void ForceController::setObstacleConstraints(

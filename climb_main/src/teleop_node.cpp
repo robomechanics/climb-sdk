@@ -30,6 +30,8 @@ TeleopNode::TeleopNode()
   controller_enable_client_ =
     this->create_client<ControllerEnable>("controller_enable");
   joint_cmd_pub_ = this->create_publisher<JointCommand>("joint_commands", 1);
+  ee_cmd_pub_ = this->create_publisher<EndEffectorCommand>(
+    "end_effector_commands", 1);
 }
 
 void TeleopNode::addCommands()
@@ -80,11 +82,12 @@ void TeleopNode::addCommands()
   this->key_input_parser_.defineCommand(
     "control [on|off]",
     [this](const std::vector<std::string> & tokens) {
+      controller_enable_ = tokens.at(1) == "on";
       auto request = std::make_shared<ControllerEnable::Request>();
-      request->enable = tokens.at(1) == "on";
+      request->enable = controller_enable_;
       auto result = controller_enable_client_->async_send_request(request);
       return KeyInputParser::Response{
-        request->enable ? "Control on" : "Control off", false};
+        controller_enable_ ? "Control on" : "Control off", false};
     });
   // Set joint state
   key_input_parser_.defineCommand(
@@ -159,12 +162,18 @@ void TeleopNode::addCommands()
       key_input_parser_.setInputCallback(
         [this, tokens](char key) {
           if (key == ' ') {
+            if (controller_enable_) {
+              controlEndEffector(
+                tokens.at(1), Eigen::Vector<double, 6>::Zero());
+            }
             return KeyInputParser::Response{"Stopped", false};
           }
-          if (tokens.at(1) == robot_->getBodyFrame()) {
+          if (controller_enable_) {
+            controlEndEffector(tokens.at(1), getTwist(key, tokens.at(1)));
+          } else if (tokens.at(1) == robot_->getBodyFrame()) {
             moveBody(getTwist(key));
           } else {
-            moveEndEffector(tokens.at(1), getTwist(key));
+            moveEndEffector(tokens.at(1), getTwist(key, tokens.at(1)));
           }
           return KeyInputParser::Response{"", true};
         });
@@ -180,54 +189,70 @@ void TeleopNode::keyCallback(
   const std::shared_ptr<KeyInput::Request> request,
   std::shared_ptr<KeyInput::Response> response)
 {
+  auto frame = "gripper_1";
+  auto ee = robot_->getEndEffectorFrames().at(robot_->getContactIndex(frame));
+  Eigen::Matrix3d R1 = robot_->getTransform(ee, frame).second;
+  std::cout << "R1: " << std::endl << R1 << std::endl;
   auto result = key_input_parser_.processKeyInput(
     request->input, request->realtime, request->autocomplete);
   response->response = result.response;
   response->realtime = result.realtime;
 }
 
-Twist TeleopNode::getTwist(char key) const
+Eigen::Vector<double, 6> TeleopNode::getTwist(char key) const
 {
-  Twist twist;
+  Eigen::Vector<double, 6> twist = Eigen::Vector<double, 6>::Zero();
   switch (key) {
     case 'w':
-      twist.linear.x = linear_step_;
+      twist[0] = linear_step_;
       break;
     case 's':
-      twist.linear.x = -linear_step_;
+      twist[0] = -linear_step_;
       break;
     case 'a':
-      twist.linear.y = linear_step_;
+      twist[1] = linear_step_;
       break;
     case 'd':
-      twist.linear.y = -linear_step_;
+      twist[1] = -linear_step_;
       break;
     case 'q':
-      twist.linear.z = linear_step_;
+      twist[2] = linear_step_;
       break;
     case 'e':
-      twist.linear.z = -linear_step_;
+      twist[2] = -linear_step_;
       break;
     case 'W':
-      twist.angular.y = angular_step_;
+      twist[4] = angular_step_;
       break;
     case 'S':
-      twist.angular.y = -angular_step_;
+      twist[4] = -angular_step_;
       break;
     case 'A':
-      twist.angular.x = -angular_step_;
+      twist[3] = -angular_step_;
       break;
     case 'D':
-      twist.angular.x = angular_step_;
+      twist[3] = angular_step_;
       break;
     case 'Q':
-      twist.angular.z = angular_step_;
+      twist[5] = angular_step_;
       break;
     case 'E':
-      twist.angular.z = -angular_step_;
+      twist[5] = -angular_step_;
       break;
   }
   return twist;
+}
+
+Eigen::Vector<double, 6> TeleopNode::getTwist(
+  char key, const std::string & frame) const
+{
+  Eigen::Vector<double, 6> twist = getTwist(key);
+  Eigen::Matrix3d R = robot_->getTransform(frame).second;
+  Eigen::MatrixXd Ad = robot_->getAdjoint({}, R.transpose());
+  auto ee = robot_->getEndEffectorFrames().at(robot_->getContactIndex(frame));
+  Eigen::Matrix3d R2 = robot_->getTransform(ee, frame).second;
+  std::cout << "R2: " << std::endl << R2 << std::endl;
+  return Ad * twist;
 }
 
 void TeleopNode::setJoint(
@@ -292,23 +317,18 @@ void TeleopNode::moveJoints(const Eigen::VectorXd & displacements)
   joint_cmd_pub_->publish(command);
 }
 
-void TeleopNode::moveEndEffector(const std::string & contact, Twist twist)
+void TeleopNode::moveEndEffector(
+  const std::string & contact, const Eigen::Vector<double, 6> & twist)
 {
   Eigen::MatrixXd Jh = robot_->getHandJacobian();
-  Eigen::Matrix3d R = robot_->getTransform(contact).second;
-  Eigen::MatrixXd Ad = robot_->getAdjoint({}, R.transpose());
   Eigen::MatrixXd B = robot_->getWrenchBasis(contact);
-  Eigen::VectorXd twist_vec(6);
-  twist_vec << twist.linear.x, twist.linear.y, twist.linear.z,
-    twist.angular.x, twist.angular.y, twist.angular.z;
-  Eigen::VectorXd contact_twist = B.transpose() * Ad * twist_vec;
   Eigen::VectorXd all_twists =
     Eigen::VectorXd::Zero(robot_->getNumConstraints());
   int ind = 0;
   for (const auto & frame : robot_->getContactFrames()) {
     int c = robot_->getNumConstraints(frame);
     if (frame == contact) {
-      all_twists.segment(ind, c) = contact_twist;
+      all_twists.segment(ind, c) = B.transpose() * twist;
     }
     ind += c;
   }
@@ -317,17 +337,35 @@ void TeleopNode::moveEndEffector(const std::string & contact, Twist twist)
   moveJoints(displacements);
 }
 
-void TeleopNode::moveBody(Twist twist)
+void TeleopNode::moveBody(const Eigen::Vector<double, 6> & twist)
 {
   Eigen::MatrixXd Jh = robot_->getHandJacobian();
   Eigen::MatrixXd Gs = -robot_->getGraspMap();
-  Eigen::VectorXd twist_vec(6);
-  twist_vec << twist.linear.x, twist.linear.y, twist.linear.z,
-    twist.angular.x, twist.angular.y, twist.angular.z;
   Eigen::VectorXd displacements =
     Jh.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(
-    Gs.transpose() * twist_vec);
+    Gs.transpose() * twist);
   moveJoints(displacements);
+}
+
+void TeleopNode::controlEndEffector(
+  const std::string & contact, const Eigen::Vector<double, 6> & twist)
+{
+  if (contact == robot_->getBodyFrame()) {
+    return;
+  }
+  Twist twist_msg;
+  twist_msg.linear.x = twist[0];
+  twist_msg.linear.y = twist[1];
+  twist_msg.linear.z = twist[2];
+  twist_msg.angular.x = twist[3];
+  twist_msg.angular.y = twist[4];
+  twist_msg.angular.z = twist[5];
+  EndEffectorCommand command;
+  command.header.stamp = this->now();
+  command.frame = {contact};
+  command.mode = {EndEffectorCommand::MODE_FREE};
+  command.twist = {twist_msg};
+  ee_cmd_pub_->publish(command);
 }
 
 rcl_interfaces::msg::SetParametersResult TeleopNode::parameterCallback(

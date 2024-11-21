@@ -74,8 +74,6 @@ private:
   rcl_interfaces::msg::SetParametersResult parameterCallback(
     const std::vector<rclcpp::Parameter> & parameters) override;
 
-  // TF prefix
-  std::string name_;
   // Contact frame transform estimator
   std::unique_ptr<ContactEstimator> contact_estimator_;
   // Contact force estimator

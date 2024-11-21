@@ -4,6 +4,9 @@
 #include <string>
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
+#include <tf2/exceptions.h>
 #include <std_msgs/msg/string.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 
@@ -49,14 +52,20 @@ protected:
   virtual rcl_interfaces::msg::SetParametersResult parameterCallback(
     const std::vector<rclcpp::Parameter> & parameters);
 
+  // TF prefix
+  std::string name_;
   // Kinematics interface
   std::shared_ptr<KinematicsInterface> robot_;
+  // Tf buffer
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
 private:
   // Robot description subscriber handle
   rclcpp::Subscription<String>::SharedPtr description_sub_;
   // Joint state subscriber handle
   rclcpp::Subscription<JointState>::SharedPtr joint_sub_;
+  // Tf listener
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   // Parameter callback handle
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
     param_handle_;

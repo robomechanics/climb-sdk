@@ -56,9 +56,17 @@ private:
   /**
    * @brief Convert key press into a twist
    * @param key The key character (linear: wasdqe, angular: WASDQE)
-   * @return A twist message
+   * @return The twist vector (linear, angular)
    */
-  Twist getTwist(char key) const;
+  Eigen::Vector<double, 6> getTwist(char key) const;
+
+  /**
+   * @brief Convert key press into a twist in a specific frame
+   * @param key The key character (linear: wasdqe, angular: WASDQE)
+   * @param frame The name of the twist frame
+   * @return The twist vector (linear, angular)
+   */
+  Eigen::Vector<double, 6> getTwist(char key, const std::string & frame) const;
 
   /**
    * @brief Set a joint property
@@ -78,13 +86,40 @@ private:
     const std::vector<std::string> & joints,
     const std::vector<double> & positions);
 
+  /**
+   * @brief Move a joint by a given displacement
+   * @param joint The joint name
+   * @param displacement The joint displacement
+   */
   void moveJoint(const std::string & joint, double displacement);
 
+  /**
+   * @brief Move each joint by a given displacement
+   * @param displacements The joint displacements
+   */
   void moveJoints(const Eigen::VectorXd & displacements);
 
-  void moveEndEffector(const std::string & contact, Twist twist);
+  /**
+   * @brief Move the end effector by a given displacement
+   * @param contact The contact frame name
+   * @param twist The twist vector in the contact frame (linear, angular)
+   */
+  void moveEndEffector(
+    const std::string & contact, const Eigen::Vector<double, 6> & twist);
 
-  void moveBody(Twist twist);
+  /**
+   * @brief Move the body frame by a given displacement
+   * @param twist The twist vector in the body frame (linear, angular)
+   */
+  void moveBody(const Eigen::Vector<double, 6> & twist);
+
+  /**
+   * @brief Set the end effector controller velocity setpoint
+   * @param contact The contact frame name
+   * @param twist The twist vector in the contact frame (linear, angular)
+   */
+  void controlEndEffector(
+    const std::string & contact, const Eigen::Vector<double, 6> & twist);
 
   rcl_interfaces::msg::SetParametersResult parameterCallback(
     const std::vector<rclcpp::Parameter> & parameters) override;
@@ -111,6 +146,8 @@ private:
   double linear_step_;
   // Twist angular step in rad
   double angular_step_;
+  // Controller enabled
+  bool controller_enable_;
 };
 
 #endif  // TELEOP_NODE_HPP

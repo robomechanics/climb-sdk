@@ -35,7 +35,7 @@ std::vector<TransformStamped> ContactEstimator::update(
 std::vector<TransformStamped> ContactEstimator::update(Eigen::Vector3d gravity)
 {
   std::vector<TransformStamped> transforms;
-  auto ground = getGroundPlane(robot_->getContactFrames());
+  auto ground = getGroundPlane();
   for (int i = 0; i < robot_->getNumContacts(); ++i) {
     auto ee_frame = robot_->getEndEffectorFrames()[i];
     auto contact_frame = robot_->getContactFrames()[i];
@@ -54,7 +54,7 @@ std::vector<TransformStamped> ContactEstimator::update(Eigen::Vector3d gravity)
 }
 
 ContactEstimator::Plane ContactEstimator::getGroundPlane(
-  std::vector<std::string> contact_frames)
+  const std::vector<std::string> & contact_frames)
 {
   Plane plane;
   Eigen::MatrixXd contacts(3, contact_frames.size());
@@ -69,11 +69,10 @@ ContactEstimator::Plane ContactEstimator::getGroundPlane(
     plane.normal = contacts.jacobiSvd(
       Eigen::ComputeThinU | Eigen::ComputeThinV).matrixU().col(2);
   }
-  plane.distance = mean.dot(plane.normal);
-  if (plane.distance < 0) {
+  if (plane.normal.dot(Eigen::Vector3d::UnitZ()) > 0) {
     plane.normal *= -1;
-    plane.distance *= -1;
   }
+  plane.distance = mean.dot(plane.normal);
   return plane;
 }
 
@@ -86,12 +85,14 @@ Eigen::Matrix3d ContactEstimator::getContactOrientation(
   Eigen::Matrix3d R_bc = robot_->getTransform(contact_frame).second;
   if (wrist == KinematicsInterface::WristType::GRAVITY) {
     // Align x-axis with normal and negative z-axis with gravity
-    Eigen::Vector3d g = gravity / gravity.norm();
-    if (abs(normal.dot(g)) < cos(min_incline_)) {
-      R_bc.col(0) = normal;
-      R_bc.col(1) = -g.cross(R_bc.col(0));
-      R_bc.col(1) /= R_bc.col(1).norm();
-      R_bc.col(2) = R_bc.col(0).cross(R_bc.col(1));
+    if (gravity.size() && gravity.norm()) {
+      Eigen::Vector3d g = gravity / gravity.norm();
+      if (abs(normal.dot(g)) < cos(min_incline_)) {
+        R_bc.col(0) = normal;
+        R_bc.col(1) = -g.cross(R_bc.col(0));
+        R_bc.col(1) /= R_bc.col(1).norm();
+        R_bc.col(2) = R_bc.col(0).cross(R_bc.col(1));
+      }
     }
     return R_be.transpose() * R_bc;
   } else if (wrist == KinematicsInterface::WristType::FIXED) {

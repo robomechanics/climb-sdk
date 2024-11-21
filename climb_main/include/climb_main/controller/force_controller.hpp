@@ -28,15 +28,9 @@ public:
   ForceController(std::shared_ptr<KinematicsInterface> robot);
 
   /**
-   * @brief Reset the controller setpoint to a specified joint position
-   * @param[in] position Initial joint position
+   * @brief Reset the controller setpoints
    */
-  void reset(Eigen::VectorXd position) {position_cmd_ = position;}
-
-  /**
-   * @brief Reset the controller setpoint to the current joint position
-   */
-  void reset() {position_cmd_ = {};}
+  void reset();
 
   /**
    * @brief Update the contact forces based on the given force command
@@ -54,8 +48,10 @@ public:
   /**
    * @brief Set the obstacle constraint to maintain clearance between the body
    * frame and the estimated ground plane.
+   * @param[in] normal Normal vector of the ground plane in the body frame
+   * @param[in] distance Distance from the ground plane to the body frame
    */
-  void setGroundConstraint();
+  void setGroundConstraint(const Eigen::Vector3d & normal, double distance);
 
   /**
    * @brief Set the obstacle constraints for the controller
@@ -98,7 +94,7 @@ public:
    */
   Eigen::VectorXd getJointDisplacement() const
   {
-    return displacment_cmd_.head(position_cmd_.size());
+    return displacement_cmd_.head(position_cmd_.size());
   }
 
   /**
@@ -107,8 +103,8 @@ public:
    */
   Eigen::VectorXd getBodyDisplacement() const
   {
-    return displacment_cmd_.tail(
-      displacment_cmd_.size() - position_cmd_.size());
+    return displacement_cmd_.tail(
+      displacement_cmd_.size() - position_cmd_.size());
   }
 
   /**
@@ -173,7 +169,7 @@ private:
   // Nominal joint configuration
   Eigen::VectorXd configuration_;
   // Commanded joint and body displacements
-  Eigen::VectorXd displacment_cmd_;
+  Eigen::VectorXd displacement_cmd_;
   // Commanded joint positions
   Eigen::VectorXd position_cmd_;
   // Commanded joint efforts

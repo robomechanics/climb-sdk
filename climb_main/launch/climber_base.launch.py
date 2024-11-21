@@ -121,7 +121,8 @@ def generate_launch_description():
         executable="teleop_node",
         name="teleop",
         output="screen",
-        parameters=[global_config_path, robot_config_path],
+        parameters=[{"tf_prefix": namespace},
+                    global_config_path, robot_config_path],
         remappings=[('/loris/key_input', '/key_input')]
     )
     key_input = Node(

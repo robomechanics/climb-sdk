@@ -15,11 +15,12 @@
       verbose: False
       debug: False
       stiffness: 1000.0
-      microspine_max_force: 10.0
+      microspine_max_force: 15.0
       friction_coefficient: 0.5
       clearance: 0.1
       effort_limit: 2.0
-      normalization: 0.1
+      normalization: 0.01
+      tracking: 1000.0
       joint_step: 0.01
       default_configuration: "climb"
       sim_wrench: [13.0, 0.0, 0.0, 0.0, 0.0, 0.0]

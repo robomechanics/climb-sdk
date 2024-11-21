@@ -22,7 +22,7 @@ std_msgs/Header header          # Header with timestamp (frame_id is not used)
 string[] frame                  # Contact frame ID
 uint8[] mode                    # Contact mode
 
-# Mixed velocity of free end-effector in body frame (rad/s or m/s)
+# Velocity of free end-effector in contact frame (rad/s or m/s)
 geometry_msgs/Twist[] twist
 
 # Contact force on transitioning end-effector in contact frame (N or Nm)

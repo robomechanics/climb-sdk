@@ -60,7 +60,7 @@ target_include_directories(${PROJECT_NAME}_kinematics PUBLIC
 target_link_libraries(${PROJECT_NAME}_kinematics ${PROJECT_NAME}_util
   Eigen3::Eigen orocos-kdl)
 ament_target_dependencies(${PROJECT_NAME}_kinematics kdl_parser sensor_msgs
-  geometry_msgs climb_msgs urdf)
+  geometry_msgs climb_msgs urdf tf2 tf2_ros)
 
 # Optimization library
 add_library(${PROJECT_NAME}_optimization SHARED
@@ -107,7 +107,7 @@ target_link_libraries(hardware_node ${PROJECT_NAME}_hardware)
 # Controller node executable
 add_executable(controller_node src/controller_node.cpp)
 ament_target_dependencies(controller_node rclcpp std_msgs sensor_msgs
-  geometry_msgs climb_msgs tf2 tf2_ros)
+  geometry_msgs climb_msgs)
 target_link_libraries(controller_node ${PROJECT_NAME}_controller)
 
 # Teleop node executable

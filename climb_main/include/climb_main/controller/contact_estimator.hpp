@@ -55,7 +55,13 @@ public:
    * @param[in] contact_frames List of contact frames currently in contact
    * @return Best fit ground plane
    */
-  Plane getGroundPlane(std::vector<std::string> contact_frames);
+  Plane getGroundPlane(const std::vector<std::string> & contact_frames);
+
+  /**
+   * @brief Get the ground plane normal vector and distance from origin
+   * @return Best fit ground plane
+   */
+  Plane getGroundPlane() {return getGroundPlane(robot_->getContactFrames());}
 
   /**
    * @brief Get the rotation matrix from the parent to child frame

@@ -11,12 +11,8 @@ ControllerNode::ControllerNode()
   contact_estimator_ = std::make_unique<ContactEstimator>(robot_);
   force_estimator_ = std::make_unique<ForceEstimator>(robot_);
   force_controller_ = std::make_unique<ForceController>(robot_);
-  Eigen::VectorXd initial_pos(14);
-  initial_pos << 0, 0, 0, 0, 0, 0, 0, 0, -0.5, -0.5, -0.5, -0.5, 0, 0;
-  force_controller_->reset(initial_pos);
 
   // Declare parameters
-  this->declare_parameter("tf_prefix", "");
   this->declare_parameter("debug", false);
   this->declare_parameter("effort_limit", 0.0);
   this->declare_parameter("sim_wrench", std::vector<double>());
@@ -47,10 +43,8 @@ void ControllerNode::update()
 {
   // Update contact frames
   std::vector<geometry_msgs::msg::TransformStamped> frames;
-  if (gravity_.size()) {
-    frames = contact_estimator_->update(gravity_);
-    robot_->updateContactFrames(frames);
-  }
+  frames = contact_estimator_->update(gravity_);
+  robot_->updateContactFrames(frames);
 
   // Estimate contact forces
   Eigen::VectorXd forces = force_estimator_->update();
@@ -70,16 +64,9 @@ void ControllerNode::update()
   }
 
   if (enabled_) {
-    // Set controller command (temporary code for testing)
-    EndEffectorCommand cmd;
-    cmd.frame = {"gripper_1", "gripper_2", "gripper_3", "gripper_4", "tail_contact"};
-    cmd.mode = {EndEffectorCommand::MODE_STANCE, EndEffectorCommand::MODE_STANCE,
-      EndEffectorCommand::MODE_STANCE, EndEffectorCommand::MODE_STANCE,
-      EndEffectorCommand::MODE_CONTACT};
-    force_controller_->setEndEffectorCommand(cmd);
-
     // Update controller
-    force_controller_->setGroundConstraint();
+    auto ground = contact_estimator_->getGroundPlane();
+    force_controller_->setGroundConstraint(ground.normal, ground.distance);
     bool success = force_controller_->update(forces);
 
     // Publish joint commands
@@ -88,10 +75,6 @@ void ControllerNode::update()
       JointCommand cmd_msg;
       cmd_msg.header.stamp = this->get_clock()->now();
       cmd_msg.name = robot_->getJointNames();
-      cmd_msg.mode =
-        std::vector<uint8_t>(robot_->getNumJoints(), JointCommand::MODE_POSITION);
-
-      // Set commanded joint positions
       Eigen::VectorXd joint_position = force_controller_->getJointPosition();
       cmd_msg.position = std::vector<double>(
         joint_position.data(), joint_position.data() + joint_position.size());
@@ -168,10 +151,11 @@ void ControllerNode::update()
 
 void ControllerNode::jointCallback(const JointState::SharedPtr msg)
 {
-  KinematicsNode::jointCallback(msg);
-  if (robot_->isInitialized()) {
-    update();
+  if (!robot_->isInitialized()) {
+    return;
   }
+  robot_->updateJointState(*msg);
+  update();
 }
 
 void ControllerNode::endEffectorCmdCallback(
@@ -196,9 +180,7 @@ rcl_interfaces::msg::SetParametersResult ControllerNode::parameterCallback(
 {
   auto result = KinematicsNode::parameterCallback(parameters);
   for (const auto & param : parameters) {
-    if (param.get_name() == "tf_prefix") {
-      name_ = param.as_string();
-    } else if (param.get_name() == "debug") {
+    if (param.get_name() == "debug") {
       debug_ = param.as_bool();
     } else if (param.get_name() == "effort_limit") {
       max_effort_ = param.as_double();
