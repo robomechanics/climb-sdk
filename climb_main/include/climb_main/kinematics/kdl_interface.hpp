@@ -60,14 +60,8 @@ private:
     std::vector<int> joint_indices;
     size_t joints;
     size_t segments;
+    std::unordered_map<std::string, int> contact_indices;
   };
-
-  /**
-   * @brief Update the transform from the end effector to the contact frame
-   * @param contact Name of the contact frame
-   * @param transform Transform from end effector to contact frame
-   */
-  void updateContactFrame(const std::string & contact, KDL::Frame transform);
 
   /**
    * @brief Get a Joint array of values for a specific chain
@@ -100,6 +94,8 @@ private:
   KDL::Tree tree_;
   // Joint indices by joint name
   std::unordered_map<std::string, int> joint_indices_;
+  // Contact frame transforms
+  std::unordered_map<std::string, KDL::Frame> contact_transforms_;
   // Cached kinematic chains by parent and child frame names
   std::unordered_map<std::pair<std::string, std::string>, Chain, pair_hash>
   chains_;

@@ -85,6 +85,33 @@ TEST_F(KinematicsTest, Transform)
   EXPECT_NEAR_EIGEN(R, R_expected, TOL) << "Incorrect left foot rotation";
 }
 
+TEST_F(KinematicsTest, ContactFrames)
+{
+  TransformStamped transform;
+  transform.header.frame_id = "left_foot";
+  transform.child_frame_id = "left_contact";
+  transform.transform.rotation.w = sqrt(2) / 2;
+  transform.transform.rotation.y = sqrt(2) / 2;
+  robot_->updateContactFrames({transform});
+  auto [p, R] = robot_->getTransform("left_contact");
+  Eigen::Vector3d p_expected{1, 1, -1};
+  EXPECT_NEAR_EIGEN(p, p_expected, TOL) << "Incorrect left contact position";
+  Eigen::Matrix3d R_original;
+  R_original << 0, 0, -1,
+    0, 1, 0,
+    1, 0, 0;
+  EXPECT_FALSE(R.isApprox(R_original, TOL)) <<
+    "Contact frame transform not updated";
+  Eigen::Matrix3d R_expected;
+  R_expected << 1, 0, 0,
+    0, 1, 0,
+    0, 0, 1;
+  EXPECT_NEAR_EIGEN(R, R_expected, TOL) << "Incorrect left contact rotation";
+  auto [pinv, Rinv] = robot_->getTransform("left_contact", "root");
+  EXPECT_NEAR_EIGEN(Rinv, R_expected.transpose(), TOL) <<
+    "Incorrect inverse transform";
+}
+
 TEST_F(KinematicsTest, MixedJacobian)
 {
   Eigen::MatrixXd Jm = robot_->getJacobian(true);

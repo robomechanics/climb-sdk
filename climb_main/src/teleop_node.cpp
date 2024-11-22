@@ -189,10 +189,6 @@ void TeleopNode::keyCallback(
   const std::shared_ptr<KeyInput::Request> request,
   std::shared_ptr<KeyInput::Response> response)
 {
-  auto frame = "gripper_1";
-  auto ee = robot_->getEndEffectorFrames().at(robot_->getContactIndex(frame));
-  Eigen::Matrix3d R1 = robot_->getTransform(ee, frame).second;
-  std::cout << "R1: " << std::endl << R1 << std::endl;
   auto result = key_input_parser_.processKeyInput(
     request->input, request->realtime, request->autocomplete);
   response->response = result.response;
@@ -250,8 +246,6 @@ Eigen::Vector<double, 6> TeleopNode::getTwist(
   Eigen::Matrix3d R = robot_->getTransform(frame).second;
   Eigen::MatrixXd Ad = robot_->getAdjoint({}, R.transpose());
   auto ee = robot_->getEndEffectorFrames().at(robot_->getContactIndex(frame));
-  Eigen::Matrix3d R2 = robot_->getTransform(ee, frame).second;
-  std::cout << "R2: " << std::endl << R2 << std::endl;
   return Ad * twist;
 }
 

@@ -33,8 +33,8 @@ bool KdlInterface::initialize(std::string & error_message)
     std::string end_effector = end_effector_frames_[i];
     if (tree_.getSegment(contact) == tree_.getSegments().end()) {
       if (tree_.getSegment(end_effector) == tree_.getSegments().end()) {
-        error_message = "Could not find chain from " + body_frame_ +
-          " to " + contact + " or " + end_effector;
+        error_message = "Could not find chain: " + body_frame_ +
+          " -> " + contact + " or " + body_frame_ + " -> " + end_effector;
         return false;
       } else {
         tree_.addSegment(
@@ -43,7 +43,7 @@ bool KdlInterface::initialize(std::string & error_message)
           end_effector);
       }
     }
-    updateContactFrame(contact, KDL::Frame::Identity());
+    contact_transforms_[contact] = KDL::Frame::Identity();
   }
   return initialized_ = true;
 }
@@ -326,16 +326,8 @@ void KdlInterface::updateContactFrames(
         transform.transform.translation.x,
         transform.transform.translation.y,
         transform.transform.translation.z));
-    // Update contact frame
-    updateContactFrame(contact, ee_to_contact);
+    contact_transforms_[contact] = ee_to_contact;
   }
-}
-
-void KdlInterface::updateContactFrame(
-  const std::string & contact, KDL::Frame transform)
-{
-  auto chain = getChain(body_frame_, contact);
-  chain.kdl_chain.getSegment(chain.segments - 1).setFrameToTip(transform);
 }
 
 KDL::JntArray KdlInterface::getJointArray(
@@ -351,51 +343,75 @@ KDL::JntArray KdlInterface::getJointArray(
 KdlInterface::Chain KdlInterface::getChain(
   const std::string & parent, const std::string & child)
 {
-  if (chains_.find({parent, child}) != chains_.end()) {
-    return chains_[{parent, child}];
-  }
-  auto [parent_frame, parent_inertial] = findSuffix(parent, "_inertial");
-  auto [child_frame, child_inertial] = findSuffix(child, "_inertial");
   Chain chain;
-  if (tree_.getChain(parent_frame, child_frame, chain.kdl_chain)) {
-    for (size_t i = 0; i < chain.kdl_chain.getNrOfSegments(); i++) {
-      auto joint = chain.kdl_chain.getSegment(i).getJoint().getName();
-      if (std::find(joint_names_.begin(), joint_names_.end(), joint) !=
-        joint_names_.end())
-      {
-        chain.joint_names.push_back(joint);
-        chain.joint_indices.push_back(joint_indices_.at(joint));
-      }
-    }
-    if (parent_inertial) {
-      KDL::Frame transform;
-      transform.p =
-        -tree_.getSegment(parent_frame)->second.segment.getInertia().getCOG();
-      KDL::Chain new_chain;
-      new_chain.addSegment(
-        KDL::Segment(
-          parent_frame, KDL::Joint(parent_frame + "_joint", KDL::Joint::None), transform));
-      new_chain.addChain(chain.kdl_chain);
-      chain.kdl_chain = new_chain;
-    }
-    if (child_inertial) {
-      KDL::Frame transform;
-      transform.p = chain.kdl_chain.getSegment(
-        chain.kdl_chain.getNrOfSegments() - 1).getInertia().getCOG();
-      chain.kdl_chain.addSegment(
-        KDL::Segment(
-          child, KDL::Joint(child + "_joint", KDL::Joint::None), transform));
-    }
-    chain.joints = chain.joint_names.size();
-    chain.segments = chain.kdl_chain.getNrOfSegments();
-    chains_[{parent, child}] = chain;
-    if (chain.joints != chain.kdl_chain.getNrOfJoints()) {
-      throw std::invalid_argument(
-              "Could not find all joints in chain from " + parent + " to " + child);
-    }
+  if (chains_.find({parent, child}) != chains_.end()) {
+    chain = chains_[{parent, child}];
   } else {
-    throw std::invalid_argument(
-            "Could not find chain from " + parent + " to " + child);
+    auto [parent_frame, parent_inertial] = findSuffix(parent, "_inertial");
+    auto [child_frame, child_inertial] = findSuffix(child, "_inertial");
+    if (tree_.getChain(parent_frame, child_frame, chain.kdl_chain)) {
+      // Identify joints in chain
+      for (size_t i = 0; i < chain.kdl_chain.getNrOfSegments(); i++) {
+        auto joint = chain.kdl_chain.getSegment(i).getJoint().getName();
+        if (std::find(joint_names_.begin(), joint_names_.end(), joint) !=
+          joint_names_.end())
+        {
+          chain.joint_names.push_back(joint);
+          chain.joint_indices.push_back(joint_indices_.at(joint));
+        }
+      }
+      // Identify contact frames if present
+      if (contact_transforms_.find(parent_frame) != contact_transforms_.end()) {
+        chain.contact_indices[parent_frame] =
+          -chain.kdl_chain.getNrOfSegments() - (child_inertial ? 1 : 0);
+      }
+      if (contact_transforms_.find(child_frame) != contact_transforms_.end()) {
+        chain.contact_indices[child_frame] =
+          chain.kdl_chain.getNrOfSegments() - 1 + (parent_inertial ? 1 : 0);
+      }
+      // Add parent/child inertial links if requested
+      if (parent_inertial) {
+        KDL::Frame transform;
+        transform.p =
+          -tree_.getSegment(parent_frame)->second.segment.getInertia().getCOG();
+        KDL::Chain new_chain;
+        new_chain.addSegment(
+          KDL::Segment(
+            parent_frame, KDL::Joint(
+              parent_frame + "_joint", KDL::Joint::None), transform));
+        new_chain.addChain(chain.kdl_chain);
+        chain.kdl_chain = new_chain;
+      }
+      if (child_inertial) {
+        KDL::Frame transform;
+        transform.p = chain.kdl_chain.getSegment(
+          chain.kdl_chain.getNrOfSegments() - 1).getInertia().getCOG();
+        chain.kdl_chain.addSegment(
+          KDL::Segment(
+            child, KDL::Joint(child + "_joint", KDL::Joint::None), transform));
+      }
+      // Count joints and segments
+      chain.joints = chain.joint_names.size();
+      chain.segments = chain.kdl_chain.getNrOfSegments();
+      if (chain.joints != chain.kdl_chain.getNrOfJoints()) {
+        throw std::invalid_argument(
+                "Unexpected joints in chain: " + parent + " -> " + child);
+      }
+      chains_[{parent, child}] = chain;
+    } else {
+      throw std::invalid_argument(
+              "Could not find chain: " + parent + " -> " + child);
+    }
+  }
+  // Update contact frame transforms
+  for (const auto & [frame, index] : chain.contact_indices) {
+    if (index > 0) {
+      auto & segment = chain.kdl_chain.getSegment(index);
+      segment.setFrameToTip(contact_transforms_.at(frame));
+    } else {
+      auto & segment = chain.kdl_chain.getSegment(chain.segments + index);
+      segment.setFrameToTip(contact_transforms_.at(frame).Inverse());
+    }
   }
   return chain;
 }
