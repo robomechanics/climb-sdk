@@ -6,6 +6,7 @@ RUN apt-get -y update \
     python3-pip \
     usbutils \
     xterm \
+    gdb \
     ros-$ROS_DISTRO-joint-state-publisher-gui \
     ros-$ROS_DISTRO-xacro \
     ros-$ROS_DISTRO-dynamixel-sdk \

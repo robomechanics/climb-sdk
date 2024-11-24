@@ -39,7 +39,7 @@ bool KdlInterface::initialize(std::string & error_message)
       } else {
         tree_.addSegment(
           KDL::Segment(
-            contact, KDL::Joint(contact + "_joint", KDL::Joint::Fixed)),
+            contact, KDL::Joint(contact + "_joint", KDL::Joint::None)),
           end_effector);
       }
     }
@@ -343,69 +343,68 @@ KDL::JntArray KdlInterface::getJointArray(
 KdlInterface::Chain KdlInterface::getChain(
   const std::string & parent, const std::string & child)
 {
-  Chain chain;
-  if (chains_.find({parent, child}) != chains_.end()) {
-    chain = chains_[{parent, child}];
-  } else {
+  if (chains_.find({parent, child}) == chains_.end()) {
+    // Compute chain
+    Chain chain;
     auto [parent_frame, parent_inertial] = findSuffix(parent, "_inertial");
     auto [child_frame, child_inertial] = findSuffix(child, "_inertial");
-    if (tree_.getChain(parent_frame, child_frame, chain.kdl_chain)) {
-      // Identify joints in chain
-      for (size_t i = 0; i < chain.kdl_chain.getNrOfSegments(); i++) {
-        auto joint = chain.kdl_chain.getSegment(i).getJoint().getName();
-        if (std::find(joint_names_.begin(), joint_names_.end(), joint) !=
-          joint_names_.end())
-        {
-          chain.joint_names.push_back(joint);
-          chain.joint_indices.push_back(joint_indices_.at(joint));
-        }
-      }
-      // Identify contact frames if present
-      if (contact_transforms_.find(parent_frame) != contact_transforms_.end()) {
-        chain.contact_indices[parent_frame] =
-          -chain.kdl_chain.getNrOfSegments() - (child_inertial ? 1 : 0);
-      }
-      if (contact_transforms_.find(child_frame) != contact_transforms_.end()) {
-        chain.contact_indices[child_frame] =
-          chain.kdl_chain.getNrOfSegments() - 1 + (parent_inertial ? 1 : 0);
-      }
-      // Add parent/child inertial links if requested
-      if (parent_inertial) {
-        KDL::Frame transform;
-        transform.p =
-          -tree_.getSegment(parent_frame)->second.segment.getInertia().getCOG();
-        KDL::Chain new_chain;
-        new_chain.addSegment(
-          KDL::Segment(
-            parent_frame, KDL::Joint(
-              parent_frame + "_joint", KDL::Joint::None), transform));
-        new_chain.addChain(chain.kdl_chain);
-        chain.kdl_chain = new_chain;
-      }
-      if (child_inertial) {
-        KDL::Frame transform;
-        transform.p = chain.kdl_chain.getSegment(
-          chain.kdl_chain.getNrOfSegments() - 1).getInertia().getCOG();
-        chain.kdl_chain.addSegment(
-          KDL::Segment(
-            child, KDL::Joint(child + "_joint", KDL::Joint::None), transform));
-      }
-      // Count joints and segments
-      chain.joints = chain.joint_names.size();
-      chain.segments = chain.kdl_chain.getNrOfSegments();
-      if (chain.joints != chain.kdl_chain.getNrOfJoints()) {
-        throw std::invalid_argument(
-                "Unexpected joints in chain: " + parent + " -> " + child);
-      }
-      chains_[{parent, child}] = chain;
-    } else {
+    if (!tree_.getChain(parent_frame, child_frame, chain.kdl_chain)) {
       throw std::invalid_argument(
               "Could not find chain: " + parent + " -> " + child);
     }
+    // Identify joints in chain
+    for (size_t i = 0; i < chain.kdl_chain.getNrOfSegments(); i++) {
+      auto joint = chain.kdl_chain.getSegment(i).getJoint().getName();
+      if (std::find(joint_names_.begin(), joint_names_.end(), joint) !=
+        joint_names_.end())
+      {
+        chain.joint_names.push_back(joint);
+        chain.joint_indices.push_back(joint_indices_.at(joint));
+      }
+    }
+    // Identify contact frames if present
+    if (contact_transforms_.find(parent_frame) != contact_transforms_.end()) {
+      chain.contact_indices[parent_frame] =
+        -chain.kdl_chain.getNrOfSegments() - (child_inertial ? 1 : 0);
+    }
+    if (contact_transforms_.find(child_frame) != contact_transforms_.end()) {
+      chain.contact_indices[child_frame] =
+        chain.kdl_chain.getNrOfSegments() - 1 + (parent_inertial ? 1 : 0);
+    }
+    // Add parent/child inertial links if requested
+    if (parent_inertial) {
+      KDL::Frame transform;
+      transform.p =
+        -tree_.getSegment(parent_frame)->second.segment.getInertia().getCOG();
+      KDL::Chain new_chain;
+      new_chain.addSegment(
+        KDL::Segment(
+          parent_frame, KDL::Joint(
+            parent_frame + "_joint", KDL::Joint::None), transform));
+      new_chain.addChain(chain.kdl_chain);
+      chain.kdl_chain = new_chain;
+    }
+    if (child_inertial) {
+      KDL::Frame transform;
+      transform.p =
+        tree_.getSegment(child_frame)->second.segment.getInertia().getCOG();
+      chain.kdl_chain.addSegment(
+        KDL::Segment(
+          child, KDL::Joint(child + "_joint", KDL::Joint::None), transform));
+    }
+    // Count joints and segments
+    chain.joints = chain.joint_names.size();
+    chain.segments = chain.kdl_chain.getNrOfSegments();
+    if (chain.joints != chain.kdl_chain.getNrOfJoints()) {
+      throw std::invalid_argument(
+              "Unexpected joints in chain: " + parent + " -> " + child);
+    }
+    chains_[{parent, child}] = chain;
   }
   // Update contact frame transforms
+  auto & chain = chains_.at({parent, child});
   for (const auto & [frame, index] : chain.contact_indices) {
-    if (index > 0) {
+    if (index >= 0) {
       auto & segment = chain.kdl_chain.getSegment(index);
       segment.setFrameToTip(contact_transforms_.at(frame));
     } else {
@@ -413,7 +412,7 @@ KdlInterface::Chain KdlInterface::getChain(
       segment.setFrameToTip(contact_transforms_.at(frame).Inverse());
     }
   }
-  return chain;
+  return chains_[{parent, child}];
 }
 
 std::tuple<std::string, bool> KdlInterface::findSuffix(

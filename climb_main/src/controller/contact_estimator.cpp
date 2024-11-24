@@ -81,44 +81,40 @@ Eigen::Matrix3d ContactEstimator::getContactOrientation(
   const Eigen::Vector3d & normal, const Eigen::Vector3d & gravity)
 {
   auto wrist = robot_->getWristType(contact_frame);
+  Eigen::Matrix3d R_ec =
+    robot_->getTransform(end_effector_frame, contact_frame).second;
+  if (!normal.norm()) {
+    return R_ec;
+  }
   Eigen::Matrix3d R_be = robot_->getTransform(end_effector_frame).second;
-  Eigen::Matrix3d R_bc = robot_->getTransform(contact_frame).second;
+  Eigen::Vector3d n_e = R_be.transpose() * normal;
+  Eigen::Vector3d g_e = R_be.transpose() * gravity;
+  Eigen::Vector3d com_e = robot_->getTransform(
+    end_effector_frame, contact_frame + "_inertial").first;
   if (wrist == KinematicsInterface::WristType::GRAVITY) {
-    // Align x-axis with normal and negative z-axis with gravity
-    if (gravity.size() && gravity.norm()) {
-      Eigen::Vector3d g = gravity / gravity.norm();
-      if (abs(normal.dot(g)) < cos(min_incline_)) {
-        R_bc.col(0) = normal;
-        R_bc.col(1) = -g.cross(R_bc.col(0));
-        R_bc.col(1) /= R_bc.col(1).norm();
-        R_bc.col(2) = R_bc.col(0).cross(R_bc.col(1));
-      }
+    // Align center of mass with gravity, then align x-axis with normal
+    Eigen::Matrix3d R_ec1 = R_ec;
+    if (g_e.norm() && com_e.norm() &&
+      g_e.dot(n_e) / (g_e.norm() * n_e.norm()) < std::cos(min_incline_) &&
+      com_e.dot(n_e) / (com_e.norm() * n_e.norm()) < std::cos(min_incline_))
+    {
+      R_ec1 = Eigen::Quaterniond::FromTwoVectors(com_e, g_e) * R_ec;
     }
-    return R_be.transpose() * R_bc;
+    Eigen::Matrix3d R_ec2 =
+      Eigen::Quaterniond::FromTwoVectors(R_ec1.col(0), n_e) * R_ec1;
+    R_ec2 /= R_ec2.col(0).norm();
+    return R_ec2;
   } else if (wrist == KinematicsInterface::WristType::FIXED) {
     // Maintain constant orientation
     return Eigen::Matrix3d::Identity();
   } else if (wrist == KinematicsInterface::WristType::SPRING) {
     // Rotate from end effector normal to surface normal
-    Eigen::Vector3d ee_normal = R_be.col(2);
-    Eigen::Vector3d axis = ee_normal.cross(normal);
-    if (axis.norm() < 1e-6) {
-      return Eigen::Matrix3d::Identity();
-    }
-    axis /= axis.norm();
-    double angle = acos(ee_normal.dot(normal));
-    return Eigen::AngleAxisd(angle, axis).toRotationMatrix();
+    return Eigen::Quaterniond::FromTwoVectors(
+      Eigen::Vector3d::UnitX(), n_e).toRotationMatrix();
   } else if (wrist == KinematicsInterface::WristType::FREE) {
     // Rotate from previous contact normal to surface normal
-    Eigen::Vector3d contact_normal = R_bc.col(2);
-    Eigen::Vector3d axis = contact_normal.cross(normal);
-    if (axis.norm() < 1e-6) {
-      return R_be.transpose() * R_bc;
-    }
-    axis /= axis.norm();
-    double angle = acos(contact_normal.dot(normal));
-    return R_be.transpose() * R_bc *
-           Eigen::AngleAxisd(angle, axis).toRotationMatrix();
+    return Eigen::Quaterniond::FromTwoVectors(
+      R_ec.col(0), n_e).toRotationMatrix() * R_ec;
   }
   return Eigen::Matrix3d::Identity();
 }

@@ -384,7 +384,7 @@
       <inertial>
         <!-- Offset gripper center of mass to ensure correct resting angle -->
         <origin xyz="0.0045
-          ${0.0150 * sin(offset)}
+          ${0.0150 * sin(offset) * reverse}
           ${-0.0150 * cos(offset)}" />
         <xacro:inertial mass="0.0700"
           ixx="0.0007082" iyy="0.0002180" izz="0.0005308" />
