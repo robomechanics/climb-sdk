@@ -26,12 +26,14 @@ find_package(keyboard_handler REQUIRED)
 # Utilities library
 add_library(${PROJECT_NAME}_util SHARED
   src/util/parameterized.cpp
+  src/util/eigen_utils.cpp
 )
 target_include_directories(${PROJECT_NAME}_util PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-ament_target_dependencies(${PROJECT_NAME}_util rclcpp)
+target_link_libraries(${PROJECT_NAME}_util Eigen3::Eigen)
+ament_target_dependencies(${PROJECT_NAME}_util rclcpp geometry_msgs)
 
 # Hardware library
 add_library(${PROJECT_NAME}_hardware SHARED
@@ -146,6 +148,11 @@ if(BUILD_TESTING)
   # the following line skips cpplint (only works in a git repo)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
+
+  # Utilities tests
+  ament_add_gtest(${PROJECT_NAME}_util_test test/util_test.cpp)
+  target_link_libraries(${PROJECT_NAME}_util_test ${PROJECT_NAME}_util)
+  target_include_directories(${PROJECT_NAME}_util_test PRIVATE include)
 
   # Hardware tests
   ament_add_gtest(${PROJECT_NAME}_hardware_test test/hardware_test.cpp)
