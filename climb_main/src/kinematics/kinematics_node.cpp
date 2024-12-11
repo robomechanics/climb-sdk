@@ -51,18 +51,53 @@ void KinematicsNode::jointCallback(const JointState::SharedPtr msg)
   std::vector<TransformStamped> transforms;
   for (auto i = 0; i < robot_->getNumContacts(); i++) {
     try {
-      auto ee_frame = robot_->getEndEffectorFrames().at(i);
-      auto contact_frame = robot_->getContactFrames().at(i);
-      auto transform = tf_buffer_->lookupTransform(
-        name_ + "/" + ee_frame, name_ + "/" + contact_frame,
-        tf2::TimePointZero);
-      transform.header.frame_id = ee_frame;
-      transform.child_frame_id = contact_frame;
-      transforms.push_back(transform);
+      transforms.emplace_back(
+        lookupTransform(
+          robot_->getEndEffectorFrames().at(i),
+          robot_->getContactFrames().at(i)));
     } catch (const tf2::TransformException & ex) {
     }
   }
   robot_->updateContactFrames(transforms);
+}
+
+TransformStamped KinematicsNode::lookupTransform(
+  const std::string & parent_frame, const std::string & child_frame,
+  const rclcpp::Time & time)
+{
+  if (parent_frame.empty() || child_frame.empty()) {
+    throw std::invalid_argument("TF frame name cannot be empty");
+  }
+  std::string parent = parent_frame.at(0) == '/' ?
+    parent_frame.substr(1) :
+    name_ + "/" + parent_frame;
+  std::string child = child_frame.at(0) == '/' ?
+    child_frame.substr(1) :
+    name_ + "/" + child_frame;
+  auto transform = tf_buffer_->lookupTransform(parent, child, time);
+  if (parent_frame.at(0) != '/') {transform.header.frame_id = parent_frame;}
+  if (child_frame.at(0) != '/') {transform.child_frame_id = child_frame;}
+  return transform;
+}
+
+TransformStamped KinematicsNode::lookupMapToBodyTransform(
+  const rclcpp::Time & time)
+{
+  TransformStamped transform;
+  try {
+    transform = lookupTransform("/map", robot_->getBodyFrame(), time);
+  } catch (const tf2::TransformException &) {
+    try {
+      transform = lookupTransform("map", robot_->getBodyFrame(), time);
+    } catch (const tf2::TransformException &) {
+      try {
+        transform =
+          lookupTransform("camera_link", robot_->getBodyFrame(), time);
+      } catch (const tf2::TransformException &) {
+      }
+    }
+  }
+  return transform;
 }
 
 rcl_interfaces::msg::SetParametersResult KinematicsNode::parameterCallback(

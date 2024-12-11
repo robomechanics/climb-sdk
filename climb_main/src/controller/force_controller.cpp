@@ -64,7 +64,10 @@ bool ForceController::update(const Eigen::VectorXd & force)
   VectorXd u = robot_->getJointEffort();
   VectorXd umin = robot_->getJointEffortMin();
   VectorXd umax = robot_->getJointEffortMax();
-  u = u.cwiseMin(umax).cwiseMax(umin);
+  if (max_effort_ > 0) {
+    umax = umax.cwiseMin(max_effort_);
+    umin = umin.cwiseMax(-max_effort_);
+  }
   if (!configuration_.size()) {
     configuration_ = Eigen::VectorXd::Zero(n);
   }
@@ -84,10 +87,10 @@ bool ForceController::update(const Eigen::VectorXd & force)
   problem.addLinearCost("margin", -stiffness_);
 
   // Respect joint limits and maximum displacement per timestep
-  problem.addBounds(
-    "joint",
-    (qmin - q).cwiseMax(-joint_step_), (qmax - q).cwiseMin(joint_step_));
-  problem.addBounds("body", -joint_step_, joint_step_);
+  // problem.addBounds("joint", qmin - q, qmax - q);
+  problem.addLinearConstraint(
+    {"joint"}, {MatrixXd::Identity(n, n) * stiffness_},
+    (qmin - q) * stiffness_, (qmax - q) * stiffness_);
 
   // Respect joint effort limits
   problem.addLinearConstraint(
@@ -119,17 +122,17 @@ bool ForceController::update(const Eigen::VectorXd & force)
     if (mode == EndEffectorCommand::MODE_FREE) {
       problem.addLinearConstraint(
         // -displacement - error <= -setpoint
-        {"displacement", "error"}, {-A_i, -I_i},
-        {}, -B_i.transpose() * end_effector_goals_[frame].setpoint);
+        {"displacement", "error"}, {-stiffness_ * A_i, -stiffness_ * I_i},
+        {}, -stiffness_ * B_i.transpose() * end_effector_goals_[frame].setpoint);
       problem.addLinearConstraint(
         // displacement - error <= setpoint
-        {"displacement", "error"}, {A_i, -I_i},
-        {}, B_i.transpose() * end_effector_goals_[frame].setpoint);
+        {"displacement", "error"}, {stiffness_ * A_i, -stiffness_ * I_i},
+        {}, stiffness_ * B_i.transpose() * end_effector_goals_[frame].setpoint);
     } else if (mode == EndEffectorCommand::MODE_TRANSITION) {
       problem.addLinearConstraint(
         // -displacement - error <= -setpoint
         {"displacement", "error"}, {-K_i * A_i, -K_i * I_i},
-        {}, -B_i.transpose() * end_effector_goals_[frame].setpoint - force_i);
+        {}, -(B_i.transpose() * end_effector_goals_[frame].setpoint - force_i));
       problem.addLinearConstraint(
         // displacement - error <= setpoint
         {"displacement", "error"}, {K_i * A_i, -K_i * I_i},
@@ -140,7 +143,7 @@ bool ForceController::update(const Eigen::VectorXd & force)
         // A_c * displacement <= b_c
         {"displacement"},
         {constraint.A * K_i * A_i},
-        {}, (constraint.b - constraint.A * force_i).cwiseMax(0));
+        {}, (constraint.b - constraint.A * force_i));
       problem.addLinearConstraint({"error"}, {I_i}, {});
     } else if (mode == EndEffectorCommand::MODE_STANCE) {
       auto constraint = getAdhesionConstraint(frame);
@@ -170,7 +173,7 @@ bool ForceController::update(const Eigen::VectorXd & force)
       J_mass += mass / total_mass * robot_->getJacobian(frame, true);
       G_mass.leftCols(3) += mass / total_mass * Eigen::Matrix3d::Identity();
       G_mass.rightCols(3) +=
-        mass / total_mass * robot_->getSkew(robot_->getTransform(frame).first);
+        mass / total_mass * robot_->getSkew(robot_->getTransform(frame).translation());
     }
   }
   problem.addLinearConstraint(
@@ -187,7 +190,7 @@ bool ForceController::update(const Eigen::VectorXd & force)
     MatrixXd G_ob(3, p);
     G_ob <<
       Eigen::Matrix3d::Identity(),
-      robot_->getSkew(robot_->getTransform(obstacle.frame).first);
+      robot_->getSkew(robot_->getTransform(obstacle.frame).translation());
     Eigen::RowVector3d normal(obstacle.normal);
     // normal * x <= dist
     problem.addLinearConstraint(
@@ -206,6 +209,7 @@ bool ForceController::update(const Eigen::VectorXd & force)
   // Store results
   if (success) {
     displacement_cmd_ = solver_->getSolution().head(n + p);
+    displacement_cmd_ /= std::max(1.0, displacement_cmd_.cwiseAbs().maxCoeff() / joint_step_);
     displacement_cmd_.head(n) =
       displacement_cmd_.head(n).cwiseMin(qmax - q).cwiseMax(qmin - q);
     margin_ = solver_->getSolution().tail(1)(0) * stiffness_;
@@ -368,7 +372,10 @@ void ForceController::declareParameters()
     "Maximum tangential force on microspine gripper in N");
   declareParameter(
     "friction_coefficient", 0.5,
-    "End effector coefficient of friction");
+    "End effector coefficient of friction", 0.0);
+  declareParameter(
+    "effort_limit", 0.0,
+    "Maximum joint effort in Nm (0 for no limit)", 0.0);
   for (const auto & param : solver_->getParameters()) {
     parameters_.push_back(param);
   }
@@ -398,6 +405,8 @@ void ForceController::setParameter(const Parameter & param, SetParametersResult 
     microspine_min_force_ = param.as_double();
   } else if (param.get_name() == "microspine_max_force") {
     microspine_max_force_ = param.as_double();
+  } else if (param.get_name() == "effort_limit") {
+    max_effort_ = param.as_double();
   }
   solver_->setParameter(param, result);
 }

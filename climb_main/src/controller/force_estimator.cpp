@@ -1,4 +1,5 @@
 #include "climb_main/controller/force_estimator.hpp"
+#include "climb_main/util/ros_utils.hpp"
 
 ForceEstimator::ForceEstimator(std::shared_ptr<KinematicsInterface> robot)
 : robot_(robot)
@@ -46,6 +47,7 @@ Eigen::VectorXd ForceEstimator::update(
     g_to_f_ext *= robot_->getMass() * g_ / g.norm();
   }
   Eigen::VectorXd f_ext = g_to_f_ext * g;
+  // TODO: use IMU orientation instead of acceleration if provided
 
   // Compute robot kinematics
   Eigen::MatrixXd Jh = robot_->getHandJacobian();
@@ -126,40 +128,51 @@ void ForceEstimator::reset(int num_joints)
   effort_count_ = 0;
 }
 
-std::vector<WrenchStamped> ForceEstimator::forcesToMessages(
-  Eigen::VectorXd forces, rclcpp::Time stamp, std::string tf_prefix)
+ContactForce ForceEstimator::getContactForceMessage(
+  const Eigen::VectorXd & forces, const rclcpp::Time & stamp)
 {
-  std::vector<WrenchStamped> messages;
-  auto contacts = robot_->getContactFrames();
-  contacts.push_back(robot_->getBodyFrame());
+  ContactForce message;
+  Eigen::Matrix<double, 6, Eigen::Dynamic> basis;
+  Eigen::Vector<double, 6> wrench;
   size_t index = 0;
-  for (size_t i = 0; i < contacts.size(); i++) {
-    WrenchStamped message;
-    message.header.stamp = stamp;
-    if (tf_prefix.size()) {
-      message.header.frame_id = tf_prefix + "/" + contacts[i];
-    } else {
-      message.header.frame_id = contacts[i];
-    }
-    Eigen::VectorXd wrench;
-    if (i == contacts.size() - 1) {
-      Eigen::MatrixXd Gs = -robot_->getGraspMap();
-      wrench = -Gs * forces;  // External wrench on body = -f_b = -Gs * f_c
-    } else {
-      Eigen::MatrixXd basis = robot_->getWrenchBasis(contacts[i]);
-      Eigen::VectorXd f = forces(Eigen::seq(index, index + basis.cols() - 1));
-      wrench = -basis * f;    // Wrench of world on end effector = -B * f_c
-      index += basis.cols();
-    }
-    message.wrench.force.x = wrench(0);
-    message.wrench.force.y = wrench(1);
-    message.wrench.force.z = wrench(2);
-    message.wrench.torque.x = wrench(3);
-    message.wrench.torque.y = wrench(4);
-    message.wrench.torque.z = wrench(5);
-    messages.push_back(message);
+  for (auto frame : robot_->getContactFrames()) {
+    basis = robot_->getWrenchBasis(frame);
+    wrench = basis * forces.segment(index, basis.cols());
+    index += basis.cols();
+    message.frame.emplace_back(std::move(frame));
+    message.wrench.emplace_back(RosUtils::eigenToWrench(wrench));
+  }
+  message.header.stamp = stamp;
+  return message;
+}
+
+std::vector<WrenchStamped> ForceEstimator::splitContactForceMessage(
+  const ContactForce & message, const std::string & tf_prefix)
+{
+  using RosUtils::operator-;
+  std::vector<WrenchStamped> messages;
+  messages.reserve(message.frame.size());
+  for (size_t i = 0; i < message.frame.size(); i++) {
+    WrenchStamped wrench;
+    wrench.header.stamp = message.header.stamp;
+    wrench.header.frame_id = tf_prefix + "/" + message.frame[i];
+    wrench.wrench = -(message.wrench[i]);
+    messages.push_back(std::move(wrench));
   }
   return messages;
+}
+
+WrenchStamped ForceEstimator::getGravityForceMessage(
+  const Eigen::VectorXd & forces, const rclcpp::Time & stamp,
+  const std::string & tf_prefix)
+{
+  WrenchStamped message;
+  Eigen::Matrix<double, 6, Eigen::Dynamic> Gs = -robot_->getGraspMap();
+  Eigen::Vector<double, 6> wrench = -Gs * forces;
+  message.header.frame_id = tf_prefix + "/" + robot_->getBodyFrame();
+  message.header.stamp = stamp;
+  message.wrench = RosUtils::eigenToWrench(wrench);
+  return message;
 }
 
 void ForceEstimator::declareParameters()

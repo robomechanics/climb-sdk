@@ -2,13 +2,12 @@
 #include <fstream>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include "climb_main/kinematics/kdl_interface.hpp"
-#include "climb_main/controller/force_estimator.hpp"
-#include "climb_main/controller/force_controller.hpp"
+#include "climb_main/step_planner/step_planner.hpp"
 #include "util/test_utils.hpp"
 
 const double TOL = 1e-6;
 
-class ControllerTest : public testing::Test
+class StepPlannerTest : public testing::Test
 {
 protected:
   void SetUp() override
@@ -70,79 +69,48 @@ protected:
     right_foot_transform.header.frame_id = "right_foot";
     left_foot_transform.transform.rotation.w = 1;
     robot_->updateContactFrames({left_foot_transform, right_foot_transform});
+
+    // Initialize step planner
+    step_planner_ = std::make_unique<StepPlanner>(robot_);
   }
 
   std::shared_ptr<KinematicsInterface> robot_;
+  std::unique_ptr<StepPlanner> step_planner_;
 };
 
-TEST_F(ControllerTest, ForceEstimator)
+TEST_F(StepPlannerTest, MoveFoothold)
 {
-  // Initialize estimator
-  ForceEstimator estimator(robot_);
-  estimator.setParameter(
-    "joint_effort_variance", std::vector<double> {1, 1, 1, 1});
-  estimator.setParameter("joint_effort_filter_window", 2);
-  estimator.setParameter("gravity", 10.0);
-  estimator.setParameter("gravity_offset", true);
+  // Set foothold
+  Eigen::Isometry3d foothold = Eigen::Isometry3d::Identity();
+  foothold.translation() << 1, 0, 0;
+  foothold.linear() =
+    Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d(0, 0, 1)).toRotationMatrix();
+  step_planner_->step("left_contact", foothold);
 
-  // Set joint effort values
-  JointState joint_state;
-  joint_state.name = {"left_hip", "right_hip", "left_knee", "right_knee"};
-  joint_state.effort = {0, 0, -sqrt(2) * 5, sqrt(2) * 5};
-  robot_->updateJointState(joint_state);
+  EXPECT_NEAR_EIGEN(
+    step_planner_->getFoothold("left_contact").rotation(),
+    foothold.rotation(), TOL) << "Failed to set foothold rotation";
+  EXPECT_NEAR_EIGEN(
+    step_planner_->getFoothold("left_contact").translation(),
+    foothold.translation(), TOL) << "Failed to set foothold translation";
 
-  // Estimate without IMU (multiple measurements)
-  for (int i = 0; i < 3; i++) {
-    estimator.update();
-  }
-  Eigen::VectorXd forces_robot_on_world = estimator.update();
-  Eigen::VectorXd forces = -forces_robot_on_world;  // forces of world on robot
-  Eigen::VectorXd forces_expected(6);
-  forces_expected << sqrt(2) * 10, 0, sqrt(2) * 10,
-    -sqrt(2) * 10, 0, sqrt(2) * 10;
-  EXPECT_NEAR_EIGEN(forces, forces_expected, TOL) <<
-    "Incorrect force estimate without IMU";
+  // Move foothold
+  Eigen::Vector<double, 6> twist;
+  twist << 0, 2, 0, 0, M_PI / 2, 0;
+  step_planner_->moveFoothold("left_contact", twist);
 
-  // Estimate with IMU
-  Imu imu;
-  imu.orientation_covariance[0] = -1;
-  imu.linear_acceleration.x = 7;
-  imu.linear_acceleration.z = -7;
-  imu.linear_acceleration_covariance[0] = 1;
-  imu.linear_acceleration_covariance[4] = 1;
-  imu.linear_acceleration_covariance[8] = 1;
-  forces_robot_on_world = estimator.update(imu);
-  forces = -forces_robot_on_world;
-  EXPECT_NEAR_EIGEN(forces, forces_expected, TOL) <<
-    "Incorrect force estimate with IMU";
-}
+  Eigen::Isometry3d expected = Eigen::Isometry3d::Identity();
+  expected.translation() << 1, 2, 0;
+  expected.linear() =
+    Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d(0, 1, 0)) *
+    Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d(0, 0, 1)).toRotationMatrix();
 
-TEST_F(ControllerTest, ForceController)
-{
-  // Initialize controller
-  ForceController controller(robot_);
-  controller.defaultParameters();
-  controller.setParameter("mass_threshold", 1000.0);
-  controller.setParameter("verbose", true);
-  controller.setParameter("joint_step", 0.01);
-
-  // Set end effector commands
-  EndEffectorCommand command;
-  command.frame = {"left_contact", "right_contact"};
-  command.mode = {
-    EndEffectorCommand::MODE_STANCE, EndEffectorCommand::MODE_STANCE};
-  controller.setEndEffectorCommand(command);
-
-  // Update controller output (ignore link masses)
-  Eigen::Vector<double, 6> forces{-10, 0, -10, 10, 0, -10};
-  EXPECT_TRUE(controller.update(forces));
-
-  // Check for static equilibrium (ignore link masses)
-  Eigen::MatrixXd Gs = -robot_->getGraspMap();
-  Eigen::VectorXd gravity_wrench = -Gs * forces;
-  Eigen::VectorXd contact_wrench = Gs * controller.getContactForce();
-  EXPECT_NEAR_EIGEN(contact_wrench, -gravity_wrench, TOL) <<
-    "Static equilibrium constraint violated";
+  EXPECT_NEAR_EIGEN(
+    step_planner_->getFoothold("left_contact").rotation(),
+    expected.rotation(), TOL) << "Incorrect foothold rotation after move";
+  EXPECT_NEAR_EIGEN(
+    step_planner_->getFoothold("left_contact").translation(),
+    expected.translation(), TOL) << "Incorrect foothold translation after move";
 }
 
 int main(int argc, char ** argv)

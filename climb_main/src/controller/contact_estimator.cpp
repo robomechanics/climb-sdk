@@ -59,7 +59,7 @@ ContactEstimator::Plane ContactEstimator::getGroundPlane(
   Plane plane;
   Eigen::MatrixXd contacts(3, contact_frames.size());
   for (size_t i = 0; i < contact_frames.size(); ++i) {
-    contacts.col(i) = robot_->getTransform(contact_frames[i]).first;
+    contacts.col(i) = robot_->getTransform(contact_frames[i]).translation();
   }
   Eigen::Vector3d mean = contacts.rowwise().mean();
   if (contact_frames.size() < 3) {
@@ -82,15 +82,15 @@ Eigen::Matrix3d ContactEstimator::getContactOrientation(
 {
   auto wrist = robot_->getWristType(contact_frame);
   Eigen::Matrix3d R_ec =
-    robot_->getTransform(end_effector_frame, contact_frame).second;
+    robot_->getTransform(end_effector_frame, contact_frame).rotation();
   if (!normal.norm()) {
     return R_ec;
   }
-  Eigen::Matrix3d R_be = robot_->getTransform(end_effector_frame).second;
+  Eigen::Matrix3d R_be = robot_->getTransform(end_effector_frame).rotation();
   Eigen::Vector3d n_e = R_be.transpose() * normal;
   Eigen::Vector3d g_e = R_be.transpose() * gravity;
   Eigen::Vector3d com_e = robot_->getTransform(
-    end_effector_frame, contact_frame + "_inertial").first;
+    end_effector_frame, contact_frame + "_inertial").translation();
   if (wrist == KinematicsInterface::WristType::GRAVITY) {
     // Align center of mass with gravity, then align x-axis with normal
     Eigen::Matrix3d R_ec1 = R_ec;

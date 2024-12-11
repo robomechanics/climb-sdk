@@ -7,7 +7,7 @@
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
 #include "climb_msgs/msg/joint_command.hpp"
-#include "climb_msgs/msg/contact_state.hpp"
+#include "climb_msgs/msg/contact_force.hpp"
 #include "climb_msgs/msg/end_effector_command.hpp"
 #include "climb_msgs/srv/controller_enable.hpp"
 
@@ -20,7 +20,7 @@ using std_msgs::msg::String;
 using geometry_msgs::msg::WrenchStamped;
 using sensor_msgs::msg::JointState;
 using climb_msgs::msg::JointCommand;
-using climb_msgs::msg::ContactState;
+using climb_msgs::msg::ContactForce;
 using climb_msgs::msg::EndEffectorCommand;
 using climb_msgs::srv::ControllerEnable;
 
@@ -29,7 +29,7 @@ using climb_msgs::srv::ControllerEnable;
  *
  * Services: controller_enable
  * Subscribers: end_effector_commands, joint_states, robot_description
- * Publishers: joint_commands, contact_states, contact_forces, tf contact frames
+ * Publishers: joint_commands, contact_forces, tf contact frames
  */
 class ControllerNode : public KinematicsNode
 {
@@ -83,6 +83,8 @@ private:
   // Joint command publisher
   rclcpp::Publisher<JointCommand>::SharedPtr joint_cmd_pub_;
   // Contact force publisher
+  rclcpp::Publisher<ContactForce>::SharedPtr contact_force_pub_;
+  // Individual contact force publishers (for Rviz)
   std::vector<rclcpp::Publisher<WrenchStamped>::SharedPtr> contact_force_pubs_;
   // Contact command subscriber
   rclcpp::Subscription<EndEffectorCommand>::SharedPtr ee_cmd_sub_;

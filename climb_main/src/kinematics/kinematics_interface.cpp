@@ -144,14 +144,14 @@ Eigen::Matrix3d KinematicsInterface::getSkew(
 }
 
 Eigen::Matrix<double, 6, 6> KinematicsInterface::getAdjoint(
-  const Eigen::Vector3d & position,
-  const Eigen::Matrix3d & rotation)
+  const Eigen::Isometry3d & transform)
 {
   Eigen::Matrix<double, 6, 6> adjoint;
-  adjoint.block<3, 3>(0, 0) = rotation;
+  adjoint.block<3, 3>(0, 0) = transform.rotation();
   adjoint.block<3, 3>(3, 0) = Eigen::Matrix3d::Zero();
-  adjoint.block<3, 3>(0, 3) = getSkew(position) * rotation;
-  adjoint.block<3, 3>(3, 3) = rotation;
+  adjoint.block<3, 3>(0, 3) =
+    getSkew(transform.translation()) * adjoint.block<3, 3>(0, 0);
+  adjoint.block<3, 3>(3, 3) = adjoint.block<3, 3>(0, 0);
   return adjoint;
 }
 

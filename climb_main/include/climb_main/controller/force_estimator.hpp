@@ -6,11 +6,13 @@
 #include <Eigen/Geometry>
 #include <sensor_msgs/msg/imu.hpp>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
+#include <climb_msgs/msg/contact_force.hpp>
 #include "climb_main/util/parameterized.hpp"
 #include "climb_main/kinematics/kinematics_interface.hpp"
 
 using sensor_msgs::msg::Imu;
 using geometry_msgs::msg::WrenchStamped;
+using climb_msgs::msg::ContactForce;
 
 /**
  * @brief Estimates contact forces from joint effort and IMU if present
@@ -65,11 +67,30 @@ public:
    * @brief Convert contact force vector to individual WrenchStamped messages
    * @param[in] forces Vector of contact forces
    * @param[in] stamp Timestamp of contact force measurement
-   * @param[in] tf_prefix Optional prefix for contact frame names
-   * @return Vector of WrenchStamped messages
+   * @return ContactForce message
    */
-  std::vector<WrenchStamped> forcesToMessages(
-    Eigen::VectorXd forces, rclcpp::Time stamp, std::string tf_prefix = "");
+  ContactForce getContactForceMessage(
+    const Eigen::VectorXd & forces, const rclcpp::Time & stamp);
+
+  /**
+   * @brief Convert ContactForce message to individual WrenchStamped messages
+   * @param[in] message ContactForce message
+   * @param[in] tf_prefix Optional prefix for contact frame names
+   * @return Vector of WrenchStamped messages for each contact frame
+   */
+  std::vector<WrenchStamped> splitContactForceMessage(
+    const ContactForce & message, const std::string & tf_prefix);
+
+  /**
+   * @brief Convert contact force vector to a gravity WrenchStamped message
+   * @param[in] forces Vector of contact forces
+   * @param[in] stamp Timestamp of contact force measurement
+   * @param[in] tf_prefix Optional prefix for contact frame names
+   * @return WrenchStamped message for external wrench on body
+   */
+  WrenchStamped getGravityForceMessage(
+    const Eigen::VectorXd & forces, const rclcpp::Time & stamp,
+    const std::string & tf_prefix);
 
   void declareParameters() override;
 

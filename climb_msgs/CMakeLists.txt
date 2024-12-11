@@ -13,11 +13,12 @@ find_package(rosidl_default_generators REQUIRED)
 
 # Generate interfaces
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/BehaviorCommand.msg"
-  "msg/ContactState.msg"
+  "action/StepCommand.action"
+  "msg/ContactForce.msg"
   "msg/ActuatorState.msg"
   "msg/JointCommand.msg"
   "msg/EndEffectorCommand.msg"
+  "msg/StepOverrideCommand.msg"
   "srv/ActuatorEnable.srv"
   "srv/ControllerEnable.srv"
   "srv/KeyInput.srv"

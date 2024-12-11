@@ -69,17 +69,17 @@ public:
    * @brief Get transform from parent frame to child frame
    * @param[in] parent Name of parent frame
    * @param[in] child Name of child frame
-   * @return Pair of position and rotation matrix of child frame in parent frame
+   * @return Transform of child frame in parent frame
    */
-  virtual std::pair<Eigen::Vector3d, Eigen::Matrix3d> getTransform(
+  virtual Eigen::Isometry3d getTransform(
     const std::string & parent, const std::string & child) = 0;
 
   /**
    * @brief Get transform from body frame to child frame
    * @param[in] child Name of child frame
-   * @return Pair of position and rotation matrix of child frame in parent frame
+   * @return Transform of child frame in body frame
    */
-  virtual std::pair<Eigen::Vector3d, Eigen::Matrix3d> getTransform(
+  virtual Eigen::Isometry3d getTransform(
     const std::string & child) {return getTransform(body_frame_, child);}
 
   /**
@@ -145,11 +145,10 @@ public:
    * @brief Compute adjoint mapping twist in child frame to twist in parent
    * frame
    * @param[in] position Position of child frame in parent frame
-   * @param[in] rotation Rotation of child frame in parent frame
    * @return Adjoint matrix of size 6 x 6
    */
   virtual Eigen::Matrix<double, 6, 6> getAdjoint(
-    const Eigen::Vector3d & position, const Eigen::Matrix3d & rotation);
+    const Eigen::Isometry3d & transform);
 
   /**
    * @brief Compute adjoint mapping twist in child frame to twist in parent
@@ -161,8 +160,8 @@ public:
   virtual Eigen::Matrix<double, 6, 6> getAdjoint(
     const std::string & parent, const std::string & child)
   {
-    auto transform = getTransform(parent, child);
-    return getAdjoint(transform.first, transform.second);
+    Eigen::Isometry3d transform = getTransform(parent, child);
+    return getAdjoint(transform);
   }
 
   /**

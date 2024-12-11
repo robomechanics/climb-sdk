@@ -1,5 +1,7 @@
 #include "climb_main/controller_node.hpp"
 #include "climb_main/kinematics/kdl_interface.hpp"
+#include "climb_main/util/ros_utils.hpp"
+#include "climb_main/util/eigen_utils.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -14,7 +16,6 @@ ControllerNode::ControllerNode()
 
   // Declare parameters
   this->declare_parameter("debug", false);
-  this->declare_parameter("effort_limit", 0.0);
   this->declare_parameter("sim_wrench", std::vector<double>());
   this->declare_parameter("default_configuration", "");
   for (const auto & p : contact_estimator_->getParameters()) {
@@ -32,6 +33,8 @@ ControllerNode::ControllerNode()
     "end_effector_commands", 1,
     std::bind(&ControllerNode::endEffectorCmdCallback, this, _1));
   joint_cmd_pub_ = this->create_publisher<JointCommand>("joint_commands", 1);
+  contact_force_pub_ =
+    this->create_publisher<ContactForce>("contact_forces", 1);
   controller_enable_srv_ = this->create_service<ControllerEnable>(
     "controller_enable",
     std::bind(&ControllerNode::controllerEnableCallback, this, _1, _2));
@@ -63,6 +66,7 @@ void ControllerNode::update()
         2) << forces.transpose());
   }
 
+  Eigen::Vector<double, 6> body_twist = Eigen::Vector<double, 6>::Zero();
   if (enabled_) {
     // Update controller
     auto ground = contact_estimator_->getGroundPlane();
@@ -93,6 +97,7 @@ void ControllerNode::update()
       // Publish joint command
       robot_->clampJointCommand(cmd_msg);
       joint_cmd_pub_->publish(cmd_msg);
+      body_twist = force_controller_->getBodyDisplacement();
 
       // Log controller results
       if (debug_) {
@@ -103,6 +108,9 @@ void ControllerNode::update()
         RCLCPP_INFO_STREAM(
           this->get_logger(),
           "Goal force: " << force_controller_->getContactForce().transpose());
+        RCLCPP_INFO_STREAM(
+          this->get_logger(),
+          "Goal effort: " << force_controller_->getJointEffort().transpose());
         RCLCPP_INFO_STREAM(
           this->get_logger(),
           "Joint displacement: " <<
@@ -127,26 +135,49 @@ void ControllerNode::update()
     tf_broadcaster_->sendTransform(frame);
   }
 
-  // Publish contact forces
-  std::vector<WrenchStamped> contact_forces =
-    force_estimator_->forcesToMessages(forces, this->get_clock()->now(), name_);
-  for (size_t i = 0; i < contact_forces.size(); i++) {
-    if (contact_force_pubs_.size() == i) {
-      if (i == contact_forces.size() - 1) {
-        contact_force_pubs_.push_back(
-          this->create_publisher<WrenchStamped>("gravity_force", 10));
-      } else {
-        contact_force_pubs_.push_back(
-          this->create_publisher<WrenchStamped>(
-            "contact_force_" + std::to_string(i + 1), 10));
-      }
-    }
-    contact_force_pubs_.at(i)->publish(contact_forces[i]);
+  // Update map frame
+  TransformStamped map_to_body = lookupMapToBodyTransform();
+  if (!map_to_body.header.frame_id.empty()) {
+    Eigen::Isometry3d transform =
+      RosUtils::transformToEigen(map_to_body.transform);
+    EigenUtils::applyChildTwistInPlace(transform, body_twist);
+    geometry_msgs::msg::TransformStamped map_frame;
+    map_frame.header.stamp = this->get_clock()->now();
+    map_frame.header.frame_id = name_ + "/" + robot_->getBodyFrame();
+    map_frame.child_frame_id = name_ + "/map";
+    map_frame.transform = RosUtils::eigenToTransform(transform.inverse());
+    tf_broadcaster_->sendTransform(map_frame);
   }
+
+  // Publish contact forces
+  auto contact_force =
+    force_estimator_->getContactForceMessage(forces, this->get_clock()->now());
+  contact_force_pub_->publish(contact_force);
+  // Publish individual contact wrenches for RViz
+  auto contact_wrenches =
+    force_estimator_->splitContactForceMessage(contact_force, name_);
+  for (size_t i = 0; i < contact_wrenches.size(); i++) {
+    if (contact_force_pubs_.size() == i) {
+      contact_force_pubs_.push_back(
+        this->create_publisher<WrenchStamped>(
+          "contact_force_" + std::to_string(i + 1), 10));
+    }
+    contact_force_pubs_.at(i)->publish(contact_wrenches[i]);
+  }
+  // Display gravity wrench for RViz
+  auto gravity_wrench =
+    force_estimator_->getGravityForceMessage(
+    forces, this->get_clock()->now(), name_);
+  if (contact_force_pubs_.size() == contact_wrenches.size()) {
+    contact_force_pubs_.push_back(
+      this->create_publisher<WrenchStamped>("gravity_force", 10));
+  }
+  contact_force_pubs_.back()->publish(gravity_wrench);
+  // Store gravity force for next iteration
   gravity_ <<
-    contact_forces.back().wrench.force.x,
-    contact_forces.back().wrench.force.y,
-    contact_forces.back().wrench.force.z;
+    gravity_wrench.wrench.force.x,
+    gravity_wrench.wrench.force.y,
+    gravity_wrench.wrench.force.z;
 }
 
 void ControllerNode::jointCallback(const JointState::SharedPtr msg)
@@ -183,6 +214,7 @@ rcl_interfaces::msg::SetParametersResult ControllerNode::parameterCallback(
     if (param.get_name() == "debug") {
       debug_ = param.as_bool();
     } else if (param.get_name() == "effort_limit") {
+      // Declared by force_controller
       max_effort_ = param.as_double();
     } else if (param.get_name() == "sim_wrench") {
       std::vector<double> wrench = param.as_double_array();

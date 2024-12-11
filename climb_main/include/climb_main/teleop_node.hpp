@@ -4,21 +4,26 @@
 #include <string>
 #include <vector>
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
 #include <climb_msgs/srv/key_input.hpp>
 #include <climb_msgs/srv/actuator_enable.hpp>
 #include <climb_msgs/srv/controller_enable.hpp>
 #include <climb_msgs/msg/joint_command.hpp>
 #include <climb_msgs/msg/end_effector_command.hpp>
+#include <climb_msgs/msg/step_override_command.hpp>
+#include <climb_msgs/action/step_command.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 
 #include "climb_main/teleop/key_input_parser.hpp"
 #include "climb_main/kinematics/kinematics_node.hpp"
 
+using climb_msgs::action::StepCommand;
 using climb_msgs::srv::KeyInput;
 using climb_msgs::srv::ActuatorEnable;
 using climb_msgs::srv::ControllerEnable;
 using climb_msgs::msg::JointCommand;
 using climb_msgs::msg::EndEffectorCommand;
+using climb_msgs::msg::StepOverrideCommand;
 using sensor_msgs::msg::JointState;
 using geometry_msgs::msg::Twist;
 
@@ -27,6 +32,7 @@ using geometry_msgs::msg::Twist;
  *
  * Services: key_input
  * Clients: actuator_enable, controller_enable
+ * Action clients: step_command
  * Subscribers: joint_states, robot_description
  * Publishers: joint_commands, end_effector_commands
  */
@@ -52,6 +58,62 @@ private:
   void keyCallback(
     const std::shared_ptr<KeyInput::Request> request,
     std::shared_ptr<KeyInput::Response> response);
+
+  /**
+   * @brief Enable or disable the actuator
+   * @param tokens The command tokens
+   * @return The response message
+   */
+  KeyInputParser::Response enableCommandCallback(
+    const std::vector<std::string> & tokens);
+
+  /**
+   * @brief Enable or disable the controller
+   * @param tokens The command tokens
+   * @return The response message
+   */
+  KeyInputParser::Response controlCommandCallback(
+    const std::vector<std::string> & tokens);
+
+  /**
+   * @brief Set a joint property
+   * @param tokens The command tokens
+   * @return The response message
+   */
+  KeyInputParser::Response setCommandCallback(
+    const std::vector<std::string> & tokens);
+
+  /**
+   * @brief Go to a specific configuration
+   * @param tokens The command tokens
+   * @return The response message
+   */
+  KeyInputParser::Response gotoCommandCallback(
+    const std::vector<std::string> & tokens);
+
+  /**
+   * @brief Move a joint
+   * @param tokens The command tokens
+   * @return The response message
+   */
+  KeyInputParser::Response moveCommandCallback(
+    const std::vector<std::string> & tokens);
+
+  /**
+   * @brief Move the end effector
+   * @param tokens The command tokens
+   * @return The response message
+   */
+  KeyInputParser::Response twistCommandCallback(
+    const std::vector<std::string> & tokens);
+
+  /**
+   * @brief Take a step
+   * @param tokens The command tokens
+   * @return The response message
+   */
+  KeyInputParser::Response stepCommandCallback(
+    const std::vector<std::string> & tokens);
 
   /**
    * @brief Convert key press into a twist
@@ -132,10 +194,16 @@ private:
   rclcpp::Publisher<JointCommand>::SharedPtr joint_cmd_pub_;
   // End effector command publisher
   rclcpp::Publisher<EndEffectorCommand>::SharedPtr ee_cmd_pub_;
+  // Step override command publisher
+  rclcpp::Publisher<StepOverrideCommand>::SharedPtr step_override_cmd_pub_;
   // Actuator enable client
   rclcpp::Client<ActuatorEnable>::SharedPtr actuator_enable_client_;
   // Controller enable client
   rclcpp::Client<ControllerEnable>::SharedPtr controller_enable_client_;
+  // Step command action client
+  rclcpp_action::Client<StepCommand>::SharedPtr step_cmd_client_;
+  // Command callback group
+  rclcpp::CallbackGroup::SharedPtr command_callback_group_;
   // Poses
   std::map<std::string, std::vector<double>> configurations_;
   // Joint setpoints

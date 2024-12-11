@@ -230,6 +230,72 @@ inline geometry_msgs::msg::Transform eigenToTransform(
   msg.rotation = eigenToQuaternion(Eigen::Quaterniond(transform.rotation()));
   return msg;
 }
+
+/**
+ * @brief Negate a geometry_msgs::msg::Twist
+ */
+inline geometry_msgs::msg::Twist operator-(
+  const geometry_msgs::msg::Twist & twist)
+{
+  geometry_msgs::msg::Twist result;
+  result.linear.x = -twist.linear.x;
+  result.linear.y = -twist.linear.y;
+  result.linear.z = -twist.linear.z;
+  result.angular.x = -twist.angular.x;
+  result.angular.y = -twist.angular.y;
+  result.angular.z = -twist.angular.z;
+  return result;
+}
+
+/**
+ * @brief Negate a geometry_msgs::msg::Wrench
+ */
+inline geometry_msgs::msg::Wrench operator-(
+  const geometry_msgs::msg::Wrench & wrench)
+{
+  geometry_msgs::msg::Wrench result;
+  result.force.x = -wrench.force.x;
+  result.force.y = -wrench.force.y;
+  result.force.z = -wrench.force.z;
+  result.torque.x = -wrench.torque.x;
+  result.torque.y = -wrench.torque.y;
+  result.torque.z = -wrench.torque.z;
+  return result;
+}
+
+/**
+ * @brief Negate a geometry_msgs::msg::Pose
+ */
+inline geometry_msgs::msg::Pose operator-(
+  const geometry_msgs::msg::Pose & pose)
+{
+  geometry_msgs::msg::Pose result;
+  result.position.x = -pose.position.x;
+  result.position.y = -pose.position.y;
+  result.position.z = -pose.position.z;
+  result.orientation.w = pose.orientation.w;
+  result.orientation.x = -pose.orientation.x;
+  result.orientation.y = -pose.orientation.y;
+  result.orientation.z = -pose.orientation.z;
+  return result;
+}
+
+/**
+ * @brief Negate a geometry_msgs::msg::Transform
+ */
+inline geometry_msgs::msg::Transform operator-(
+  const geometry_msgs::msg::Transform & transform)
+{
+  geometry_msgs::msg::Transform result;
+  result.translation.x = -transform.translation.x;
+  result.translation.y = -transform.translation.y;
+  result.translation.z = -transform.translation.z;
+  result.rotation.w = transform.rotation.w;
+  result.rotation.x = -transform.rotation.x;
+  result.rotation.y = -transform.rotation.y;
+  result.rotation.z = -transform.rotation.z;
+  return result;
+}
 }  // namespace RosUtils
 
 #endif  // ROS_UTILS_HPP

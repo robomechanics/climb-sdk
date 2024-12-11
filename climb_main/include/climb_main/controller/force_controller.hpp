@@ -202,6 +202,8 @@ private:
   double microspine_min_force_;
   // Maximum tangential force on microspine gripper in N
   double microspine_max_force_;
+  // Maximum joint effort in Nm
+  double max_effort_;
 };
 
 #endif  // FORCE_CONTROLLER_HPP

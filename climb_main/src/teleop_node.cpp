@@ -1,4 +1,7 @@
 #include "climb_main/teleop_node.hpp"
+#include <rclcpp/executors.hpp>
+#include <fmt/core.h>
+#include "climb_main/util/ros_utils.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -22,9 +25,13 @@ TeleopNode::TeleopNode()
   this->declare_parameter("angular_step", 0.02);  // rad
   // Define commands
   addCommands();
+  // Create separate callback group to handle key commands in their own thread
+  command_callback_group_ = this->create_callback_group(
+    rclcpp::CallbackGroupType::MutuallyExclusive);
   // Initialize service, clients, and publishers
   key_input_service_ = this->create_service<KeyInput>(
-    "key_input", std::bind(&TeleopNode::keyCallback, this, _1, _2));
+    "key_input", std::bind(&TeleopNode::keyCallback, this, _1, _2),
+    rclcpp::ServicesQoS(), command_callback_group_);
   actuator_enable_client_ =
     this->create_client<ActuatorEnable>("actuator_enable");
   controller_enable_client_ =
@@ -32,6 +39,10 @@ TeleopNode::TeleopNode()
   joint_cmd_pub_ = this->create_publisher<JointCommand>("joint_commands", 1);
   ee_cmd_pub_ = this->create_publisher<EndEffectorCommand>(
     "end_effector_commands", 1);
+  step_override_cmd_pub_ = this->create_publisher<StepOverrideCommand>(
+    "step_override_commands", 1);
+  step_cmd_client_ = rclcpp_action::create_client<StepCommand>(this, "step_command");
+  RCLCPP_INFO(this->get_logger(), "Teleop node initialized");
 }
 
 void TeleopNode::addCommands()
@@ -42,14 +53,17 @@ void TeleopNode::addCommands()
       return robot_->getJointNames();
     });
   key_input_parser_.defineToken(
-    "FRAME", [this]() {
-      auto frames = robot_->getContactFrames();
-      frames.insert(frames.begin(), robot_->getBodyFrame());
-      return frames;
+    "BODY", [this]() {
+      return std::vector<std::string>{robot_->getBodyFrame()};
+    });
+  key_input_parser_.defineToken(
+    "CONTACT", [this]() {
+      return robot_->getContactFrames();
     });
   key_input_parser_.defineToken(
     "CONFIGURATION", [this]() {
       std::vector<std::string> poses;
+      poses.reserve(configurations_.size());
       for (const auto & [name, _] : configurations_) {
         poses.push_back(name);
       }
@@ -58,131 +72,31 @@ void TeleopNode::addCommands()
   // Enable motors
   this->key_input_parser_.defineCommand(
     "[enable|disable]",
-    [this](const std::vector<std::string> & tokens) {
-      auto request = std::make_shared<ActuatorEnable::Request>();
-      request->enable = tokens.at(0) == "enable";
-      auto result = actuator_enable_client_->async_send_request(request);
-      auto status = result.wait_for(std::chrono::seconds(1));
-      if (status == std::future_status::ready) {
-        auto response = result.get();
-        if (response->success) {
-          return KeyInputParser::Response{
-            request->enable ? "Enabled" : "Disabled", false};
-        } else {
-          return KeyInputParser::Response{
-            request->enable ? "Failed to enable" : "Failed to disable", false};
-        }
-      } else {
-        return KeyInputParser::Response{
-          "Hardware node is not responding", false};
-      }
-      return KeyInputParser::Response{
-        request->enable ? "Enabled" : "Disabled", false};
-    });
+    std::bind(&TeleopNode::enableCommandCallback, this, _1));
+  // Enable controller
   this->key_input_parser_.defineCommand(
     "control [on|off]",
-    [this](const std::vector<std::string> & tokens) {
-      controller_enable_ = tokens.at(1) == "on";
-      auto request = std::make_shared<ControllerEnable::Request>();
-      request->enable = controller_enable_;
-      auto result = controller_enable_client_->async_send_request(request);
-      return KeyInputParser::Response{
-        controller_enable_ ? "Control on" : "Control off", false};
-    });
+    std::bind(&TeleopNode::controlCommandCallback, this, _1));
   // Set joint state
   key_input_parser_.defineCommand(
-    "set JOINT [position|velocity] DOUBLE deg",
-    [this](const std::vector<std::string> & tokens) {
-      setJoint(
-        tokens.at(1), tokens.at(2), std::stod(tokens.at(3)) * M_PI / 180);
-      std::ostringstream ss;
-      ss <<
-        tokens.at(1) << ": " << tokens.at(2) << " = " << tokens.at(3) << "°";
-      return KeyInputParser::Response{ss.str(), false};
-    });
-  key_input_parser_.defineCommand(
     "set JOINT [position|velocity|effort] DOUBLE",
-    [this](const std::vector<std::string> & tokens) {
-      setJoint(tokens.at(1), tokens.at(2), std::stod(tokens.at(3)));
-      std::ostringstream ss;
-      ss << tokens.at(1) << ": " << tokens.at(2) << " = " << tokens.at(3);
-      return KeyInputParser::Response{ss.str(), false};
-    });
-  key_input_parser_.defineCommand(
-    "set [position|velocity] DOUBLE deg",
-    [this](const std::vector<std::string> & tokens) {
-      setJoint("", tokens.at(1), std::stod(tokens.at(2)) * M_PI / 180);
-      std::ostringstream ss;
-      ss << "all joints: " << tokens.at(1) << " = " << tokens.at(2) << "°";
-      return KeyInputParser::Response{ss.str(), false};
-    });
-  key_input_parser_.defineCommand(
-    "set [position|velocity|effort] DOUBLE",
-    [this](const std::vector<std::string> & tokens) {
-      setJoint("", tokens.at(1), std::stod(tokens.at(2)));
-      std::ostringstream ss;
-      ss << "all joints: " << tokens.at(1) << " = " << tokens.at(2);
-      return KeyInputParser::Response{ss.str(), false};
-    });
+    std::bind(&TeleopNode::setCommandCallback, this, _1));
   // Go to configuration
   key_input_parser_.defineCommand(
     "goto CONFIGURATION",
-    [this](const std::vector<std::string> & tokens) {
-      setConfiguration(
-        robot_->getJointNames(), configurations_.at(tokens.at(1)));
-      return KeyInputParser::Response{"Configuration: " + tokens.at(1), false};
-    });
+    std::bind(&TeleopNode::gotoCommandCallback, this, _1));
   // Move joint
   key_input_parser_.defineCommand(
     "move JOINT",
-    [this](const std::vector<std::string> & tokens) {
-      key_input_parser_.setInputCallback(
-        [this, tokens](char key) {
-          switch (key) {
-            case ' ':
-              return KeyInputParser::Response{"Stopped", false};
-            case 'w':
-              moveJoint(tokens.at(1), joint_step_);
-              break;
-            case 's':
-              moveJoint(tokens.at(1), -joint_step_);
-              break;
-          }
-          return KeyInputParser::Response{"", true};
-        });
-      joint_setpoints_ = robot_->getJointPosition();
-      std::ostringstream ss;
-      ss << tokens.at(1) << ": Move with w/s keys, press space to stop";
-      return KeyInputParser::Response{ss.str(), true};
-    });
+    std::bind(&TeleopNode::moveCommandCallback, this, _1));
   // Twist contact frame
   key_input_parser_.defineCommand(
-    "twist FRAME",
-    [this](const std::vector<std::string> & tokens) {
-      key_input_parser_.setInputCallback(
-        [this, tokens](char key) {
-          if (key == ' ') {
-            if (controller_enable_) {
-              controlEndEffector(
-                tokens.at(1), Eigen::Vector<double, 6>::Zero());
-            }
-            return KeyInputParser::Response{"Stopped", false};
-          }
-          if (controller_enable_) {
-            controlEndEffector(tokens.at(1), getTwist(key, tokens.at(1)));
-          } else if (tokens.at(1) == robot_->getBodyFrame()) {
-            moveBody(getTwist(key));
-          } else {
-            moveEndEffector(tokens.at(1), getTwist(key, tokens.at(1)));
-          }
-          return KeyInputParser::Response{"", true};
-        });
-      joint_setpoints_ = robot_->getJointPosition();
-      std::ostringstream ss;
-      ss << tokens.at(
-        1) << ": Linear with w/a/s/d/q/e keys, angular with W/A/S/D/Q/E keys, press space to stop";
-      return KeyInputParser::Response{ss.str(), true};
-    });
+    "twist [CONTACT|BODY]",
+    std::bind(&TeleopNode::twistCommandCallback, this, _1));
+  // Take a step
+  key_input_parser_.defineCommand(
+    "step CONTACT",
+    std::bind(&TeleopNode::stepCommandCallback, this, _1));
 }
 
 void TeleopNode::keyCallback(
@@ -193,6 +107,206 @@ void TeleopNode::keyCallback(
     request->input, request->realtime, request->autocomplete);
   response->response = result.response;
   response->realtime = result.realtime;
+}
+
+KeyInputParser::Response TeleopNode::enableCommandCallback(
+  const std::vector<std::string> & tokens)
+{
+  auto request = std::make_shared<ActuatorEnable::Request>();
+  request->enable = tokens.at(0) == "enable";
+  auto result = actuator_enable_client_->async_send_request(request);
+  auto status = result.wait_for(std::chrono::milliseconds(100));
+  if (status == std::future_status::ready) {
+    auto response = result.get();
+    if (response->success) {
+      return KeyInputParser::Response{
+        request->enable ? "Enabled" : "Disabled", false};
+    } else {
+      return KeyInputParser::Response{
+        request->enable ? "Failed to enable" : "Failed to disable", false};
+    }
+  } else {
+    return KeyInputParser::Response{
+      "Hardware node is not responding", false};
+  }
+  return KeyInputParser::Response{
+    request->enable ? "Enabled" : "Disabled", false};
+}
+
+KeyInputParser::Response TeleopNode::controlCommandCallback(
+  const std::vector<std::string> & tokens)
+{
+  controller_enable_ = tokens.at(1) == "on";
+  auto request = std::make_shared<ControllerEnable::Request>();
+  request->enable = controller_enable_;
+  auto result = controller_enable_client_->async_send_request(request);
+  return KeyInputParser::Response{
+    controller_enable_ ? "Control on" : "Control off", false};
+}
+
+KeyInputParser::Response TeleopNode::setCommandCallback(
+  const std::vector<std::string> & tokens)
+{
+  setJoint(tokens.at(1), tokens.at(2), std::stod(tokens.at(3)));
+  auto response = fmt::format(
+    "{}: {} = {}", tokens.at(1), tokens.at(2), tokens.at(3));
+  return KeyInputParser::Response{response, false};
+}
+
+KeyInputParser::Response TeleopNode::gotoCommandCallback(
+  const std::vector<std::string> & tokens)
+{
+  setConfiguration(
+    robot_->getJointNames(), configurations_.at(tokens.at(1)));
+  return KeyInputParser::Response{"Configuration: " + tokens.at(1), false};
+}
+
+KeyInputParser::Response TeleopNode::moveCommandCallback(
+  const std::vector<std::string> & tokens)
+{
+  key_input_parser_.setInputCallback(
+    [this, tokens](char key) {
+      switch (key) {
+        case ' ':
+          return KeyInputParser::Response{"Stopped", false};
+        case 'w':
+          moveJoint(tokens.at(1), joint_step_);
+          break;
+        case 's':
+          moveJoint(tokens.at(1), -joint_step_);
+          break;
+      }
+      return KeyInputParser::Response{"", true};
+    });
+  joint_setpoints_ = robot_->getJointPosition();
+  auto response = fmt::format(
+    "{}: Move with w/s keys, press space to stop", tokens.at(1));
+  return KeyInputParser::Response{response, true};
+}
+
+KeyInputParser::Response TeleopNode::twistCommandCallback(
+  const std::vector<std::string> & tokens)
+{
+  key_input_parser_.setInputCallback(
+    [this, tokens](char key) {
+      if (key == ' ') {
+        if (controller_enable_) {
+          controlEndEffector(tokens.at(1), Eigen::Vector<double, 6>::Zero());
+        }
+        return KeyInputParser::Response{"Stopped", false};
+      }
+      if (controller_enable_) {
+        controlEndEffector(tokens.at(1), getTwist(key, tokens.at(1)));
+      } else if (tokens.at(1) == robot_->getBodyFrame()) {
+        moveBody(getTwist(key));
+      } else {
+        moveEndEffector(tokens.at(1), getTwist(key, tokens.at(1)));
+      }
+      return KeyInputParser::Response{"", true};
+    });
+  joint_setpoints_ = robot_->getJointPosition();
+  auto response = fmt::format(
+    "{}: Linear with w/a/s/d/q/e keys, angular with W/A/S/D/Q/E keys, "
+    "press space to stop", tokens.at(1));
+  return KeyInputParser::Response{response, true};
+}
+
+KeyInputParser::Response TeleopNode::stepCommandCallback(
+  const std::vector<std::string> & tokens)
+{
+  auto goal = StepCommand::Goal();
+  goal.frame = tokens.at(1);
+  goal.header.stamp = this->now();
+  goal.default_foothold = true;
+
+  auto options = rclcpp_action::Client<StepCommand>::SendGoalOptions();
+  options.feedback_callback =
+    [this, goal](
+    auto, const std::shared_ptr<const StepCommand::Feedback> feedback)
+    {
+      std::string state = "Invalid state";
+      switch (feedback->state) {
+        case StepCommand::Feedback::STATE_STANCE:
+          state = "Stance";
+          break;
+        case StepCommand::Feedback::STATE_DISENGAGE:
+          state = "Disengage";
+          break;
+        case StepCommand::Feedback::STATE_LIFT:
+          state = "Lift";
+          break;
+        case StepCommand::Feedback::STATE_SWING:
+          state = "Swing";
+          break;
+        case StepCommand::Feedback::STATE_PLACE:
+          state = "Place";
+          break;
+        case StepCommand::Feedback::STATE_ENGAGE:
+          state = "Engage";
+          break;
+        case StepCommand::Feedback::STATE_SNAG:
+          state = "Snag";
+          break;
+        case StepCommand::Feedback::STATE_SLIP:
+          state = "Slip";
+          break;
+        case StepCommand::Feedback::STATE_RETRY:
+          state = "Retry";
+          break;
+        case StepCommand::Feedback::STATE_STOP:
+          state = "Stop";
+          break;
+      }
+      RCLCPP_INFO(
+        this->get_logger(), "%s state: %s", goal.frame.c_str(), state.c_str());
+    };
+  auto goal_handle_future = step_cmd_client_->async_send_goal(goal, options);
+  auto goal_handle_status =
+    goal_handle_future.wait_for(std::chrono::milliseconds(100));
+  if (goal_handle_status != std::future_status::ready) {
+    return KeyInputParser::Response{
+      "Step planner node is not responding", false};
+  }
+  auto goal_handle = goal_handle_future.get();
+  if (!goal_handle) {
+    return KeyInputParser::Response{
+      "Step planner node rejected the requested step", false};
+  }
+  auto result_future = step_cmd_client_->async_get_result(goal_handle);
+  key_input_parser_.setInputCallback(
+    [this, goal, goal_handle, result_future](char key) {
+      StepOverrideCommand command;
+      command.header.stamp = this->now();
+      command.header.frame_id = goal.frame;
+      if (key == ' ') {
+        step_cmd_client_->async_cancel_goal(goal_handle);
+        auto result_status =
+        result_future.wait_for(std::chrono::milliseconds(100));
+        if (result_status == std::future_status::ready) {
+          auto result = result_future.get();
+          if (result.result->success) {
+            return KeyInputParser::Response{"Completed step", false};
+          }
+          return KeyInputParser::Response{"Aborted step", false};
+        }
+        return KeyInputParser::Response{
+          "Step planner node is not responding", false};
+      } else if (key == '.') {
+        command.command = StepOverrideCommand::COMMAND_ADVANCE;
+        step_override_cmd_pub_->publish(command);
+        return KeyInputParser::Response{"Advancing Step", true};
+      } else if (key == ',') {
+        command.command = StepOverrideCommand::COMMAND_RETRY;
+        step_override_cmd_pub_->publish(command);
+        return KeyInputParser::Response{"Retrying Step", true};
+      } else {
+        command.offset = RosUtils::eigenToTwist(getTwist(key));
+        step_override_cmd_pub_->publish(command);
+        return KeyInputParser::Response{"", true};
+      }
+    });
+  return KeyInputParser::Response{
+    fmt::format("Taking step {}", goal.frame), true};
 }
 
 Eigen::Vector<double, 6> TeleopNode::getTwist(char key) const
@@ -243,9 +357,9 @@ Eigen::Vector<double, 6> TeleopNode::getTwist(
   char key, const std::string & frame) const
 {
   Eigen::Vector<double, 6> twist = getTwist(key);
-  Eigen::Matrix3d R = robot_->getTransform(frame).second;
-  Eigen::MatrixXd Ad = robot_->getAdjoint({}, R.transpose());
-  auto ee = robot_->getEndEffectorFrames().at(robot_->getContactIndex(frame));
+  Eigen::Isometry3d transform = Eigen::Isometry3d::Identity();
+  transform.linear() = robot_->getTransform(frame).rotation().transpose();
+  Eigen::MatrixXd Ad = robot_->getAdjoint(transform);
   return Ad * twist;
 }
 
@@ -347,18 +461,11 @@ void TeleopNode::controlEndEffector(
   if (contact == robot_->getBodyFrame()) {
     return;
   }
-  Twist twist_msg;
-  twist_msg.linear.x = twist[0];
-  twist_msg.linear.y = twist[1];
-  twist_msg.linear.z = twist[2];
-  twist_msg.angular.x = twist[3];
-  twist_msg.angular.y = twist[4];
-  twist_msg.angular.z = twist[5];
   EndEffectorCommand command;
   command.header.stamp = this->now();
   command.frame = {contact};
   command.mode = {EndEffectorCommand::MODE_FREE};
-  command.twist = {twist_msg};
+  command.twist = {RosUtils::eigenToTwist(twist)};
   ee_cmd_pub_->publish(command);
 }
 
@@ -381,7 +488,10 @@ rcl_interfaces::msg::SetParametersResult TeleopNode::parameterCallback(
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<TeleopNode>());
+  rclcpp::executors::MultiThreadedExecutor executor;
+  auto teleop_node = std::make_shared<TeleopNode>();
+  executor.add_node(teleop_node);
+  executor.spin();
   rclcpp::shutdown();
   return 0;
 }

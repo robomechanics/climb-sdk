@@ -11,6 +11,12 @@ bool KdlInterface::initialize(std::string & error_message)
   if (!KinematicsInterface::initialize(error_message)) {
     return false;
   }
+  // Replace floating joints with fixed joints to suppress warnings
+  for (auto & joint : urdf_model_.joints_) {
+    if (joint.second->type == urdf::Joint::FLOATING) {
+      joint.second->type = urdf::Joint::FIXED;
+    }
+  }
   // Load KDL tree from URDF model
   initialized_ = false;
   if (!kdl_parser::treeFromUrdfModel(urdf_model_, tree_)) {
@@ -62,13 +68,16 @@ KDL::Frame KdlInterface::getTransformKdl(
   return transform;
 }
 
-std::pair<Eigen::Vector3d, Eigen::Matrix3d> KdlInterface::getTransform(
+Eigen::Isometry3d KdlInterface::getTransform(
   const std::string & parent, const std::string & child)
 {
   auto transform = getTransformKdl(parent, child);
   Eigen::Vector3d position(transform.p.data);
   Eigen::Matrix<double, 3, 3, Eigen::RowMajor> rotation(transform.M.data);
-  return std::make_pair(position, rotation);
+  Eigen::Isometry3d transform_eigen = Eigen::Isometry3d::Identity();
+  transform_eigen.linear() = rotation;
+  transform_eigen.translation() = position;
+  return transform_eigen;
 }
 
 Eigen::MatrixXd KdlInterface::getHandJacobian(const std::string & contact_frame)

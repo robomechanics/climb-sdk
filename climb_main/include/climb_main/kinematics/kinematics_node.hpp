@@ -45,6 +45,29 @@ protected:
   virtual void jointCallback(const JointState::SharedPtr msg);
 
   /**
+   * @brief Lookup most recent transform in TF buffer by applying TF prefix
+   * @param[in] parent_frame Parent frame of transform
+   * (prefix with slash to avoid applying TF prefix)
+   * @param[in] child_frame Child frame of transform
+   * (prefix with slash to avoid applying TF prefix)
+   * @param[in] time Requested time of transform
+   * @return Transform from parent to child frame
+   */
+  TransformStamped lookupTransform(
+    const std::string & parent_frame, const std::string & child_frame,
+    const rclcpp::Time & time = rclcpp::Time(0));
+
+  /**
+   * @brief Lookup transform from map to body frame, falling back to local
+   * estimate if SLAM is not running
+   * @param[in] time Requested time of transform
+   * @return Transform from map to body frame (frames are left empty if
+   * transform is unavailable)
+   */
+  TransformStamped lookupMapToBodyTransform(
+    const rclcpp::Time & time = rclcpp::Time(0));
+
+  /**
    * @brief Update modified parameters
    * @param[in] parameters Modified parameter values
    * @return Result of the parameter update

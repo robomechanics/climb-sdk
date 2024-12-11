@@ -64,8 +64,20 @@ def generate_launch_description():
                     global_config_path, robot_config_path]
     )
 
+    # Step planner
+    step_planner = Node(
+        package="climb_main",
+        namespace=namespace,
+        executable="step_planner_node",
+        name="step_planner",
+        output="screen",
+        parameters=[{"tf_prefix": namespace},
+                    global_config_path, robot_config_path]
+    )
+
     return LaunchDescription([
         xacro_args_arg,
         base,
-        controller
+        controller,
+        step_planner
     ])

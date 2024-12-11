@@ -75,40 +75,44 @@ protected:
 
 TEST_F(KinematicsTest, Transform)
 {
-  auto [p, R] = robot_->getTransform("left_foot");
+  Eigen::Isometry3d transform = robot_->getTransform("left_foot");
   Eigen::Vector3d p_expected{1, 1, -1};
-  EXPECT_NEAR_EIGEN(p, p_expected, TOL) << "Incorrect left foot position";
+  EXPECT_NEAR_EIGEN(transform.translation(), p_expected, TOL) <<
+    "Incorrect left foot position";
   Eigen::Matrix3d R_expected;
   R_expected << 0, 0, -1,
     0, 1, 0,
     1, 0, 0;
-  EXPECT_NEAR_EIGEN(R, R_expected, TOL) << "Incorrect left foot rotation";
+  EXPECT_NEAR_EIGEN(transform.rotation(), R_expected, TOL) <<
+    "Incorrect left foot rotation";
 }
 
 TEST_F(KinematicsTest, ContactFrames)
 {
-  TransformStamped transform;
-  transform.header.frame_id = "left_foot";
-  transform.child_frame_id = "left_contact";
-  transform.transform.rotation.w = sqrt(2) / 2;
-  transform.transform.rotation.y = sqrt(2) / 2;
-  robot_->updateContactFrames({transform});
-  auto [p, R] = robot_->getTransform("left_contact");
+  TransformStamped transform_stamped;
+  transform_stamped.header.frame_id = "left_foot";
+  transform_stamped.child_frame_id = "left_contact";
+  transform_stamped.transform.rotation.w = sqrt(2) / 2;
+  transform_stamped.transform.rotation.y = sqrt(2) / 2;
+  robot_->updateContactFrames({transform_stamped});
+  Eigen::Isometry3d transform = robot_->getTransform("left_contact");
   Eigen::Vector3d p_expected{1, 1, -1};
-  EXPECT_NEAR_EIGEN(p, p_expected, TOL) << "Incorrect left contact position";
+  EXPECT_NEAR_EIGEN(transform.translation(), p_expected, TOL) <<
+    "Incorrect left contact position";
   Eigen::Matrix3d R_original;
   R_original << 0, 0, -1,
     0, 1, 0,
     1, 0, 0;
-  EXPECT_FALSE(R.isApprox(R_original, TOL)) <<
+  EXPECT_FALSE(transform.rotation().isApprox(R_original, TOL)) <<
     "Contact frame transform not updated";
   Eigen::Matrix3d R_expected;
   R_expected << 1, 0, 0,
     0, 1, 0,
     0, 0, 1;
-  EXPECT_NEAR_EIGEN(R, R_expected, TOL) << "Incorrect left contact rotation";
-  auto [pinv, Rinv] = robot_->getTransform("left_contact", "root");
-  EXPECT_NEAR_EIGEN(Rinv, R_expected.transpose(), TOL) <<
+  EXPECT_NEAR_EIGEN(transform.rotation(), R_expected, TOL) <<
+    "Incorrect left contact rotation";
+  Eigen::Isometry3d inverse = robot_->getTransform("left_contact", "root");
+  EXPECT_NEAR_EIGEN(inverse.rotation(), R_expected.transpose(), TOL) <<
     "Incorrect inverse transform";
 }
 

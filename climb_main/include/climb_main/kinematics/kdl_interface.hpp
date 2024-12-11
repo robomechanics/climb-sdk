@@ -27,7 +27,7 @@ class KdlInterface : public KinematicsInterface
 public:
   bool initialize(std::string & error_message) override;
 
-  std::pair<Eigen::Vector3d, Eigen::Matrix3d> getTransform(
+  Eigen::Isometry3d getTransform(
     const std::string & parent, const std::string & child) override;
   Eigen::MatrixXd getHandJacobian(const std::string & contact_frame) override;
   Eigen::MatrixXd getHandJacobian() override;

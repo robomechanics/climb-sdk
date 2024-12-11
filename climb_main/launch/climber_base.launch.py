@@ -130,6 +130,7 @@ def generate_launch_description():
         executable="key_input_node",
         name="key_input",
         output="screen",
+        parameters=[global_config_path, robot_config_path],
         prefix="xterm -T 'Climb-SDK' -fa 'Monospace' -fs 14 -e"
     )
 
