@@ -10,7 +10,7 @@
 /**
  * @brief Abstract interface for a quadratic program solver
  *
- * Minimize 0.5 * x'Hx + f'x subject to lb <= Ax <= ub
+ * Minimize 0.5 * x'Hx + f'x subject to Ax <= b, Aeq x = beq, lb <= x <= ub
  */
 class QpInterface : public Parameterized
 {
@@ -23,40 +23,23 @@ public:
    * @brief Solve a quadratic program
    * @param[in] H Quadratic cost matrix
    * @param[in] f Linear cost vector
-   * @param[in] A Linear constraint matrix
-   * @param[in] lb Linear constraint lower bound vector
-   * @param[in] ub Linear constraint upper bound vector
+   * @param[in] A Linear inequality constraint matrix
+   * @param[in] b Linear inequality constraint vector
+   * @param[in] Aeq Linear equality constraint matrix
+   * @param[in] beq Linear equality constraint vector
+   * @param[in] lb Lower bound vector
+   * @param[in] ub Upper bound vector
    * @return True if a solution was found
    */
   virtual bool solve(
     const Eigen::MatrixXd & H,
     const Eigen::VectorXd & f,
     const Eigen::MatrixXd & A,
+    const Eigen::VectorXd & b,
+    const Eigen::MatrixXd & Aeq,
+    const Eigen::VectorXd & beq,
     const Eigen::VectorXd & lb,
     const Eigen::VectorXd & ub) = 0;
-
-  /**
-   * @brief Solve a quadratic program with a fixed sparsity structure
-   * @param[in] H Quadratic cost matrix
-   * @param[in] f Linear cost vector
-   * @param[in] A Linear constraint matrix
-   * @param[in] lb Linear constraint lower bound vector
-   * @param[in] ub Linear constraint upper bound vector
-   * @param[in] H_sparsity Sparsity structure of H
-   * @param[in] A_sparsity Sparsity structure of A
-   * @return True if a solution was found
-   */
-  virtual bool solve(
-    const Eigen::MatrixXd & H,
-    const Eigen::VectorXd & f,
-    const Eigen::MatrixXd & A,
-    const Eigen::VectorXd & lb,
-    const Eigen::VectorXd & ub,
-    [[maybe_unused]] const Eigen::SparseMatrix<double> & H_sparsity,
-    [[maybe_unused]] const Eigen::SparseMatrix<double> & A_sparsity)
-  {
-    return solve(H, f, A, lb, ub);
-  }
 
   /**
    * @brief Solve a quadratic program
@@ -65,7 +48,9 @@ public:
    */
   bool solve(QpProblem & problem)
   {
-    return solve(problem.H, problem.f, problem.A, problem.lb, problem.ub);
+    return solve(
+      problem.H, problem.f, problem.A, problem.b, problem.Aeq, problem.beq,
+      problem.lb, problem.ub);
   }
 
   /**
@@ -81,10 +66,13 @@ public:
     const Eigen::MatrixXd & H,
     const Eigen::VectorXd & f,
     const Eigen::MatrixXd & A,
+    const Eigen::MatrixXd & b,
+    const Eigen::MatrixXd & Aeq,
+    const Eigen::VectorXd & beq,
     const Eigen::VectorXd & lb,
     const Eigen::VectorXd & ub)
   {
-    return solve(H, f, A, lb, ub);
+    return solve(H, f, A, b, Aeq, beq, lb, ub);
   }
 
   /**
@@ -94,7 +82,9 @@ public:
    */
   bool update(QpProblem & problem)
   {
-    return update(problem.H, problem.f, problem.A, problem.lb, problem.ub);
+    return update(
+      problem.H, problem.f, problem.A, problem.b, problem.Aeq, problem.beq,
+      problem.lb, problem.ub);
   }
 
   /**
@@ -110,8 +100,8 @@ public:
   double getCost() const {return cost_;}
 
   /**
-   * @brief Check if the solve function has been called
-   * @return True if the solve function has been called
+   * @brief Check if the solve function has previously been called
+   * @return True if the solve function has previously been called
    */
   bool getInitialized() const {return initialized_;}
 

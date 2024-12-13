@@ -8,11 +8,15 @@ QpProblem::QpProblem(std::vector<std::string> vars, std::vector<int> sizes)
     N += sizes[i];
   }
   M = 0;
+  Meq = 0;
   H = Eigen::MatrixXd::Zero(N, N);
   f = Eigen::VectorXd::Zero(N);
   A = Eigen::MatrixXd::Zero(M, N);
-  lb = Eigen::VectorXd::Zero(M);
-  ub = Eigen::VectorXd::Zero(M);
+  b = Eigen::VectorXd::Zero(M);
+  Aeq = Eigen::MatrixXd::Zero(Meq, N);
+  beq = Eigen::VectorXd::Zero(Meq);
+  lb = Eigen::VectorXd::Constant(N, -INFINITY);
+  ub = Eigen::VectorXd::Constant(N, INFINITY);
 }
 
 void QpProblem::addQuadraticCost(
@@ -46,30 +50,58 @@ void QpProblem::addLinearCost(
   f.segment(i, n) += f_in;
 }
 
-void QpProblem::addLinearConstraint(
+void QpProblem::addInequalityConstraint(
   const std::vector<std::string> & vars,
   const std::vector<Eigen::MatrixXd> & A_in,
-  const Eigen::VectorXd & lb_in,
-  const Eigen::VectorXd & ub_in)
+  const Eigen::VectorXd & b_in)
 {
   assert(A_in.size() && A_in.size() == vars.size());
   auto m = A_in[0].rows();
-  Eigen::VectorXd lower = lb_in.size() ? lb_in : -infinity(m);
-  Eigen::VectorXd upper = ub_in.size() ? ub_in : infinity(m);
-  assert(lower.rows() == m);
-  assert(upper.rows() == m);
+  assert(b_in.rows() == m);
 
   A.conservativeResize(M + m, N);
   A.block(M, 0, m, N).setZero();
-  lb.conservativeResize(M + m);
-  ub.conservativeResize(M + m);
   for (size_t k = 0; k < A_in.size(); k++) {
     assert(vars_.find(vars[k]) != vars_.end());
     auto [n, i] = vars_[vars[k]];
     assert(A_in[k].cols() == n && A_in[k].rows() == m);
     A.block(M, i, m, n) += A_in[k];
   }
-  lb.segment(M, m) = lower;
-  ub.segment(M, m) = upper;
+  b.conservativeResize(M + m);
+  b.segment(M, m) = b_in;
   M += m;
+}
+
+void QpProblem::addEqualityConstraint(
+  const std::vector<std::string> & vars,
+  const std::vector<Eigen::MatrixXd> & Aeq_in,
+  const Eigen::VectorXd & beq_in)
+{
+  assert(Aeq_in.size() && Aeq_in.size() == vars.size());
+  auto m = Aeq_in[0].rows();
+  assert(beq_in.rows() == m);
+
+  Aeq.conservativeResize(Meq + m, N);
+  Aeq.block(Meq, 0, m, N).setZero();
+  for (size_t k = 0; k < Aeq_in.size(); k++) {
+    assert(vars_.find(vars[k]) != vars_.end());
+    auto [n, i] = vars_[vars[k]];
+    assert(Aeq_in[k].cols() == n && Aeq_in[k].rows() == m);
+    Aeq.block(Meq, i, m, n) += Aeq_in[k];
+  }
+  beq.conservativeResize(Meq + m);
+  beq.segment(Meq, m) = beq_in;
+  Meq += m;
+}
+
+void QpProblem::addBounds(
+  const std::string & var,
+  const Eigen::VectorXd & lb_in,
+  const Eigen::VectorXd & ub_in)
+{
+  assert(vars_.find(var) != vars_.end());
+  auto [n, i] = vars_[var];
+  assert(lb_in.rows() == n && ub_in.rows() == n);
+  lb.segment(i, n) = lb_in;
+  ub.segment(i, n) = ub_in;
 }

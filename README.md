@@ -17,8 +17,9 @@ Once the required setup is complete, run the following commands to clone the rep
 ```
 cd ~/ros2_ws/src
 git clone https://github.com/robomechanics/climb-sdk.git
-cd ..
-rosdep install --from-paths src -y --ignore-src
+cd climb-sdk
+chmod +x setup.sh && ./setup.sh
+cd ~/ros2_ws
 colcon build --symlink-install
 source install/local_setup.bash
 ```
@@ -34,9 +35,11 @@ docker-compose up -d
 docker exec -it Climb-SDK bash
 ```
 
-Within the container, run the following commands to build packages.
+Within the container, run the following commands to install dependencies and build packages.
 
 ```
+cd /workspace/src/climb-sdk
+chmod +x setup.sh && ./setup.sh
 cd /workspace
 colcon build --symlink-install
 source install/local_setup.bash

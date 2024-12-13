@@ -128,10 +128,12 @@ void ControllerNode::update()
   }
 
   // Publish contact frames
+  const auto time = this->get_clock()->now();
+  const std::string prefix = name_ + "/";
   for (auto & frame : frames) {
-    frame.header.stamp = this->get_clock()->now();
-    frame.header.frame_id = name_ + "/" + frame.header.frame_id;
-    frame.child_frame_id = name_ + "/" + frame.child_frame_id;
+    frame.header.stamp = time;
+    frame.header.frame_id.insert(0, prefix);
+    frame.child_frame_id.insert(0, prefix);
     tf_broadcaster_->sendTransform(frame);
   }
 

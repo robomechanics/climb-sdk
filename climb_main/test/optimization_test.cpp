@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "climb_main/optimization/osqp_interface.hpp"
+#include "climb_main/optimization/piqp_interface.hpp"
 #include "climb_main/optimization/qp_problem.hpp"
 #include "util/test_utils.hpp"
 
@@ -16,33 +17,57 @@ TEST(OptimizerTest, OsqpInterface)
     0, 2;
   Eigen::Vector2d f{4, 1};
   Eigen::MatrixXd A(3, 2);
-  A << 1, 0,
-    0, 1,
-    1, 1;
-  Eigen::Vector3d lb{0, 0, 3};
-  Eigen::Vector3d ub{INFINITY, INFINITY, INFINITY};
+  A << -1, 0,
+    0, -1,
+    -1, -1;
+  Eigen::Vector3d b{0, 0, -3};
 
-  // Solve without sparsity structure
-  ASSERT_TRUE(solver->solve(H, f, A, lb, ub)) << "Dense solve failed";
+  // Solve problem
+  ASSERT_TRUE(solver->solve(H, f, A, b, {}, {}, {}, {})) <<
+    "Dense solve failed";
   Eigen::VectorXd sol = solver->getSolution();
   double cost = solver->getCost();
-  Eigen::Vector2d sol_expected(1, 2);
+  Eigen::Vector2d sol_expected{1, 2};
   EXPECT_NEAR_EIGEN(sol, sol_expected, TOL) << "Incorrect dense solution";
   double cost_expected = 10.5;
   EXPECT_NEAR(cost, cost_expected, TOL) << "Incorrect dense solution cost";
 
-  // Solve with sparsity structure
-  Eigen::SparseMatrix<double> H_sparsity = H.sparseView();
-  Eigen::SparseMatrix<double> A_sparsity = A.sparseView();
-  ASSERT_TRUE(solver->solve(H, f, A, lb, ub, H_sparsity, A_sparsity)) <<
-    "Sparse solve failed";
+  // Update problem
+  ASSERT_TRUE(solver->update(H, f, A, b, {}, {}, {}, {})) << "Update failed";
   sol = solver->getSolution();
-  EXPECT_NEAR_EIGEN(sol, sol_expected, TOL) << "Incorrect sparse solution";
+  EXPECT_NEAR_EIGEN(sol, sol_expected, TOL) << "Incorrect updated solution";
   cost = solver->getCost();
-  EXPECT_NEAR(cost, cost_expected, TOL) << "Incorrect sparse solution cost";
+  EXPECT_NEAR(cost, cost_expected, TOL) << "Incorrect updated solution cost";
+}
+
+TEST(OptimizerTest, PiqpInterface)
+{
+  // Setup problem:
+  // Minimize 1/2 (x^2 + 2y^2) + 4x + y
+  // Subject to 0 <= x <= inf, 0 < y <= inf, 3 <= x + y <= inf
+  std::unique_ptr<QpInterface> solver = std::make_unique<PiqpInterface>();
+  Eigen::MatrixXd H(2, 2);
+  H << 1, 0,
+    0, 2;
+  Eigen::Vector2d f{4, 1};
+  Eigen::MatrixXd A(3, 2);
+  A << -1, 0,
+    0, -1,
+    -1, -1;
+  Eigen::Vector3d b{0, 0, -3};
+
+  // Solve problem
+  ASSERT_TRUE(solver->solve(H, f, A, b, {}, {}, {}, {})) <<
+    "Dense solve failed";
+  Eigen::VectorXd sol = solver->getSolution();
+  double cost = solver->getCost();
+  Eigen::Vector2d sol_expected{1, 2};
+  EXPECT_NEAR_EIGEN(sol, sol_expected, TOL) << "Incorrect dense solution";
+  double cost_expected = 10.5;
+  EXPECT_NEAR(cost, cost_expected, TOL) << "Incorrect dense solution cost";
 
   // Update problem
-  ASSERT_TRUE(solver->update(H, f, A, lb, ub)) << "Update failed";
+  ASSERT_TRUE(solver->update(H, f, A, b, {}, {}, {}, {})) << "Update failed";
   sol = solver->getSolution();
   EXPECT_NEAR_EIGEN(sol, sol_expected, TOL) << "Incorrect updated solution";
   cost = solver->getCost();
@@ -72,21 +97,19 @@ TEST(OptimizerTest, QpProblem)
 
   Eigen::MatrixXd Ay(2, 3);
   Ay << 1, 2, 3, 4, 5, 6;
-  problem.addLinearConstraint(
+  problem.addInequalityConstraint(
     {"y", "x"}, {Ay, Eigen::MatrixXd::Identity(2, 2)},
     Eigen::Vector2d{1, 2}, {});
-  problem.addBounds({"z"}, {}, Eigen::Vector<double, 1>{4});
+  problem.addInequalityConstraint(
+    {"z"}, {Eigen::Matrix<double, 1, 1>::Ones()}, 4);
 
   Eigen::MatrixXd A_expected(3, 6);
   A_expected <<
-    1, 0, 1, 2, 3, 0,
-    0, 1, 4, 5, 6, 0,
+    -1, 0, -1, -2, -3, 0,
+    0, -1, -4, -5, -6, 0,
     0, 0, 0, 0, 0, 1;
   EXPECT_NEAR_EIGEN(problem.A, A_expected, TOL);
-  Eigen::Vector3d lb_expected{1, 2, -INFINITY};
-  EXPECT_EQ_EIGEN(problem.lb, lb_expected);
-  Eigen::Vector3d ub_expected{INFINITY, INFINITY, 4};
-  EXPECT_EQ_EIGEN(problem.ub, ub_expected);
+  Eigen::Vector3d b_expected{-1, -2, 4};
 }
 
 int main(int argc, char ** argv)

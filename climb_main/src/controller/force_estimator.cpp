@@ -150,12 +150,13 @@ std::vector<WrenchStamped> ForceEstimator::splitContactForceMessage(
   const ContactForce & message, const std::string & tf_prefix)
 {
   using RosUtils::operator-;
+  std::string prefix = tf_prefix + "/";
   std::vector<WrenchStamped> messages;
   messages.reserve(message.frame.size());
   for (size_t i = 0; i < message.frame.size(); i++) {
     WrenchStamped wrench;
     wrench.header.stamp = message.header.stamp;
-    wrench.header.frame_id = tf_prefix + "/" + message.frame[i];
+    wrench.header.frame_id = prefix + message.frame[i];
     wrench.wrench = -(message.wrench[i]);
     messages.push_back(std::move(wrench));
   }

@@ -3,7 +3,11 @@
 
 #include <Eigen/Dense>
 #include <map>
+#include <vector>
 
+/**
+ * @brief Quadratic program problem definition
+ */
 class QpProblem
 {
 public:
@@ -86,32 +90,98 @@ public:
   }
 
   /**
-   * @brief Add a linear constraint of the form: lb <= A x <= ub
+   * @brief Add a linear inequality constraint of the form: Ax <= b
    * @param vars The names of the variables
    * @param A_in The constraint matrix for each variable
-   * @param lb_in The lower bound of the constraint (or empty for -infinity)
-   * @param ub_in The upper bound of the constraint (or empty for infinity)
+   * @param b_in The upper bound of the constraint
    */
-  void addLinearConstraint(
+  void addInequalityConstraint(
+    const std::vector<std::string> & vars,
+    const std::vector<Eigen::MatrixXd> & A_in,
+    const Eigen::VectorXd & b_in);
+
+  /**
+   * @brief Add a linear inequality constraint of the form: Ax <= b
+   * @param vars The names of the variables
+   * @param A_in The constraint matrix for each variable
+   * @param b_in The upper bound of the constraint
+   */
+  void addInequalityConstraint(
+    const std::vector<std::string> & vars,
+    const std::vector<Eigen::MatrixXd> & A_in,
+    double b_in)
+  {
+    addInequalityConstraint(
+      vars, A_in, Eigen::VectorXd::Constant(A_in.at(0).rows(), b_in));
+  }
+
+  /**
+   * @brief Add a linear inequality constraint of the form: lb <= Ax <= ub
+   * @param vars The names of the variables
+   * @param A_in The constraint matrix for each variable
+   * @param lb_in The lower bound of the constraint
+   * @param ub_in The upper bound of the constraint
+   */
+  void addInequalityConstraint(
     const std::vector<std::string> & vars,
     const std::vector<Eigen::MatrixXd> & A_in,
     const Eigen::VectorXd & lb_in,
-    const Eigen::VectorXd & ub_in);
+    const Eigen::VectorXd & ub_in)
+  {
+    if (lb_in.size()) {
+      std::vector<Eigen::MatrixXd> A_neg;
+      for (const auto & A_i : A_in) {
+        A_neg.push_back(-A_i);
+      }
+      addInequalityConstraint(vars, A_neg, -lb_in);
+    }
+    if (ub_in.size()) {
+      addInequalityConstraint(vars, A_in, ub_in);
+    }
+  }
 
   /**
-   * @brief Add a linear constraint of the form: A x = b
+   * @brief Add a linear inequality constraint of the form: lb <= Ax <= ub
    * @param vars The names of the variables
    * @param A_in The constraint matrix for each variable
-   * @param b_in The value of the variable (or empty for zero)
+   * @param lb_in The lower bound of the constraint
+   * @param ub_in The upper bound of the constraint
    */
-  void addLinearConstraint(
+  void addInequalityConstraint(
     const std::vector<std::string> & vars,
     const std::vector<Eigen::MatrixXd> & A_in,
-    const Eigen::VectorXd & b_in)
+    double lb_in,
+    double ub_in)
   {
-    Eigen::VectorXd b =
-      b_in.size() ? b_in : Eigen::VectorXd::Zero(A_in[0].rows());
-    addLinearConstraint(vars, A_in, b, b);
+    addInequalityConstraint(
+      vars, A_in, Eigen::VectorXd::Constant(A_in.at(0).rows(), lb_in),
+      Eigen::VectorXd::Constant(A_in.at(0).rows(), ub_in));
+  }
+
+  /**
+   * @brief Add a linear equality constraint of the form: Aeq x = beq
+   * @param vars The names of the variables
+   * @param Aeq_in The constraint matrix for each variable
+   * @param beq_in The value of the constraint
+   */
+  void addEqualityConstraint(
+    const std::vector<std::string> & vars,
+    const std::vector<Eigen::MatrixXd> & Aeq_in,
+    const Eigen::VectorXd & beq_in);
+
+  /**
+   * @brief Add a linear equality constraint of the form: Aeq x = beq
+   * @param vars The names of the variables
+   * @param Aeq_in The constraint matrix for each variable
+   * @param beq_in The value of the constraint
+   */
+  void addEqualityConstraint(
+    const std::vector<std::string> & vars,
+    const std::vector<Eigen::MatrixXd> & Aeq_in,
+    double beq_in)
+  {
+    addEqualityConstraint(
+      vars, Aeq_in, Eigen::VectorXd::Constant(Aeq_in.at(0).rows(), beq_in));
   }
 
   /**
@@ -123,35 +193,34 @@ public:
   void addBounds(
     const std::string & var,
     const Eigen::VectorXd & lb_in,
-    const Eigen::VectorXd & ub_in)
-  {
-    assert(vars_.find(var) != vars_.end());
-    addLinearConstraint({var}, {identity(vars_[var].size)}, lb_in, ub_in);
-  }
+    const Eigen::VectorXd & ub_in);
 
   /**
    * @brief Add a linear constraint of the form: lb <= x <= ub
    * @param var The name of the variable
-   * @param lb_in The lower bound of the constraint (or empty for -infinity)
-   * @param ub_in The upper bound of the constraint (or empty for infinity)
+   * @param lb_in The lower bound of the constraint
+   * @param ub_in The upper bound of the constraint
    */
   void addBounds(
     const std::string & var,
     const double lb_in,
     const double ub_in)
   {
-    assert(vars_.find(var) != vars_.end());
     addBounds(
-      {var}, lb_in * ones(vars_[var].size), ub_in * ones(vars_[var].size));
+      var, lb_in * ones(vars_.at(var).size), ub_in * ones(vars_.at(var).size));
   }
 
   Eigen::MatrixXd H;
   Eigen::VectorXd f;
   Eigen::MatrixXd A;
+  Eigen::VectorXd b;
+  Eigen::MatrixXd Aeq;
+  Eigen::VectorXd beq;
   Eigen::VectorXd lb;
   Eigen::VectorXd ub;
   int N;
   int M;
+  int Meq;
 
 private:
   struct Var

@@ -21,6 +21,7 @@ find_package(orocos_kdl REQUIRED)
 find_package(kdl_parser REQUIRED)
 find_package(urdf REQUIRED)
 find_package(osqp REQUIRED)
+find_package(piqp REQUIRED)
 find_package(keyboard_handler REQUIRED)
 find_package(fmt REQUIRED)
 
@@ -69,6 +70,7 @@ ament_target_dependencies(${PROJECT_NAME}_kinematics kdl_parser sensor_msgs
 add_library(${PROJECT_NAME}_optimization SHARED
   src/optimization/qp_interface.cpp
   src/optimization/osqp_interface.cpp
+  src/optimization/piqp_interface.cpp
   src/optimization/qp_problem.cpp
 )
 target_include_directories(${PROJECT_NAME}_optimization PUBLIC
@@ -76,7 +78,7 @@ target_include_directories(${PROJECT_NAME}_optimization PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(${PROJECT_NAME}_optimization ${PROJECT_NAME}_util
-  osqp::osqp Eigen3::Eigen)
+  osqp::osqp Eigen3::Eigen piqp::piqp)
 
 # Controller library
 add_library(${PROJECT_NAME}_controller SHARED

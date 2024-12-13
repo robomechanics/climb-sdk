@@ -1,15 +1,13 @@
 #include "climb_main/controller/force_controller.hpp"
 
 #include <Eigen/Dense>
-#include <Eigen/SparseCore>
-#include <osqp.h>
-#include "climb_main/optimization/osqp_interface.hpp"
+#include "climb_main/optimization/piqp_interface.hpp"
 #include "climb_main/optimization/qp_problem.hpp"
 
 ForceController::ForceController(std::shared_ptr<KinematicsInterface> robot)
 : robot_(robot)
 {
-  solver_ = std::make_unique<OsqpInterface>();
+  solver_ = std::make_unique<PiqpInterface>();
 }
 
 void ForceController::reset()
@@ -33,7 +31,7 @@ bool ForceController::update(const Eigen::VectorXd & force)
   //   Equilibrium            (p)
   //   Obstacle               (o)
 
-  using Eigen::MatrixXd, Eigen::VectorXd, Eigen::SparseMatrix;
+  using Eigen::MatrixXd, Eigen::VectorXd;
 
   // Contact kinematics
   int n = robot_->getNumJoints();           // Number of joints
@@ -79,6 +77,8 @@ bool ForceController::update(const Eigen::VectorXd & force)
   // Quadratic penalty on distance from home position
   problem.addQuadraticCost("joint", normalization_, configuration_ - q);
   problem.addQuadraticCost("body", normalization_, {});
+  problem.addQuadraticCost("error", normalization_, {});
+  problem.addQuadraticCost("margin", normalization_, {});
 
   // Linear penalty on tracking error
   problem.addLinearCost("error", tracking_);
@@ -86,14 +86,11 @@ bool ForceController::update(const Eigen::VectorXd & force)
   // Maximize stability margin
   problem.addLinearCost("margin", -stiffness_);
 
-  // Respect joint limits and maximum displacement per timestep
-  // problem.addBounds("joint", qmin - q, qmax - q);
-  problem.addLinearConstraint(
-    {"joint"}, {MatrixXd::Identity(n, n) * stiffness_},
-    (qmin - q) * stiffness_, (qmax - q) * stiffness_);
+  // Respect joint limits
+  problem.addBounds("joint", qmin - q, qmax - q);
 
   // Respect joint effort limits
-  problem.addLinearConstraint(
+  problem.addInequalityConstraint(
     {"displacement"}, {Jh.transpose() * K * A},
     umin - u, umax - u);
 
@@ -120,40 +117,40 @@ bool ForceController::update(const Eigen::VectorXd & force)
       }
     }
     if (mode == EndEffectorCommand::MODE_FREE) {
-      problem.addLinearConstraint(
+      problem.addInequalityConstraint(
         // -displacement - error <= -setpoint
         {"displacement", "error"}, {-stiffness_ * A_i, -stiffness_ * I_i},
-        {}, -stiffness_ * B_i.transpose() * end_effector_goals_[frame].setpoint);
-      problem.addLinearConstraint(
+        -stiffness_ * B_i.transpose() * end_effector_goals_[frame].setpoint);
+      problem.addInequalityConstraint(
         // displacement - error <= setpoint
         {"displacement", "error"}, {stiffness_ * A_i, -stiffness_ * I_i},
-        {}, stiffness_ * B_i.transpose() * end_effector_goals_[frame].setpoint);
+        stiffness_ * B_i.transpose() * end_effector_goals_[frame].setpoint);
     } else if (mode == EndEffectorCommand::MODE_TRANSITION) {
-      problem.addLinearConstraint(
+      problem.addInequalityConstraint(
         // -displacement - error <= -setpoint
         {"displacement", "error"}, {-K_i * A_i, -K_i * I_i},
-        {}, -(B_i.transpose() * end_effector_goals_[frame].setpoint - force_i));
-      problem.addLinearConstraint(
+        -(B_i.transpose() * end_effector_goals_[frame].setpoint - force_i));
+      problem.addInequalityConstraint(
         // displacement - error <= setpoint
         {"displacement", "error"}, {K_i * A_i, -K_i * I_i},
-        {}, B_i.transpose() * end_effector_goals_[frame].setpoint - force_i);
+        B_i.transpose() * end_effector_goals_[frame].setpoint - force_i);
     } else if (mode == EndEffectorCommand::MODE_CONTACT) {
       auto constraint = getAdhesionConstraint(frame);
-      problem.addLinearConstraint(
+      problem.addInequalityConstraint(
         // A_c * displacement <= b_c
         {"displacement"},
         {constraint.A * K_i * A_i},
-        {}, (constraint.b - constraint.A * force_i));
-      problem.addLinearConstraint({"error"}, {I_i}, {});
+        (constraint.b - constraint.A * force_i));
+      problem.addEqualityConstraint({"error"}, {I_i}, 0.0);
     } else if (mode == EndEffectorCommand::MODE_STANCE) {
       auto constraint = getAdhesionConstraint(frame);
-      problem.addLinearConstraint(
+      problem.addInequalityConstraint(
         // A_c * displacement + margin <= b_c
         {"displacement", "margin"},
         {constraint.A * K_i * A_i,
           VectorXd::Constant(constraint.b.size(), stiffness_)},
-        {}, (constraint.b - constraint.A * force_i));
-      problem.addLinearConstraint({"error"}, {I_i}, {});
+        (constraint.b - constraint.A * force_i));
+      problem.addEqualityConstraint({"error"}, {I_i}, 0.0);
     }
     row += m_i;
   }
@@ -176,11 +173,11 @@ bool ForceController::update(const Eigen::VectorXd & force)
         mass / total_mass * robot_->getSkew(robot_->getTransform(frame).translation());
     }
   }
-  problem.addLinearConstraint(
-    {"displacement"}, {Gs.topRows(3) * K * A}, {});
-  problem.addLinearConstraint(
+  problem.addEqualityConstraint(
+    {"displacement"}, {Gs.topRows(3) * K * A}, 0.0);
+  problem.addEqualityConstraint(
     {"displacement", "joint", "body"},
-    {Gs.bottomRows(3) * K * A, gskew * J_mass, gskew * G_mass}, {});
+    {Gs.bottomRows(3) * K * A, gskew * J_mass, gskew * G_mass}, 0.0);
 
   // Obstacle collision constraints
   for (const auto & obstacle : obstacles_) {
@@ -193,9 +190,10 @@ bool ForceController::update(const Eigen::VectorXd & force)
       robot_->getSkew(robot_->getTransform(obstacle.frame).translation());
     Eigen::RowVector3d normal(obstacle.normal);
     // normal * x <= dist
-    problem.addLinearConstraint(
-      {"joint", "body"}, {normal * J_ob, normal * G_ob},
-      {}, VectorXd::Constant(1, std::max(0.0, obstacle.distance)));
+    problem.addInequalityConstraint(
+      {"joint", "body"},
+      {stiffness_ * normal * J_ob, stiffness_ * normal * G_ob},
+      stiffness_ * VectorXd::Constant(1, std::max(0.0, obstacle.distance)));
   }
 
   // Solve QP
@@ -209,7 +207,8 @@ bool ForceController::update(const Eigen::VectorXd & force)
   // Store results
   if (success) {
     displacement_cmd_ = solver_->getSolution().head(n + p);
-    displacement_cmd_ /= std::max(1.0, displacement_cmd_.cwiseAbs().maxCoeff() / joint_step_);
+    displacement_cmd_ /=
+      std::max(1.0, displacement_cmd_.cwiseAbs().maxCoeff() / joint_step_);
     displacement_cmd_.head(n) =
       displacement_cmd_.head(n).cwiseMin(qmax - q).cwiseMax(qmin - q);
     margin_ = solver_->getSolution().tail(1)(0) * stiffness_;

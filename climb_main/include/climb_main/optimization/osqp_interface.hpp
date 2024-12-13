@@ -16,29 +16,23 @@ public:
     const Eigen::MatrixXd & H,
     const Eigen::VectorXd & f,
     const Eigen::MatrixXd & A,
+    const Eigen::VectorXd & b,
+    const Eigen::MatrixXd & Aeq,
+    const Eigen::VectorXd & beq,
     const Eigen::VectorXd & lb,
-    const Eigen::VectorXd & ub) override
-  {
-    return solve(
-      H, f, A, lb, ub, Eigen::SparseMatrix<double>(),
-      Eigen::SparseMatrix<double>());
-  }
-
-  bool solve(
-    const Eigen::MatrixXd & H,
-    const Eigen::VectorXd & f,
-    const Eigen::MatrixXd & A,
-    const Eigen::VectorXd & lb,
-    const Eigen::VectorXd & ub,
-    const Eigen::SparseMatrix<double> & H_sparsity,
-    const Eigen::SparseMatrix<double> & A_sparsity) override;
+    const Eigen::VectorXd & ub);
 
   bool update(
     const Eigen::MatrixXd & H,
     const Eigen::VectorXd & f,
     const Eigen::MatrixXd & A,
+    const Eigen::VectorXd & b,
+    const Eigen::MatrixXd & Aeq,
+    const Eigen::VectorXd & beq,
     const Eigen::VectorXd & lb,
     const Eigen::VectorXd & ub);
+
+  void declareParameters() override;
 
   void setParameter(
     const Parameter & param, SetParametersResult & result) override;
@@ -157,20 +151,18 @@ private:
   };
 
   /**
-   * @brief Convert Eigen matrix to csc matrix with given sparsity structure
+   * @brief Convert Eigen matrix to csc matrix
    * @param mat Eigen matrix
-   * @param sparsity Sparsity structure (or empty matrix)
    * @return csc matrix
    */
-  CscWrapper eigenToOSQP(
-    const Eigen::MatrixXd & mat, const Eigen::SparseMatrix<double> & sparsity);
+  CscWrapper matrixToOSQP(const Eigen::MatrixXd & mat);
 
   /**
    * @brief Convert Eigen vector to c_float array
    * @param vec Eigen vector
    * @return c_float array
    */
-  std::vector<c_float> eigenToOSQP(const Eigen::VectorXd & vec);
+  std::vector<c_float> vectorToOSQP(const Eigen::VectorXd & vec);
 
   /**
    * @brief Convert c_float array to Eigen vector
@@ -178,13 +170,11 @@ private:
    * @param size Size of the array
    * @return Eigen vector
    */
-  Eigen::VectorXd osqpToEigen(const c_float * vec, c_int size);
+  Eigen::VectorXd osqpToVector(const c_float * vec, c_int size);
 
   std::unique_ptr<OSQPSettings> settings_;      // OSQP settings
   OSQPDataWrapper data_;                        // OSQP data
   OSQPWorkspaceWrapper workspace_;              // OSQP workspace
-  Eigen::SparseMatrix<double> H_sparsity_;      // Sparsity structure of H
-  Eigen::SparseMatrix<double> A_sparsity_;      // Sparsity structure of A
 };
 
 #endif  // OSQP_INTERFACE_HPP
