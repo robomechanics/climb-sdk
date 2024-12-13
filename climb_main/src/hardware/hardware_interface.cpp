@@ -1,8 +1,8 @@
 #include "climb_main/hardware/hardware_interface.hpp"
 
 void HardwareInterface::addActuators(
-  std::vector<int> ids, std::vector<std::string> joints,
-  std::string model, double ratio)
+  const std::vector<int> & ids, const std::vector<std::string> & joints,
+  const std::string & model, double ratio)
 {
   for (size_t i = 0; i < ids.size(); i++) {
     if (ids[i] == -1) {
@@ -16,7 +16,7 @@ void HardwareInterface::addActuators(
   }
 }
 
-void HardwareInterface::removeActuators(std::vector<int> ids)
+void HardwareInterface::removeActuators(const std::vector<int> & ids)
 {
   disable(ids);
   for (int id : ids) {
@@ -29,7 +29,7 @@ void HardwareInterface::removeActuators(std::vector<int> ids)
   }
 }
 
-void HardwareInterface::removeJoints(std::vector<std::string> joints)
+void HardwareInterface::removeJoints(const std::vector<std::string> & joints)
 {
   std::vector<int> ids;
   for (const auto & j : joints) {
@@ -40,7 +40,7 @@ void HardwareInterface::removeJoints(std::vector<std::string> joints)
   removeActuators(ids);
 }
 
-void HardwareInterface::setRatios(std::vector<int> ids, double ratio)
+void HardwareInterface::setRatios(const std::vector<int> & ids, double ratio)
 {
   for (int id : ids) {
     if (ratios_by_id_.find(id) != ratios_by_id_.end()) {

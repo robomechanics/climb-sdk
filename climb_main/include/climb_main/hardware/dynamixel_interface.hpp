@@ -32,13 +32,13 @@ public:
   ~DynamixelInterface();
 
   void addActuators(
-    std::vector<int> ids, std::vector<std::string> joints,
-    std::string model, double ratio) override;
+    const std::vector<int> & ids, const std::vector<std::string> & joints,
+    const std::string & model, double ratio) override;
   bool connect() override;
   void disconnect() override;
   bool isConnected() override;
-  bool enable(std::vector<int> ids) override;
-  bool disable(std::vector<int> ids) override;
+  bool enable(const std::vector<int> & ids) override;
+  bool disable(const std::vector<int> & ids) override;
 
   void declareParameters() override;
   void setParameter(
@@ -47,7 +47,7 @@ public:
 
   ActuatorState readActuatorState() override;
   JointState readJointState() override;
-  bool writeJointCommand(JointCommand command) override;
+  bool writeJointCommand(const JointCommand & command) override;
 
   /**
    * @brief Sync read data from the control table of a set of Dynamixels
@@ -57,7 +57,7 @@ public:
    * @return Vector of data received (or empty vector if read failed)
    */
   std::vector<double> read(
-    std::vector<int> ids, std::pair<int, int> item,
+    const std::vector<int> & ids, std::pair<int, int> item,
     float protocol = 2.0);
 
   /**
@@ -69,8 +69,8 @@ public:
    * @return True if the write was successful
    */
   bool write(
-    std::vector<int> ids, std::pair<int, int> item,
-    std::vector<double> data, float protocol = 2.0);
+    const std::vector<int> & ids, std::pair<int, int> item,
+    const std::vector<double> & data, float protocol = 2.0);
 
   /**
    * @brief Convert a double to a vector of bytes for dynamixel write
@@ -88,19 +88,22 @@ public:
    */
   bool getBit(int value, int bit);
 
-  std::vector<double> readPosition(std::vector<int> ids);
-  std::vector<double> readVelocity(std::vector<int> ids);
-  std::vector<double> readEffort(std::vector<int> ids);
-  std::vector<double> readTemperature(std::vector<int> ids);
-  std::vector<double> readVoltage(std::vector<int> ids);
-  std::vector<bool> readEnabled(std::vector<int> ids);
-  std::vector<uint8_t> readError(std::vector<int> ids);
+  std::vector<double> readPosition(const std::vector<int> & ids);
+  std::vector<double> readVelocity(const std::vector<int> & ids);
+  std::vector<double> readEffort(const std::vector<int> & ids);
+  std::vector<double> readTemperature(const std::vector<int> & ids);
+  std::vector<double> readVoltage(const std::vector<int> & ids);
+  std::vector<bool> readEnabled(const std::vector<int> & ids);
+  std::vector<uint8_t> readError(const std::vector<int> & ids);
 
-  bool writePosition(std::vector<int> ids, std::vector<double> position);
+  bool writePosition(
+    const std::vector<int> & ids, const std::vector<double> & position);
   bool writeVelocity(
-    std::vector<int> ids, std::vector<double> velocity, bool limit = false);
+    const std::vector<int> & ids, const std::vector<double> & velocity,
+    bool limit = false);
   bool writeEffort(
-    std::vector<int> ids, std::vector<double> effort, bool limit = false);
+    const std::vector<int> & ids, const std::vector<double> & effort,
+    bool limit = false);
 
 private:
   // Dynamixel serial port handler

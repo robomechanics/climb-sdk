@@ -10,14 +10,14 @@ class DummyInterface : public HardwareInterface
 {
 public:
   void addActuators(
-    std::vector<int> ids, std::vector<std::string> joints,
-    std::string model, double ratio) override;
-  void removeActuators(std::vector<int> ids) override;
+    const std::vector<int> & ids, const std::vector<std::string> & joints,
+    const std::string & model, double ratio) override;
+  void removeActuators(const std::vector<int> & ids) override;
   bool connect() override;
   void disconnect() override;
   bool isConnected() override;
-  bool enable(std::vector<int> ids) override;
-  bool disable(std::vector<int> ids) override;
+  bool enable(const std::vector<int> & ids) override;
+  bool disable(const std::vector<int> & ids) override;
 
   void declareParameters() override;
   void setParameter(
@@ -26,7 +26,7 @@ public:
 
   ActuatorState readActuatorState() override;
   JointState readJointState() override;
-  bool writeJointCommand(JointCommand command) override;
+  bool writeJointCommand(const JointCommand & command) override;
 
 private:
   bool connected_ = false;          // Flag for connection status

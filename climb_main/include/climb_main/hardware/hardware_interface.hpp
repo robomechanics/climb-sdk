@@ -51,14 +51,14 @@ public:
    * Multiple actuators sharing a joint name will act in parallel
    */
   virtual void addActuators(
-    std::vector<int> ids,
-    std::vector<std::string> joints, std::string model, double ratio = 1);
+    const std::vector<int> & ids, const std::vector<std::string> & joints,
+    const std::string & model, double ratio = 1);
 
   /**
    * @brief Remove actuators by ID (removed actuators will be disabled)
    * @param ids Actuator IDs to remove
    */
-  virtual void removeActuators(std::vector<int> ids);
+  virtual void removeActuators(const std::vector<int> & ids);
 
   /**
    * @brief Remove all actuators (removed actuators will be disabled)
@@ -68,7 +68,7 @@ public:
   /**
    * @brief Remove actuators corresponding to specific joints
    */
-  void removeJoints(std::vector<std::string> joints);
+  void removeJoints(const std::vector<std::string> & joints);
 
   /**
    * @brief Get actuator model by actuator ID
@@ -121,7 +121,7 @@ public:
    * @param ids Actuator IDs
    * @param ratio New gear ratio
    */
-  void setRatios(std::vector<int> ids, double ratio);
+  void setRatios(const std::vector<int> & ids, double ratio);
 
   /**
    * @brief Get joint name by actuator ID
@@ -151,7 +151,7 @@ public:
    * @param joint Joint name
    * @return Vector of corresponding actuator IDs (empty list if not found)
    */
-  std::vector<int> getId(std::string joint) const
+  std::vector<int> getId(const std::string & joint) const
   {
     try {
       return ids_by_joint_.at(joint);
@@ -171,7 +171,7 @@ public:
    * @param ids Actuator IDs to enable
    * @return True on success
    */
-  virtual bool enable(std::vector<int> ids) = 0;
+  virtual bool enable(const std::vector<int> & ids) = 0;
 
   /**
    * @brief Enable all actuators
@@ -184,7 +184,7 @@ public:
    * @param ids Actuator IDs to disable
    * @return True on success
    */
-  virtual bool disable(std::vector<int> ids) = 0;
+  virtual bool disable(const std::vector<int> & ids) = 0;
 
   /**
    * @brief Disable all actuators
@@ -209,7 +209,7 @@ public:
    * @param command Joint command message
    * @return True on success
    */
-  virtual bool writeJointCommand(JointCommand command) = 0;
+  virtual bool writeJointCommand(const JointCommand & command) = 0;
 
 protected:
   // Actuator IDs

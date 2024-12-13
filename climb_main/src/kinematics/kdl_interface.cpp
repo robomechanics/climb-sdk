@@ -323,7 +323,6 @@ void KdlInterface::updateContactFrames(
   transforms_.clear();
   jacobians_.clear();
   for (const auto & transform : transforms) {
-    std::string contact = transform.child_frame_id;
     // Compute transform from end effector to contact frame
     auto ee_to_contact = KDL::Frame(
       KDL::Rotation::Quaternion(
@@ -335,7 +334,7 @@ void KdlInterface::updateContactFrames(
         transform.transform.translation.x,
         transform.transform.translation.y,
         transform.transform.translation.z));
-    contact_transforms_[contact] = ee_to_contact;
+    contact_transforms_[transform.child_frame_id] = ee_to_contact;
   }
 }
 

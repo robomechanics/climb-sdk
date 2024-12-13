@@ -41,14 +41,14 @@ public:
    * @return Transforms from each end effector frame to its contact frame
    */
   std::vector<TransformStamped> update(
-    Eigen::Vector3d gravity, const PointCloud2 & terrain);
+    const Eigen::Vector3d & gravity, const PointCloud2 & terrain);
 
   /**
    * @brief Update the contact frames based on nominal surface plane
    * @param[in] gravity Gravity direction vector in the body frame
    * @return Transforms from each end effector frame to its contact frame
    */
-  std::vector<TransformStamped> update(Eigen::Vector3d gravity);
+  std::vector<TransformStamped> update(const Eigen::Vector3d & gravity);
 
   /**
    * @brief Get the ground plane normal vector and distance from origin

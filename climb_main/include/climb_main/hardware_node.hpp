@@ -46,11 +46,11 @@ private:
   void jointCmdCallback(const JointCommand::SharedPtr msg);
 
   /**
-   * @brief Send commands to the actuators
+   * @brief Send enable/disable commands to the actuators
    * @param[in] request Request containing actuator commands
    * @param[out] response Response containing command results
    */
-  void actuatorCmdCallback(
+  void actuatorEnableCallback(
     const ActuatorEnable::Request::SharedPtr request,
     ActuatorEnable::Response::SharedPtr response);
 
@@ -76,7 +76,7 @@ private:
   // Joint command subscriber
   rclcpp::Subscription<JointCommand>::SharedPtr joint_cmd_sub_;
   // Actuator enable/disable service
-  rclcpp::Service<ActuatorEnable>::SharedPtr actuator_cmd_srv_;
+  rclcpp::Service<ActuatorEnable>::SharedPtr actuator_enable_srv_;
   // Parameter callback handle
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
     param_handle_;

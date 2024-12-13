@@ -1,4 +1,5 @@
 #include "climb_main/controller/contact_estimator.hpp"
+#include "climb_main/util/ros_utils.hpp"
 
 ContactEstimator::ContactEstimator(std::shared_ptr<KinematicsInterface> robot)
 : robot_(robot)
@@ -11,7 +12,7 @@ void ContactEstimator::reset()
 }
 
 std::vector<TransformStamped> ContactEstimator::update(
-  Eigen::Vector3d gravity, const PointCloud2 & terrain)
+  const Eigen::Vector3d & gravity, const PointCloud2 & terrain)
 {
   std::vector<TransformStamped> transforms;
   for (int i = 0; i < robot_->getNumContacts(); ++i) {
@@ -32,23 +33,22 @@ std::vector<TransformStamped> ContactEstimator::update(
   return transforms;
 }
 
-std::vector<TransformStamped> ContactEstimator::update(Eigen::Vector3d gravity)
+std::vector<TransformStamped> ContactEstimator::update(
+  const Eigen::Vector3d & gravity)
 {
   std::vector<TransformStamped> transforms;
-  auto ground = getGroundPlane();
+  transforms.reserve(robot_->getNumContacts());
+  const auto ground = getGroundPlane();
+  const auto & ee_frames = robot_->getEndEffectorFrames();
+  const auto & contact_frames = robot_->getContactFrames();
   for (int i = 0; i < robot_->getNumContacts(); ++i) {
-    auto ee_frame = robot_->getEndEffectorFrames()[i];
-    auto contact_frame = robot_->getContactFrames()[i];
     TransformStamped transform;
-    transform.header.frame_id = ee_frame;
-    transform.child_frame_id = contact_frame;
-    Eigen::Quaterniond q(
-      getContactOrientation(ee_frame, contact_frame, ground.normal, gravity));
-    transform.transform.rotation.x = q.x();
-    transform.transform.rotation.y = q.y();
-    transform.transform.rotation.z = q.z();
-    transform.transform.rotation.w = q.w();
-    transforms.push_back(transform);
+    transform.header.frame_id = ee_frames[i];
+    transform.child_frame_id = contact_frames[i];
+    Eigen::Quaterniond q(getContactOrientation(
+        ee_frames[i], contact_frames[i], ground.normal, gravity));
+    transform.transform.rotation = RosUtils::eigenToQuaternion(q);
+    transforms.emplace_back(std::move(transform));
   }
   return transforms;
 }

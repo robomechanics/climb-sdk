@@ -1,11 +1,11 @@
 #include "climb_main/hardware/dummy_interface.hpp"
 
 void DummyInterface::addActuators(
-  std::vector<int> ids, std::vector<std::string> joints,
-  std::string model, double ratio)
+  const std::vector<int> & ids, const std::vector<std::string> & joints,
+  const std::string & model, double ratio)
 {
   HardwareInterface::addActuators(ids, joints, model, ratio);
-  for (int id : ids) {
+  for (const auto id : ids) {
     enabled_[id] = false;
     position_[id] = 0;
     velocity_[id] = 0;
@@ -13,10 +13,10 @@ void DummyInterface::addActuators(
   }
 }
 
-void DummyInterface::removeActuators(std::vector<int> ids)
+void DummyInterface::removeActuators(const std::vector<int> & ids)
 {
   HardwareInterface::removeActuators(ids);
-  for (int id : ids) {
+  for (const auto id : ids) {
     enabled_.erase(id);
     position_.erase(id);
     velocity_.erase(id);
@@ -40,17 +40,17 @@ bool DummyInterface::isConnected()
   return connected_;
 }
 
-bool DummyInterface::enable(std::vector<int> ids)
+bool DummyInterface::enable(const std::vector<int> & ids)
 {
-  for (int id : ids) {
+  for (const auto id : ids) {
     enabled_[id] = true;
   }
   return true;
 }
 
-bool DummyInterface::disable(std::vector<int> ids)
+bool DummyInterface::disable(const std::vector<int> & ids)
 {
-  for (int id : ids) {
+  for (const auto id : ids) {
     enabled_[id] = false;
   }
   return true;
@@ -59,7 +59,7 @@ bool DummyInterface::disable(std::vector<int> ids)
 ActuatorState DummyInterface::readActuatorState()
 {
   ActuatorState state;
-  for (int id : ids_) {
+  for (const auto id : ids_) {
     state.id.push_back(id);
     state.joint.push_back(getJoint(id));
     if (isConnected()) {
@@ -88,7 +88,7 @@ JointState DummyInterface::readJointState()
     }
   }
   if (isConnected()) {
-    for (auto joint : state.name) {
+    for (const auto & joint : state.name) {
       state.position.push_back(pos[joint]);
       state.velocity.push_back(vel[joint]);
       state.effort.push_back(eff[joint]);
@@ -97,14 +97,14 @@ JointState DummyInterface::readJointState()
   return state;
 }
 
-bool DummyInterface::writeJointCommand(JointCommand command)
+bool DummyInterface::writeJointCommand(const JointCommand & command)
 {
   if (!isConnected()) {
     return false;
   }
   for (size_t j = 0; j < command.name.size(); j++) {
     size_t num_actuators = getId(command.name[j]).size();
-    for (int id : getId(command.name[j])) {
+    for (const auto id : getId(command.name[j])) {
       if (j >= command.mode.size() ||
         command.mode[j] == JointCommand::MODE_POSITION)
       {
