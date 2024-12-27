@@ -35,6 +35,15 @@ public:
   /**
    * @brief Update the contact forces based on the given force command
    * @param[in] force Current contact force estimates (robot on world)
+   * @param[in] pose Nominal pose of the body frame in the current body frame
+   * @return True if an optimal solution was found
+   */
+  bool updateDecoupled(
+    const Eigen::VectorXd & force, const Eigen::Isometry3d & pose);
+
+  /**
+   * @brief Update the contact forces based on the given force command
+   * @param[in] force Current contact force estimates (robot on world)
    * @return True if an optimal solution was found
    */
   bool update(const Eigen::VectorXd & force);
@@ -144,8 +153,8 @@ private:
   {
     // Contact mode
     int mode;
-    // Setpoint twist or wrench in rad/s, m/s, Nm, or N
-    Eigen::Vector<double, 6> setpoint;
+    // Setpoint velocity or force in rad/s, m/s, Nm, or N
+    Eigen::VectorXd setpoint;
   };
 
   struct ObstacleConstraint
@@ -182,12 +191,22 @@ private:
   double error_;
   // Expected compliance at the point of contact in N/m
   double stiffness_;
-  // Maximum joint displacement
+  // Contact force feedback gain in m/N
+  double force_kp_;
+  // Body position feedback gain in m/m
+  double body_kp_;
+  // Maximum joint displacement per timestep in rad or m
   double joint_step_;
+  // Maximum body displacement per timestep in rad or m
+  double body_step_;
+  // Maximum joint error in rad
+  double joint_max_error_;
+  // Relative cost of joint displacement in 1/N^2
+  double joint_normalization_;
+  // Relative cost of body displacement in 1/N^2
+  double body_normalization_;
   // Minimum height of body frame origin above ground plane
   double clearance_;
-  // Relative cost of joint displacement in 1/N^2
-  double normalization_;
   // Relative cost of end-effector error in 1/N
   double tracking_;
   // Minimum link mass for center of mass optimization in kg
@@ -204,6 +223,12 @@ private:
   double microspine_max_force_;
   // Maximum joint effort in Nm
   double max_effort_;
+  // Scale factor for constraint matrices
+  double constraint_scale_;
+  // Minimum body displacement in body frame in rad or m
+  Eigen::Vector3d body_min_limits_;
+  // Maximum body displacement in body frame in rad or m
+  Eigen::Vector3d body_max_limits_;
 };
 
 #endif  // FORCE_CONTROLLER_HPP

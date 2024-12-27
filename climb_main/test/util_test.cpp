@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "util/test_utils.hpp"
 #include "climb_main/util/ros_utils.hpp"
+#include "climb_main/util/eigen_utils.hpp"
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
 #include <geometry_msgs/msg/quaternion.hpp>
@@ -69,6 +70,14 @@ TEST(RosUtilsTest, Geometry)
     transformToEigen(eigenToTransform(transform_expected));
   EXPECT_NEAR_EIGEN(transform.matrix(), transform_expected.matrix(), TOL) <<
     "Transform conversion failed";
+}
+
+TEST(EigenUtilsTest, Skew)
+{
+  Eigen::Vector3d v1 = {1, 2, 3};
+  Eigen::Vector3d v2 = {4, 5, 6};
+  Eigen::Matrix3d v1_skew = EigenUtils::getSkew(v1);
+  EXPECT_NEAR_EIGEN(v1_skew * v2, v1.cross(v2), TOL) << "Skew matrix incorrect";
 }
 
 int main(int argc, char ** argv)

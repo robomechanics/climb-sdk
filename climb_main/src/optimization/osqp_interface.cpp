@@ -183,18 +183,18 @@ void OsqpInterface::setParameter(
   if (param.get_name() == "verbose") {
     settings_->verbose = param.as_bool();
   } else if (param.get_name() == "max_iter") {
-    if (param.as_int() >= 0) settings_->max_iter = param.as_int();
+    if (param.as_int() >= 0) {settings_->max_iter = param.as_int();}
   } else if (param.get_name() == "eps_abs") {
-    if (param.as_double() >= 0) settings_->eps_abs = param.as_double();
+    if (param.as_double() >= 0) {settings_->eps_abs = param.as_double();}
   } else if (param.get_name() == "eps_rel") {
-    if (param.as_double() >= 0) settings_->eps_rel = param.as_double();
+    if (param.as_double() >= 0) {settings_->eps_rel = param.as_double();}
   } else if (param.get_name() == "eps_prim_inf") {
-    if (param.as_double() >= 0) settings_->eps_prim_inf = param.as_double();
+    if (param.as_double() >= 0) {settings_->eps_prim_inf = param.as_double();}
   } else if (param.get_name() == "eps_dual_inf") {
-    if (param.as_double() >= 0) settings_->eps_dual_inf = param.as_double();
+    if (param.as_double() >= 0) {settings_->eps_dual_inf = param.as_double();}
   } else if (param.get_name() == "alpha") {
-    if (param.as_double() >= 0) settings_->alpha = param.as_double();
+    if (param.as_double() >= 0) {settings_->alpha = param.as_double();}
   } else if (param.get_name() == "rho") {
-    if (param.as_double() >= 0) settings_->rho = param.as_double();
+    if (param.as_double() >= 0) {settings_->rho = param.as_double();}
   }
 }

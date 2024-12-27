@@ -17,10 +17,20 @@ using geometry_msgs::msg::TransformStamped;
 class ContactEstimator : public Parameterized
 {
 public:
+  /**
+   * @brief Plane defined by a normal vector and a reference point on the plane
+   */
   struct Plane
   {
     Eigen::Vector3d normal;   // Normal vector of the plane
-    double distance;          // Distance from origin along normal vector
+    Eigen::Vector3d origin;   // Reference point on plane
+    double distance;          // Distance to plane along normal vector
+    Plane()
+    : normal(0, 0, 1), origin(0, 0, 0), distance(0) {}
+    Plane(const Eigen::Vector3d & normal, const Eigen::Vector3d & origin)
+    : normal(normal), origin(origin), distance(normal.dot(origin)) {}
+    Plane(const Eigen::Vector3d & normal, double distance)
+    : normal(normal), origin(normal * distance), distance(distance) {}
   };
 
   /**

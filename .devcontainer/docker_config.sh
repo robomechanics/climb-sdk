@@ -43,3 +43,6 @@ roskill() {
         pkill -f "$key"
     fi
 }
+
+# Shortcut to set USB latency timer
+alias latency='echo 1 | sudo tee /sys/bus/usb-serial/devices/ttyUSB0/latency_timer'

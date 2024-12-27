@@ -70,11 +70,15 @@ bool PiqpInterface::update(
 
 void PiqpInterface::declareParameters()
 {
-  declareParameter("check_duality_gap", true,
+  QpInterface::declareParameters();
+  declareParameter(
+    "check_duality_gap", true,
     "Check terminal criterion on duality gap");
-  declareParameter("eps_duality_gap_abs", -1.0,
+  declareParameter(
+    "eps_duality_gap_abs", -1.0,
     "Absolute tolerance for duality gap (-1 for default)");
-  declareParameter("eps_duality_gap_rel", -1.0,
+  declareParameter(
+    "eps_duality_gap_rel", -1.0,
     "Relative duality gap tolerance (-1 for default)");
 }
 
@@ -85,10 +89,16 @@ void PiqpInterface::setParameter(
     solver_.settings().verbose = param.as_bool();
     solver_.settings().compute_timings = param.as_bool();
   } else if (param.get_name() == "max_iter") {
-    if (param.as_int() >= 0) solver_.settings().max_iter = param.as_int();
+    if (param.as_int() >= 0) {
+      solver_.settings().max_iter = param.as_int();
+    }
   } else if (param.get_name() == "eps_abs") {
-    if (param.as_double() >= 0) solver_.settings().eps_abs = param.as_double();
+    if (param.as_double() >= 0) {
+      solver_.settings().eps_abs = param.as_double();
+    }
   } else if (param.get_name() == "eps_rel") {
-    if (param.as_double() >= 0) solver_.settings().eps_rel = param.as_double();
+    if (param.as_double() >= 0) {
+      solver_.settings().eps_rel = param.as_double();
+    }
   }
 }

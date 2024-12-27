@@ -21,14 +21,14 @@ Eigen::VectorXd ForceEstimator::update(const Eigen::VectorXd & effort)
 
   // Apply gravity offset
   if (gravity_offset_) {
-    Eigen::MatrixXd Gs = -robot_->getGraspMap();
+    Eigen::Matrix<double, 6, Eigen::Dynamic> Gs = -robot_->getGraspMap();
     Eigen::MatrixXd dVdg = robot_->getGravitationalMatrix();
     double m = robot_->getMass();
     A -= dVdg * Gs.topRows(3) / m;
   }
 
-  // Solve system (use SVD in case of singular A)
-  return A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
+  // Solve system
+  return A.completeOrthogonalDecomposition().solve(b);
 }
 
 Eigen::VectorXd ForceEstimator::update(
@@ -66,9 +66,9 @@ Eigen::VectorXd ForceEstimator::update(
     b.head(Jh.cols()) -= N;
   }
 
-  // Solve fully or under-determined system (use SVD in case of singular A)
+  // Solve fully or under-determined system
   if (A.rows() <= A.cols()) {
-    return A.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(b);
+    return A.completeOrthogonalDecomposition().solve(b);
   }
 
   // Solve over-determined system

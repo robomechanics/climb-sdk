@@ -123,7 +123,8 @@ def generate_launch_description():
         output="screen",
         parameters=[{"tf_prefix": namespace},
                     global_config_path, robot_config_path],
-        remappings=[('/loris/key_input', '/key_input')]
+        remappings=[('/loris/key_input', '/key_input'),
+                    ('/loris/key_output', '/key_output')]
     )
     key_input = Node(
         package="climb_main",

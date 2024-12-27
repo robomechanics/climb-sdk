@@ -80,6 +80,13 @@ Eigen::Vector<double, 6> getTwist(
  */
 Eigen::Vector<double, 6> getTwist(
   const Eigen::Isometry3d & transform, double magnitude = 0.0);
+
+/**
+ * @brief Get the skew-symmetric matrix of a vector
+ * @param[in] vector Vector
+ * @return Skew-symmetric matrix
+ */
+Eigen::Matrix3d getSkew(const Eigen::Vector3d & vector);
 }  // namespace EigenUtils
 
 #endif  // EIGEN_UTILS_HPP

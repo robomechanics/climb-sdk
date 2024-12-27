@@ -2,6 +2,7 @@
 
 using KeyCode = KeyboardHandler::KeyCode;
 using KeyModifiers = KeyboardHandler::KeyModifiers;
+using std::placeholders::_1;
 
 KeyInputNode::KeyInputNode()
 : Node("KeyInputNode"), history_({""})
@@ -27,6 +28,14 @@ KeyInputNode::KeyInputNode()
   this->declare_parameter("service", "key_input", service_param_desc);
   std::string service = this->get_parameter("service").as_string();
 
+  // Get topic name as parameter
+  auto topic_param_desc = rcl_interfaces::msg::ParameterDescriptor{};
+  topic_param_desc.description =
+    "Name of KeyInput topic for asynchronous responses";
+  topic_param_desc.read_only = true;
+  this->declare_parameter("topic", "key_output", topic_param_desc);
+  std::string topic = this->get_parameter("topic").as_string();
+
   // Timeout for service requests
   auto timeout_param_desc = rcl_interfaces::msg::ParameterDescriptor{};
   timeout_param_desc.description = "Timeout for service requests in ms";
@@ -35,8 +44,10 @@ KeyInputNode::KeyInputNode()
   timeout_ = std::chrono::milliseconds(
     this->get_parameter("timeout").as_int());
 
-  // Initialize service
+  // Initialize service and subscriber
   key_input_client_ = this->create_client<KeyInput>(service);
+  async_response_sub_ = this->create_subscription<TeleopMessage>(
+    topic, 1, std::bind(&KeyInputNode::keyOutputCallback, this, _1));
 }
 
 void KeyInputNode::keyCallback(KeyCode key_code, KeyModifiers key_modifiers)
@@ -166,6 +177,14 @@ void KeyInputNode::autoComplete(const std::string & input)
   if (status == std::future_status::ready) {
     input_ = result.get()->response;
     index_ = input_.size();
+  }
+}
+
+void KeyInputNode::keyOutputCallback(const TeleopMessage::SharedPtr msg)
+{
+  realtime_ = msg->realtime;
+  if (!msg->response.empty()) {
+    std::cout << msg->response << std::endl;
   }
 }
 

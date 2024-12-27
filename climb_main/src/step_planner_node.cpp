@@ -37,21 +37,17 @@ StepPlannerNode::StepPlannerNode()
 
 void StepPlannerNode::contactForceCallback(const ContactForce::SharedPtr msg)
 {
+  if (!robot_->isInitialized()) {
+    return;
+  }
   TransformStamped map_to_body = lookupMapToBodyTransform();
   if (map_to_body.header.frame_id.empty()) {
     return;
   }
 
   // Update step progress
-  auto new_states = step_planner_->update(*msg, map_to_body);
-  for (const auto & [contact, state] : new_states) {
-    auto handle = goal_handles_.find(contact);
-    if (handle != goal_handles_.end()) {
-      auto feedback = std::make_shared<StepCommand::Feedback>();
-      feedback->state = static_cast<uint8_t>(state);
-      handle->second->publish_feedback(feedback);
-    }
-  }
+  step_planner_->update(*msg, map_to_body);
+  processStateChanges();
 
   // Publish end effector command
   auto cmd = step_planner_->getCommand();
@@ -63,9 +59,6 @@ void StepPlannerNode::contactForceCallback(const ContactForce::SharedPtr msg)
   footholds.header.frame_id = name_ + "/map";
   footholds.header.stamp = this->now();
   for (const auto & frame : robot_->getContactFrames()) {
-    if (step_planner_->getState(frame) == StepPlanner::State::STANCE) {
-      continue;
-    }
     footholds.poses.push_back(
       RosUtils::eigenToPose(step_planner_->getFoothold(frame)));
   }
@@ -91,6 +84,9 @@ void StepPlannerNode::stepOverrideCommandCallback(
       step_planner_->advance(msg->header.frame_id);
       break;
     case StepOverrideCommand::COMMAND_STOP:
+      step_planner_->cancel(msg->header.frame_id);
+      break;
+    case StepOverrideCommand::COMMAND_PAUSE:
       step_planner_->pause(msg->header.frame_id);
       break;
     case StepOverrideCommand::COMMAND_RESUME:
@@ -110,8 +106,9 @@ rclcpp_action::CancelResponse StepPlannerNode::cancelCallback(
   [[maybe_unused]] const std::shared_ptr<GoalHandle> goal_handle)
 {
   auto goal = goal_handle->get_goal();
-  step_planner_->cancel(goal->frame);
   goal_handles_.erase(goal->frame);
+  step_planner_->cancel(goal->frame);
+  processStateChanges();
   return rclcpp_action::CancelResponse::ACCEPT;
 }
 
@@ -124,6 +121,27 @@ void StepPlannerNode::acceptedCallback(
     step_planner_->step(goal->frame);
   } else {
     step_planner_->step(goal->frame, RosUtils::poseToEigen(goal->foothold));
+  }
+}
+
+void StepPlannerNode::processStateChanges()
+{
+  auto changes = step_planner_->getStateChanges();
+  while (!changes.empty()) {
+    auto change = changes.front();
+    changes.pop();
+    auto handle = goal_handles_.find(change.contact);
+    if (handle != goal_handles_.end()) {
+      auto feedback = std::make_shared<StepCommand::Feedback>();
+      feedback->state = static_cast<uint8_t>(change.state);
+      handle->second->publish_feedback(feedback);
+      if (change.state == StepPlanner::State::STANCE) {
+        auto result = std::make_shared<StepCommand::Result>();
+        result->success = true;
+        handle->second->succeed(result);
+        goal_handles_.erase(handle);
+      }
+    }
   }
 }
 

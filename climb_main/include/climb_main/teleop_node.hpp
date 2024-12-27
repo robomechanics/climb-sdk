@@ -11,6 +11,7 @@
 #include <climb_msgs/msg/joint_command.hpp>
 #include <climb_msgs/msg/end_effector_command.hpp>
 #include <climb_msgs/msg/step_override_command.hpp>
+#include <climb_msgs/msg/teleop_message.hpp>
 #include <climb_msgs/action/step_command.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 
@@ -24,6 +25,7 @@ using climb_msgs::srv::ControllerEnable;
 using climb_msgs::msg::JointCommand;
 using climb_msgs::msg::EndEffectorCommand;
 using climb_msgs::msg::StepOverrideCommand;
+using climb_msgs::msg::TeleopMessage;
 using sensor_msgs::msg::JointState;
 using geometry_msgs::msg::Twist;
 
@@ -190,6 +192,8 @@ private:
   KeyInputParser key_input_parser_;
   // Key input service
   rclcpp::Service<KeyInput>::SharedPtr key_input_service_;
+  // Asynchronous key response publisher
+  rclcpp::Publisher<TeleopMessage>::SharedPtr key_output_pub_;
   // Joint command publisher
   rclcpp::Publisher<JointCommand>::SharedPtr joint_cmd_pub_;
   // End effector command publisher

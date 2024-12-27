@@ -56,24 +56,28 @@ std::vector<TransformStamped> ContactEstimator::update(
 ContactEstimator::Plane ContactEstimator::getGroundPlane(
   const std::vector<std::string> & contact_frames)
 {
-  Plane plane;
-  Eigen::MatrixXd contacts(3, contact_frames.size());
+  Eigen::Vector3d normal;
+  Eigen::MatrixXd contacts(3, 0);
   for (size_t i = 0; i < contact_frames.size(); ++i) {
-    contacts.col(i) = robot_->getTransform(contact_frames[i]).translation();
+    if (robot_->getContactType(contact_frames[i]) == ContactType::TAIL) {
+      continue;
+    }
+    contacts.conservativeResize(3, contacts.cols() + 1);
+    contacts.rightCols(1) =
+      robot_->getTransform(contact_frames[i]).translation();
   }
   Eigen::Vector3d mean = contacts.rowwise().mean();
   if (contact_frames.size() < 3) {
-    plane.normal = {0, 0, 1};
+    normal = {0, 0, 1};
   } else {
     contacts.colwise() -= mean;
-    plane.normal = contacts.jacobiSvd(
+    normal = contacts.jacobiSvd(
       Eigen::ComputeThinU | Eigen::ComputeThinV).matrixU().col(2);
   }
-  if (plane.normal.dot(Eigen::Vector3d::UnitZ()) > 0) {
-    plane.normal *= -1;
+  if (normal.dot(Eigen::Vector3d::UnitZ()) > 0) {
+    normal *= -1;
   }
-  plane.distance = mean.dot(plane.normal);
-  return plane;
+  return Plane(normal, mean);
 }
 
 Eigen::Matrix3d ContactEstimator::getContactOrientation(
@@ -91,7 +95,7 @@ Eigen::Matrix3d ContactEstimator::getContactOrientation(
   Eigen::Vector3d g_e = R_be.transpose() * gravity;
   Eigen::Vector3d com_e = robot_->getTransform(
     end_effector_frame, contact_frame + "_inertial").translation();
-  if (wrist == KinematicsInterface::WristType::GRAVITY) {
+  if (wrist == WristType::GRAVITY) {
     // Align center of mass with gravity, then align x-axis with normal
     Eigen::Matrix3d R_ec1 = R_ec;
     if (g_e.norm() && com_e.norm() &&
@@ -104,14 +108,14 @@ Eigen::Matrix3d ContactEstimator::getContactOrientation(
       Eigen::Quaterniond::FromTwoVectors(R_ec1.col(0), n_e) * R_ec1;
     R_ec2 /= R_ec2.col(0).norm();
     return R_ec2;
-  } else if (wrist == KinematicsInterface::WristType::FIXED) {
+  } else if (wrist == WristType::FIXED) {
     // Maintain constant orientation
     return Eigen::Matrix3d::Identity();
-  } else if (wrist == KinematicsInterface::WristType::SPRING) {
+  } else if (wrist == WristType::SPRING) {
     // Rotate from end effector normal to surface normal
     return Eigen::Quaterniond::FromTwoVectors(
       Eigen::Vector3d::UnitX(), n_e).toRotationMatrix();
-  } else if (wrist == KinematicsInterface::WristType::FREE) {
+  } else if (wrist == WristType::FREE) {
     // Rotate from previous contact normal to surface normal
     return Eigen::Quaterniond::FromTwoVectors(
       R_ec.col(0), n_e).toRotationMatrix() * R_ec;

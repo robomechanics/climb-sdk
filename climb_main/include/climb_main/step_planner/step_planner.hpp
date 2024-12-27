@@ -1,6 +1,7 @@
 #ifndef STEP_PLANNER_HPP
 #define STEP_PLANNER_HPP
 
+#include <queue>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <climb_msgs/msg/contact_force.hpp>
 #include <climb_msgs/msg/end_effector_command.hpp>
@@ -46,12 +47,24 @@ public:
     bool paused;
   };
 
+  struct StateChange
+  {
+    rclcpp::Time t;
+    std::string contact;
+    State state;
+  };
+
   /**
    * @brief Constructor for StepPlanner
    * @param[in] robot Kinematics interface for the robot
    * @return Constructed object of type StepPlanner
    */
   StepPlanner(std::shared_ptr<KinematicsInterface> robot);
+
+  /**
+   * @brief Reset the state machine
+   */
+  void reset();
 
   /**
    * @brief Begin a step to the specified foothold
@@ -70,9 +83,8 @@ public:
   /**
    * @brief Cancel the current step
    * @param[in] contact Name of the contact frame taking the step
-   * (leave empty to cancel all)
    */
-  void cancel(const std::string & contact = "");
+  void cancel(const std::string & contact);
 
   /**
    * @brief Pause the current step
@@ -80,8 +92,9 @@ public:
    */
   void pause(const std::string & contact)
   {
-    if (footsteps_.find(contact) != footsteps_.end()) {
+    if (!footsteps_.at(contact).paused) {
       footsteps_.at(contact).paused = true;
+      change_queue_.push({t_, contact, State::STOP});
     }
   }
 
@@ -91,8 +104,9 @@ public:
    */
   void resume(const std::string & contact)
   {
-    if (footsteps_.find(contact) != footsteps_.end()) {
+    if (footsteps_.at(contact).paused) {
       footsteps_.at(contact).paused = false;
+      change_queue_.push({t_, contact, footsteps_.at(contact).state});
     }
   }
 
@@ -108,9 +122,8 @@ public:
    */
   void retry(const std::string & contact)
   {
-    if (footsteps_.find(contact) != footsteps_.end()) {
-      footsteps_.at(contact).state = State::RETRY;
-    }
+    footsteps_.at(contact).state = State::RETRY;
+    change_queue_.push({t_, contact, footsteps_.at(contact).state});
   }
 
   /**
@@ -127,8 +140,13 @@ public:
    * @param[in] transform Message containing transform from map to body frame
    * @return Map from contact frames that changed state to their new states
    */
-  std::unordered_map<std::string, State> update(
-    const ContactForce & forces, const TransformStamped & transform);
+  void update(const ContactForce & forces, const TransformStamped & transform);
+
+  /**
+   * @brief Get all state changes since the last query and clear the queue
+   * @return Queue of state changes
+   */
+  std::queue<StateChange> getStateChanges();
 
   /**
    * @brief Update the transform from the map to the robot base frame
@@ -141,7 +159,7 @@ public:
    * @brief Get the current end effector command
    * @return End effector command ROS message
    */
-  EndEffectorCommand getCommand() const;
+  EndEffectorCommand getCommand();
 
   /**
    * @brief Get the nominal foothold for the specified contact
@@ -181,8 +199,10 @@ private:
   std::unordered_map<std::string, Footstep> footsteps_;
   // Time of last joint state update
   rclcpp::Time t_;
-  // Time of last state change
+  // Time of last timeout
   rclcpp::Time t0_;
+  // Queue of state changes
+  std::queue<StateChange> change_queue_;
   // Parameters
   double step_height_;
   double step_length_;

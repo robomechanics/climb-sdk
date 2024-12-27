@@ -4,9 +4,11 @@
 #include <string>
 #include <vector>
 #include <rclcpp/rclcpp.hpp>
+#include <climb_msgs/msg/teleop_message.hpp>
 #include <climb_msgs/srv/key_input.hpp>
 #include <keyboard_handler/keyboard_handler.hpp>
 
+using climb_msgs::msg::TeleopMessage;
 using climb_msgs::srv::KeyInput;
 
 /**
@@ -44,6 +46,12 @@ private:
    */
   void autoComplete(const std::string & input);
 
+  /**
+   * @brief Callback for asynchronous responses
+   * @param msg The response message
+   */
+  void keyOutputCallback(const TeleopMessage::SharedPtr msg);
+
   // Keyboard handler
   KeyboardHandler keyboard_handler_;
   // Input string
@@ -56,8 +64,10 @@ private:
   size_t history_index_;
   // Send every key press individually
   bool realtime_;
-  // Key input service
+  // Key input service client
   rclcpp::Client<KeyInput>::SharedPtr key_input_client_;
+  // Async response subscriber
+  rclcpp::Subscription<TeleopMessage>::SharedPtr async_response_sub_;
   // Timeout for service requests
   std::chrono::milliseconds timeout_;
 };

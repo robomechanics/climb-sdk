@@ -6,63 +6,76 @@ using geometry_msgs::msg::Twist;
 using geometry_msgs::msg::Wrench;
 
 StepPlanner::StepPlanner(std::shared_ptr<KinematicsInterface> robot)
-: robot_(robot), transform_(Eigen::Isometry3d::Identity())
+: robot_(robot), transform_(Eigen::Isometry3d::Identity()),
+  t_(0, 0, RCL_ROS_TIME), t0_(0, 0, RCL_ROS_TIME)
 {
+  declareParameters();
+}
+
+void StepPlanner::reset()
+{
+  for (const auto & contact : robot_->getContactFrames()) {
+    cancel(contact);
+  }
 }
 
 void StepPlanner::step(
   const std::string & contact, const Eigen::Isometry3d & foothold)
 {
-  footsteps_[contact] =
-  {State::DISENGAGE, transform_ * robot_->getTransform(contact),
+  footsteps_[contact] = {
+    State::DISENGAGE,
+    transform_ * robot_->getTransform(contact),
     foothold, t_, false};
+  change_queue_.push({t_, contact, footsteps_.at(contact).state});
 }
 
 void StepPlanner::cancel(const std::string & contact)
 {
-  if (contact.empty()) {
-    footsteps_.clear();
-  } else if (footsteps_.find(contact) != footsteps_.end()) {
-    footsteps_[contact].state = State::STOP;
-  }
+  footsteps_[contact] = {
+    State::STANCE,
+    transform_ * robot_->getTransform(contact),
+    transform_ * robot_->getTransform(contact),
+    t_, false};
+  change_queue_.push({t_, contact, footsteps_.at(contact).state});
 }
 
 void StepPlanner::advance(const std::string & contact)
 {
-  if (footsteps_.find(contact) == footsteps_.end()) {return;}
-  switch (footsteps_[contact].state) {
+  auto initial_state = footsteps_.at(contact).state;
+  switch (footsteps_.at(contact).state) {
     case State::DISENGAGE:
-      footsteps_[contact].state = State::LIFT;
+      footsteps_.at(contact).state = State::LIFT;
       break;
     case State::LIFT:
-      footsteps_[contact].state = State::SWING;
+      footsteps_.at(contact).state = State::SWING;
       break;
     case State::SWING:
-      footsteps_[contact].state = State::PLACE;
+      footsteps_.at(contact).state = State::PLACE;
       break;
     case State::PLACE:
-      footsteps_[contact].state = State::ENGAGE;
+      footsteps_.at(contact).state = State::ENGAGE;
       break;
     case State::ENGAGE:
-      footsteps_[contact].state = State::STANCE;
+      footsteps_.at(contact).state = State::STANCE;
       break;
     default:
       break;
+  }
+  if (footsteps_.at(contact).state != initial_state) {
+    footsteps_.at(contact).t0 = t_;
+    change_queue_.push({t_, contact, footsteps_.at(contact).state});
   }
 }
 
 void StepPlanner::moveFoothold(
   const std::string & contact, const Eigen::Vector<double, 6> & twist)
 {
-  if (footsteps_.find(contact) != footsteps_.end()) {
-    EigenUtils::applyTwistInPlace(footsteps_.at(contact).foothold, twist);
-  }
+  EigenUtils::applyTwistInPlace(footsteps_.at(contact).foothold, twist);
 }
 
-std::unordered_map<std::string, StepPlanner::State> StepPlanner::update(
+void StepPlanner::update(
   const ContactForce & forces, const TransformStamped & transform)
 {
-  std::unordered_map<std::string, State> new_states;
   t_ = forces.header.stamp;
   if (transform.child_frame_id == robot_->getBodyFrame()) {
     transform_ = RosUtils::transformToEigen(transform.transform);
@@ -70,6 +83,9 @@ std::unordered_map<std::string, StepPlanner::State> StepPlanner::update(
     throw std::invalid_argument(
             "Invalid transform: expected child frame " + robot_->getBodyFrame() +
             " but received " + transform.child_frame_id);
+  }
+  if (footsteps_.empty()) {
+    reset();
   }
   State initial_state;
   int index;
@@ -79,7 +95,6 @@ std::unordered_map<std::string, StepPlanner::State> StepPlanner::update(
   Eigen::Isometry3d ee_pose;
   Eigen::Vector<double, 6> force;
   Eigen::VectorXd displacement;
-  std::vector<std::string> remove;
   for (auto & [contact, footstep] : footsteps_) {
     if (footstep.paused) {continue;}
     index = std::distance(
@@ -90,13 +105,13 @@ std::unordered_map<std::string, StepPlanner::State> StepPlanner::update(
     origin = transform_.inverse() * footstep.origin;
     foothold = transform_.inverse() * footstep.foothold;
     ee_pose = robot_->getTransform(contact);
-    initial_state = footstep.state;
-    switch (footstep.state) {
+    initial_state = footstep.paused ? State::STOP : footstep.state;
+    switch (initial_state) {
       case State::STANCE:     // Wait for disengage command
         displacement =
           basis.transpose() * EigenUtils::getTwist(origin, ee_pose);
         if (displacement.norm() > retry_distance_) {
-          footstep.state = State::SLIP;
+          // footstep.state = State::SLIP;
         }
         break;
       case State::DISENGAGE:  // Disengage foot until contact is lost
@@ -110,6 +125,7 @@ std::unordered_map<std::string, StepPlanner::State> StepPlanner::update(
           footstep.state = State::SWING;
         } else if (force.norm() > snag_threshold_) {
           footstep.state = State::SNAG;
+          footstep.origin = transform_ * ee_pose;
         }
         break;
       case State::SWING:      // Move foot over next foothold (in body frame)
@@ -120,6 +136,7 @@ std::unordered_map<std::string, StepPlanner::State> StepPlanner::update(
           footstep.state = State::PLACE;
         } else if (force.norm() > snag_threshold_) {
           footstep.state = State::SNAG;
+          footstep.origin = transform_ * ee_pose;
         }
         break;
       case State::PLACE:      // Lower foot until contact is detected
@@ -132,9 +149,11 @@ std::unordered_map<std::string, StepPlanner::State> StepPlanner::update(
         displacement = basis.transpose() * EigenUtils::getTwist(ee_pose, foothold);
         if ((force - engage_force_).norm() < engage_tolerance_) {
           footstep.state = State::STANCE;
-          footstep.foothold = transform_ * ee_pose;
+          footstep.origin = transform_ * ee_pose;
+          footstep.foothold = footstep.origin;
         } else if (displacement.norm() > retry_distance_) {
           footstep.state = State::RETRY;
+          footstep.origin = transform_ * ee_pose;
         }
         break;
       case State::STOP:       // Freeze end effector in place
@@ -145,32 +164,37 @@ std::unordered_map<std::string, StepPlanner::State> StepPlanner::update(
     }
     if (footstep.state != initial_state) {
       footstep.t0 = t_;
-      new_states[contact] = footstep.state;
-      if (footstep.state == State::STANCE) {
-        remove.push_back(contact);
-      }
+      change_queue_.push({footstep.t0, contact, footstep.state});
     }
   }
-  for (const auto & contact : remove) {
-    footsteps_.erase(contact);
-  }
-  return new_states;
 }
 
-EndEffectorCommand StepPlanner::getCommand() const
+std::queue<StepPlanner::StateChange> StepPlanner::getStateChanges()
+{
+  std::queue<StateChange> changes;
+  changes.swap(change_queue_);
+  return changes;
+}
+
+EndEffectorCommand StepPlanner::getCommand()
 {
   EndEffectorCommand cmd;
   Eigen::Vector<double, 6> vel;
   double theta;
   for (const auto & [contact, footstep] : footsteps_) {
-    if (footstep.paused) {
-      continue;
-    }
-    cmd.frame.push_back(contact);
-    switch (footstep.state) {
+    switch (footstep.paused ? State::STOP : footstep.state) {
       case State::STANCE:
+        cmd.frame.push_back(contact);
+        if (robot_->getContactType(contact) == ContactType::TAIL) {
+          cmd.mode.push_back(EndEffectorCommand::MODE_CONTACT);
+        } else {
+          cmd.mode.push_back(EndEffectorCommand::MODE_STANCE);
+        }
+        cmd.twist.push_back(Twist());
+        cmd.wrench.push_back(Wrench());
         break;
       case State::DISENGAGE:
+        cmd.frame.push_back(contact);
         cmd.mode.push_back(EndEffectorCommand::MODE_TRANSITION);
         cmd.twist.push_back(Twist());
         vel = disengage_force_;
@@ -181,12 +205,14 @@ EndEffectorCommand StepPlanner::getCommand() const
         cmd.wrench.push_back(RosUtils::eigenToWrench(vel));
         break;
       case State::LIFT:
+        cmd.frame.push_back(contact);
         cmd.mode.push_back(EndEffectorCommand::MODE_FREE);
         vel = {-swing_velocity_, 0, 0, 0, 0, 0};
         cmd.twist.push_back(RosUtils::eigenToTwist(vel));
         cmd.wrench.push_back(Wrench());
         break;
       case State::SWING:
+        cmd.frame.push_back(contact);
         cmd.mode.push_back(EndEffectorCommand::MODE_FREE);
         vel = EigenUtils::getTwist(
           Eigen::Isometry3d::Identity(),
@@ -198,12 +224,14 @@ EndEffectorCommand StepPlanner::getCommand() const
         cmd.wrench.push_back(Wrench());
         break;
       case State::PLACE:
+        cmd.frame.push_back(contact);
         cmd.mode.push_back(EndEffectorCommand::MODE_FREE);
         vel = {swing_velocity_, 0, 0, 0, 0, 0};
         cmd.twist.push_back(RosUtils::eigenToTwist(vel));
         cmd.wrench.push_back(Wrench());
         break;
       case State::ENGAGE:
+        cmd.frame.push_back(contact);
         cmd.mode.push_back(EndEffectorCommand::MODE_TRANSITION);
         cmd.twist.push_back(Twist());
         cmd.wrench.push_back(RosUtils::eigenToWrench(engage_force_));
@@ -215,16 +243,21 @@ EndEffectorCommand StepPlanner::getCommand() const
       case State::SLIP:
         break;
       case State::STOP:
-        cmd.mode.push_back(EndEffectorCommand::MODE_FREE);
-        cmd.twist.push_back(Twist());
-        cmd.wrench.push_back(Wrench());
+        if (t_ - t0_ > rclcpp::Duration::from_seconds(0.1)) {
+          t0_ = t_;
+          cmd.frame.push_back(contact);
+          cmd.mode.push_back(EndEffectorCommand::MODE_FREE);
+          cmd.twist.push_back(Twist());
+          cmd.wrench.push_back(Wrench());
+        }
         break;
     }
   }
   return cmd;
 }
 
-Eigen::Isometry3d StepPlanner::getNominalFoothold(const std::string & contact) const
+Eigen::Isometry3d StepPlanner::getNominalFoothold(
+  const std::string & contact) const
 {
   return transform_ * EigenUtils::applyTwist(
     robot_->getTransform(contact),
@@ -233,9 +266,6 @@ Eigen::Isometry3d StepPlanner::getNominalFoothold(const std::string & contact) c
 
 StepPlanner::State StepPlanner::getState(const std::string & contact) const
 {
-  if (footsteps_.find(contact) == footsteps_.end()) {
-    return State::STANCE;
-  }
   return footsteps_.at(contact).state;
 }
 

@@ -11,29 +11,31 @@
   controller:
     ros__parameters:
       joint_effort_filter_window: 3
-      mass_threshold: 0.5
       verbose: False
       debug: False
       stiffness: 1000.0
       microspine_max_force: 15.0
-      friction_coefficient: 0.5
       clearance: 0.05
-      effort_limit: 1.4
-      normalization: 0.01
-      tracking: 2000.0
-      joint_step: 0.01
+      effort_limit: 1.6
+      body_min_limits: [-0.0, -0.28, -10.0]
+      body_max_limits: [0.0, 0.28, 10.0]
+      joint_normalization: 0.01
+      body_normalization: 100.0
       default_configuration: "climb"
-      sim_wrench: [13.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+      force_kp: 0.0001
+      body_kp: 0.1
+      joint_max_error: 0.1
+      sim_wrench: [30.0, 0.0, 0.0, 0.0, 0.0, 0.0]
   step_planner:
     ros__parameters:
-      step_height: 0.1
-      step_length: 0.15
-      swing_velocity: 0.005
+      step_height: 0.05
+      step_length: 0.1
+      swing_velocity: 0.002
       engage_force: [3.0, 0.0, -5.0, 0.0, 0.0, 0.0]
       engage_tolerance: 1.0
-      disengage_force: [-5.0, 5.0, 5.0, 0.0, 0.0, 0.0]
-      disengage_frequency: 0.5
-      disengage_tolerance: 3.0
+      disengage_force: [-3.0, 3.0, 3.0, 0.0, 0.0, 0.0]
+      disengage_frequency: 0.25
+      disengage_tolerance: 2.0
       contact_threshold: 5.0
       snag_threshold: 5.0
       foothold_tolerance: 0.01

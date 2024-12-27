@@ -67,6 +67,12 @@ private:
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<StepCommand>>
     goal_handle);
 
+  /**
+   * @brief Send state changes as feedback to the appropriate step command goal
+   * handles
+   */
+  void processStateChanges();
+
   rcl_interfaces::msg::SetParametersResult parameterCallback(
     const std::vector<rclcpp::Parameter> & parameters) override;
 

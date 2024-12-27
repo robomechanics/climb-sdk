@@ -32,6 +32,7 @@ TeleopNode::TeleopNode()
   key_input_service_ = this->create_service<KeyInput>(
     "key_input", std::bind(&TeleopNode::keyCallback, this, _1, _2),
     rclcpp::ServicesQoS(), command_callback_group_);
+  key_output_pub_ = this->create_publisher<TeleopMessage>("key_output", 1);
   actuator_enable_client_ =
     this->create_client<ActuatorEnable>("actuator_enable");
   controller_enable_client_ =
@@ -187,12 +188,22 @@ KeyInputParser::Response TeleopNode::moveCommandCallback(
 KeyInputParser::Response TeleopNode::twistCommandCallback(
   const std::vector<std::string> & tokens)
 {
+  StepOverrideCommand command;
+  command.header.stamp = this->now();
+  command.header.frame_id = tokens.at(1);
+  command.command = StepOverrideCommand::COMMAND_PAUSE;
+  step_override_cmd_pub_->publish(command);
   key_input_parser_.setInputCallback(
     [this, tokens](char key) {
       if (key == ' ') {
         if (controller_enable_) {
           controlEndEffector(tokens.at(1), Eigen::Vector<double, 6>::Zero());
         }
+        StepOverrideCommand command;
+        command.header.stamp = this->now();
+        command.header.frame_id = tokens.at(1);
+        command.command = StepOverrideCommand::COMMAND_RESUME;
+        step_override_cmd_pub_->publish(command);
         return KeyInputParser::Response{"Stopped", false};
       }
       if (controller_enable_) {
@@ -257,8 +268,10 @@ KeyInputParser::Response TeleopNode::stepCommandCallback(
           state = "Stop";
           break;
       }
-      RCLCPP_INFO(
-        this->get_logger(), "%s state: %s", goal.frame.c_str(), state.c_str());
+      TeleopMessage msg;
+      msg.response = fmt::format("{} state: {}", goal.frame, state);
+      msg.realtime = true;
+      key_output_pub_->publish(msg);
     };
   auto goal_handle_future = step_cmd_client_->async_send_goal(goal, options);
   auto goal_handle_status =
@@ -272,7 +285,17 @@ KeyInputParser::Response TeleopNode::stepCommandCallback(
     return KeyInputParser::Response{
       "Step planner node rejected the requested step", false};
   }
-  auto result_future = step_cmd_client_->async_get_result(goal_handle);
+  auto result_future = step_cmd_client_->async_get_result(
+    goal_handle, [this](const auto & result) {
+      TeleopMessage msg;
+      if (result.result->success) {
+        msg.response = "Completed step";
+      } else {
+        msg.response = "Aborted step";
+      }
+      msg.realtime = false;
+      key_output_pub_->publish(msg);
+    });
   key_input_parser_.setInputCallback(
     [this, goal, goal_handle, result_future](char key) {
       StepOverrideCommand command;
@@ -280,17 +303,7 @@ KeyInputParser::Response TeleopNode::stepCommandCallback(
       command.header.frame_id = goal.frame;
       if (key == ' ') {
         step_cmd_client_->async_cancel_goal(goal_handle);
-        auto result_status =
-        result_future.wait_for(std::chrono::milliseconds(100));
-        if (result_status == std::future_status::ready) {
-          auto result = result_future.get();
-          if (result.result->success) {
-            return KeyInputParser::Response{"Completed step", false};
-          }
-          return KeyInputParser::Response{"Aborted step", false};
-        }
-        return KeyInputParser::Response{
-          "Step planner node is not responding", false};
+        return KeyInputParser::Response{"", true};
       } else if (key == '.') {
         command.command = StepOverrideCommand::COMMAND_ADVANCE;
         step_override_cmd_pub_->publish(command);

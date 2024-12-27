@@ -57,4 +57,13 @@ Vector<double, 6> getTwist(const Isometry3d & transform, double magnitude)
   }
   return twist;
 }
+
+Eigen::Matrix3d getSkew(const Eigen::Vector3d & vector)
+{
+  Eigen::Matrix3d skew;
+  skew << 0, -vector(2), vector(1),
+    vector(2), 0, -vector(0),
+    -vector(1), vector(0), 0;
+  return skew;
+}
 }  // namespace EigenUtils

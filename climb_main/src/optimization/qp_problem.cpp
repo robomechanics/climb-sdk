@@ -102,6 +102,6 @@ void QpProblem::addBounds(
   assert(vars_.find(var) != vars_.end());
   auto [n, i] = vars_[var];
   assert(lb_in.rows() == n && ub_in.rows() == n);
-  lb.segment(i, n) = lb_in;
-  ub.segment(i, n) = ub_in;
+  lb.segment(i, n) = lb.segment(i, n).cwiseMax(lb_in);
+  ub.segment(i, n) = ub.segment(i, n).cwiseMin(ub_in);
 }

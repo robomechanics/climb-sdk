@@ -17,32 +17,32 @@ using climb_msgs::msg::JointCommand;
 using geometry_msgs::msg::TransformStamped;
 
 /**
+ * @brief Contact type between end-effector and the environment
+ */
+enum class ContactType { DEFAULT, MICROSPINE, TAIL, MAGNET_WHEEL, FRICTION };
+
+/**
+ * @brief Wrist type for end-effector
+ */
+enum class WristType { FIXED, FREE, SPRING, GRAVITY };
+
+/**
  * @brief Abstract interface for a kinematics library
  */
 class KinematicsInterface : public Parameterized
 {
 public:
   /**
-   * @brief Contact type between end-effector and the environment
-   */
-  enum ContactType { DEFAULT, MICROSPINE, TAIL, MAGNET_WHEEL, FRICTION };
-
-  /**
-   * @brief Wrist type for end-effector
-   */
-  enum WristType { FIXED, FREE, SPRING, GRAVITY };
-
-  /**
    * @brief Mapping of contact types to wrench basis specifications
    * Axes are ordered as [Fx, Fy, Fz, Tx, Ty, Tz]
    * A value of 1 indicates the axis is included in the basis
    */
   const std::map<ContactType, std::vector<int>> WRENCH_BASES = {
-    {MICROSPINE, {1, 1, 1, 0, 0, 0}},
-    {TAIL, {1, 0, 0, 0, 0, 0}},
-    {MAGNET_WHEEL, {1, 1, 1, 0, 0, 0}},
-    {DEFAULT, {1, 1, 1, 1, 1, 1}},
-    {FRICTION, {1, 1, 1, 0, 0, 0}}
+    {ContactType::MICROSPINE, {1, 1, 1, 0, 0, 0}},
+    {ContactType::TAIL, {1, 0, 0, 0, 0, 0}},
+    {ContactType::MAGNET_WHEEL, {1, 1, 1, 0, 0, 0}},
+    {ContactType::DEFAULT, {1, 1, 1, 1, 1, 1}},
+    {ContactType::FRICTION, {1, 1, 1, 0, 0, 0}}
   };
 
   /**

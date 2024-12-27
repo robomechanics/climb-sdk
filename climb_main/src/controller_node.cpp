@@ -71,7 +71,19 @@ void ControllerNode::update()
     // Update controller
     auto ground = contact_estimator_->getGroundPlane();
     force_controller_->setGroundConstraint(ground.normal, ground.distance);
-    bool success = force_controller_->update(forces);
+
+    Eigen::Isometry3d nominal_pose = Eigen::Isometry3d::Identity();
+    nominal_pose.translation() = ground.origin;
+    // nominal_pose.linear() = Eigen::Quaterniond::FromTwoVectors(
+    //   -Eigen::Vector3d::UnitZ(), ground.normal).toRotationMatrix();
+    TransformStamped goal_pose;
+    goal_pose.header.frame_id = name_ + "/" + robot_->getBodyFrame();
+    goal_pose.header.stamp = this->get_clock()->now();
+    goal_pose.child_frame_id = name_ + "/goal_pose";
+    goal_pose.transform = RosUtils::eigenToTransform(nominal_pose);
+    tf_broadcaster_->sendTransform(goal_pose);
+
+    bool success = force_controller_->updateDecoupled(forces, nominal_pose);
 
     // Publish joint commands
     if (success && force_controller_->getJointDisplacement().norm() > 1e-6) {

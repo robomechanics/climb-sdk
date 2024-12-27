@@ -19,6 +19,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/JointCommand.msg"
   "msg/EndEffectorCommand.msg"
   "msg/StepOverrideCommand.msg"
+  "msg/TeleopMessage.msg"
   "srv/ActuatorEnable.srv"
   "srv/ControllerEnable.srv"
   "srv/KeyInput.srv"
