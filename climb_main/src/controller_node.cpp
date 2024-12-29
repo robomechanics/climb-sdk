@@ -50,7 +50,9 @@ void ControllerNode::update()
   robot_->updateContactFrames(frames);
 
   // Estimate contact forces
-  Eigen::VectorXd forces = force_estimator_->update();
+  Imu imu;
+  imu.linear_acceleration.x = -1.0;   // TODO: Read from IMU
+  Eigen::VectorXd forces = force_estimator_->update(imu);
 
   // Adjust forces to match simulated wrench if specified
   if (sim_wrench_.size()) {

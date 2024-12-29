@@ -397,34 +397,23 @@ bool ForceController::update(const Eigen::VectorXd & force)
 
 void ForceController::setEndEffectorCommand(const EndEffectorCommand & command)
 {
+  Eigen::Vector<double, 6> setpoint;
   for (size_t i = 0; i < command.frame.size(); i++) {
     std::string frame = command.frame[i];
     EndEffectorGoal goal;
-    Eigen::MatrixXd basisT = robot_->getWrenchBasis(frame).transpose();
-    if (i < command.mode.size()) {
-      goal.mode = command.mode[i];
-    } else {
-      goal.mode = EndEffectorCommand::MODE_FREE;
+    goal.mode =
+      i < command.mode.size() ? command.mode[i] : EndEffectorCommand::MODE_FREE;
+    setpoint.setZero();
+    if (goal.mode == EndEffectorCommand::MODE_FREE) {
+      if (i < command.twist.size()) {
+        setpoint = RosUtils::twistToEigen(command.twist[i]);
+      }
+    } else if (goal.mode == EndEffectorCommand::MODE_TRANSITION) {
+      if (i < command.wrench.size()) {
+        setpoint = RosUtils::wrenchToEigen(command.wrench[i]);
+      }
     }
-    switch (goal.mode) {
-      case EndEffectorCommand::MODE_FREE:
-        if (i < command.twist.size()) {
-          goal.setpoint = basisT * RosUtils::twistToEigen(command.twist[i]);
-        } else {
-          goal.setpoint = Eigen::VectorXd::Zero(basisT.rows());
-        }
-        break;
-      case EndEffectorCommand::MODE_TRANSITION:
-        if (i < command.wrench.size()) {
-          goal.setpoint = basisT * RosUtils::wrenchToEigen(command.wrench[i]);
-        } else {
-          goal.setpoint = Eigen::VectorXd::Zero(basisT.rows());
-        }
-        break;
-      default:
-        goal.setpoint = Eigen::VectorXd::Zero(basisT.rows());
-        break;
-    }
+    goal.setpoint = robot_->getWrenchBasis(frame).transpose() * setpoint;
     end_effector_goals_[frame] = goal;
   }
 }

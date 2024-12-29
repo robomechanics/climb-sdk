@@ -15,6 +15,8 @@ RUN apt-get -y update \
     ros-$ROS_DISTRO-gz-ros2-control \
     ros-$ROS_DISTRO-ros2-controllers \
     ros-$ROS_DISTRO-osqp-vendor \
+    ros-$ROS_DISTRO-pcl-ros \
+    ros-$ROS_DISTRO-pcl-conversions \
     ros-$ROS_DISTRO-realsense2-camera \
     ros-$ROS_DISTRO-imu-filter-madgwick \
     ros-$ROS_DISTRO-rtabmap-ros \

@@ -400,7 +400,7 @@ JointState DynamixelInterface::readJointState()
 {
   JointState state;
   auto position = readPosition(ids_);
-  auto velocity = readVelocity(ids_);
+  auto velocity = std::vector<double>();    // TODO: finite difference velocity
   auto effort = readEffort(ids_);
   std::unordered_map<std::string, double> pos, vel, eff;
   std::unordered_set<std::string> names;

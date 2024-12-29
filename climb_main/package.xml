@@ -16,6 +16,8 @@
   <build_depend>orocos_kdl_vendor</build_depend>
   <build_depend>kdl_parser</build_depend>
   <build_depend>osqp_vendor</build_depend>
+  <build_depend>pcl_ros</build_depend>
+  <build_depend>pcl_conversions</build_depend>
 
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
