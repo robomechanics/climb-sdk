@@ -29,7 +29,8 @@ if [ ! $PIQP -eq 0 ]; then
     cd build &&
     cmake .. -DCMAKE_CXX_FLAGS="-march=native" -DBUILD_TESTS=OFF -DBUILD_BENCHMARKS=OFF &&
     cmake --build . --config Release &&
-    cmake --install . --config Release
+    cmake --install . --config Release &&
+    ldconfig
     PIQP=$?
 fi
 

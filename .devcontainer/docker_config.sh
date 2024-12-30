@@ -2,7 +2,9 @@
 source /ros_entrypoint.sh
 
 # Source ROS2 workspace
-if [ -f /workspace/install/local_setup.bash ]; then source /workspace/install/local_setup.bash; fi
+if [ -f /workspace/install/local_setup.bash ]; then
+    source /workspace/install/local_setup.bash;
+fi
 
 # Handle errors
 trap 'exec /bin/bash' ERR
@@ -11,9 +13,9 @@ trap 'exec /bin/bash' ERR
 alias gz='ign gazebo'
 
 # Aliases for frequently used ROS2 launch files
-alias climber_base='ros2 launch climb_main climber_base.launch.py'
-alias climber='ros2 launch climb_main climber_control.launch.py'
-alias climber_plan='ros2 launch climb_main climber_plan.launch.py'
+alias climber_base='ros2 launch loris_bringup climber_base.launch.py'
+alias climber='ros2 launch loris_bringup climber_control.launch.py'
+alias climber_plan='ros2 launch loris_bringup climber_plan.launch.py'
 alias sim='ros2 launch climb_sim sim.launch.py'
 display() {
     ros2 launch "$1_description" display.launch.py
@@ -22,9 +24,28 @@ display() {
 # Shortcut to build ROS2 packages
 rosbuild() {
     if [ $# -eq 0 ]; then
-        colcon build --symlink-install --cmake-args "-DCMAKE_BUILD_TYPE=Debug";
+        colcon build --symlink-install --cmake-args "-DCMAKE_BUILD_TYPE=Debug"
     else
-        colcon build --symlink-install --packages-select "$1" --cmake-args "-DCMAKE_BUILD_TYPE=Debug";
+        colcon build --symlink-install --packages-select "$1" --cmake-args "-DCMAKE_BUILD_TYPE=Debug"
+    fi
+}
+
+# Shortcut to test ROS2 packages
+rostest() {
+    if [ $# -eq 0 ]; then
+        colcon test
+    else
+        colcon test --packages-select "$1"
+    fi
+    colcon test-result --verbose
+}
+
+# Shortcut to clean ROS2 packages
+rosclean() {
+    if [ $# -eq 0 ]; then
+        rm -r /workspace/build/* /workspace/install/* /workspace/log/*
+    else
+        rm -r /workspace/build/"$1" /workspace/install/"$1"
     fi
 }
 

@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>climb_sdk</name>
+  <version>0.0.0</version>
+  <description>Meta-package to import the full climb-sdk codebase</description>
+  <maintainer email="pnadan@cmu.edu">Paul Nadan</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>climb_msgs</exec_depend>
+  <exec_depend>climb_util</exec_depend>
+  <exec_depend>climb_robot_driver</exec_depend>
+  <exec_depend>climb_kinematics</exec_depend>
+  <exec_depend>climb_teleop</exec_depend>
+  <exec_depend>climb_optimization</exec_depend>
+  <exec_depend>climb_control</exec_depend>
+  <exec_depend>climb_gait_planner</exec_depend>
+  <!-- <exec_depend>climb_footstep_planner</exec_depend> -->
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
