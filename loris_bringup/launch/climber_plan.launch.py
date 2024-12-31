@@ -54,7 +54,8 @@ def generate_launch_description():
         namespace=namespace,
         output='screen',
         parameters=[{"tf_prefix": namespace},
-                    global_config_path, robot_config_path]
+                    global_config_path, robot_config_path],
+        remappings=[('/loris/map_cloud', '/rtabmap/cloud_map')]
     )
 
     # Camera setup

@@ -32,9 +32,7 @@ KinematicsNode::KinematicsNode(
 void KinematicsNode::descriptionCallback(const String::SharedPtr msg)
 {
   std::string error_message;
-  if (robot_->loadRobotDescription(msg->data, error_message)) {
-    RCLCPP_INFO(this->get_logger(), "Robot description loaded");
-  } else {
+  if (!robot_->loadRobotDescription(msg->data, error_message)) {
     RCLCPP_ERROR(
       this->get_logger(),
       "Failed to load robot description: %s", error_message.c_str());

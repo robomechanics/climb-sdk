@@ -24,7 +24,7 @@ display() {
 # Shortcut to build ROS2 packages
 rosbuild() {
     if [ $# -eq 0 ]; then
-        colcon build --symlink-install --cmake-args "-DCMAKE_BUILD_TYPE=Debug"
+        colcon build --symlink-install --continue-on-error --cmake-args "-DCMAKE_BUILD_TYPE=Debug"
     else
         colcon build --symlink-install --packages-select "$1" --cmake-args "-DCMAKE_BUILD_TYPE=Debug"
     fi

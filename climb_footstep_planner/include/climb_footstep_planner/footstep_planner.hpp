@@ -2,13 +2,14 @@
 #define FOOTSTEP_PLANNER_HPP
 
 #include <climb_kinematics/kinematics_interfaces/kinematics_interface.hpp>
+#include <climb_util/parameterized.hpp>
 #include <pcl/common/common.h>
 #include <Eigen/Geometry>
 #include <unordered_map>
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
-class FootstepPlanner
+class FootstepPlanner : public Parameterized
 {
 public:
   struct Stance
@@ -20,18 +21,22 @@ public:
 
   FootstepPlanner();
 
-  bool initialize(const std::string & robot_description);
+  bool initialize(const std::string & robot_description, std::string & message);
 
-  bool isInitialized()
-  {
-    return robot_->isInitialized() && map_cloud_.size() > 0;
-  }
+  bool isInitialized(std::string & message);
 
   void update(const PointCloud & map_cloud) {map_cloud_ = map_cloud;}
 
   std::vector<Stance> plan(Stance start, Eigen::Isometry3d goal);
 
   std::vector<Stance> replan(Stance start);
+
+  void declareParameters() override;
+
+  void setParameter(
+    const Parameter & param, SetParametersResult & result) override;
+
+  using Parameterized::setParameter;
 
 private:
   std::shared_ptr<KinematicsInterface> robot_;

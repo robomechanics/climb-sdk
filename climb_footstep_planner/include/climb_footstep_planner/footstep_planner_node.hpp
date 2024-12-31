@@ -25,6 +25,8 @@ class FootstepPlannerNode : public KinematicsNode
 public:
   FootstepPlannerNode();
   void update();
+  rcl_interfaces::msg::SetParametersResult parameterCallback(
+    const std::vector<rclcpp::Parameter> & parameters) override;
 
 private:
   void descriptionCallback(const String::SharedPtr msg) override;
@@ -33,8 +35,7 @@ private:
     const Trigger::Request::SharedPtr request,
     Trigger::Response::SharedPtr response);
 
-  FootstepPlanner footstep_planner_;
-  rclcpp::Subscription<String>::SharedPtr description_sub_;
+  std::unique_ptr<FootstepPlanner> footstep_planner_;
   rclcpp::Subscription<PointCloud2>::SharedPtr point_cloud_sub_;
   rclcpp::Publisher<PoseArray>::SharedPtr footholds_pub_;
   std::vector<rclcpp::Publisher<Path>::SharedPtr> path_pubs_;

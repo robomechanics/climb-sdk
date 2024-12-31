@@ -7,9 +7,14 @@ using std::placeholders::_2;
 FootstepPlannerNode::FootstepPlannerNode()
 : KinematicsNode("FootstepPlannerNode")
 {
-  description_sub_ = this->create_subscription<String>(
-    "robot_description", rclcpp::QoS(1).transient_local(),
-    std::bind(&FootstepPlannerNode::descriptionCallback, this, _1));
+  footstep_planner_ = std::make_unique<FootstepPlanner>();
+  for (const auto & p : footstep_planner_->getParameters()) {
+    if (this->has_parameter(p.name)) {
+      this->set_parameter(this->get_parameter(p.name));
+    } else {
+      this->declare_parameter(p.name, p.default_value, p.descriptor);
+    }
+  }
   point_cloud_sub_ = create_subscription<PointCloud2>(
     "map_cloud", 1,
     std::bind(&FootstepPlannerNode::pointCloudCallback, this, _1));
@@ -23,23 +28,29 @@ FootstepPlannerNode::FootstepPlannerNode()
 void FootstepPlannerNode::descriptionCallback(const String::SharedPtr msg)
 {
   KinematicsNode::descriptionCallback(msg);
-  footstep_planner_.initialize(msg->data);
+  std::string error_message;
+  if (!footstep_planner_->initialize(msg->data, error_message)) {
+    RCLCPP_ERROR(
+      this->get_logger(),
+      "Failed to load robot description: %s", error_message.c_str());
+  }
 }
 
 void FootstepPlannerNode::pointCloudCallback(
   const PointCloud2::SharedPtr msg)
 {
   pcl::fromROSMsg(*msg, point_cloud_);
-  footstep_planner_.update(point_cloud_);
+  footstep_planner_->update(point_cloud_);
 }
 
 void FootstepPlannerNode::planCallback(
   const Trigger::Request::SharedPtr request [[maybe_unused]],
   Trigger::Response::SharedPtr response)
 {
-  if (!footstep_planner_.isInitialized()) {
+  std::string message;
+  if (!footstep_planner_->isInitialized(message)) {
     response->success = false;
-    response->message = "Footstep planner not ready";
+    response->message = message;
     return;
   }
   FootstepPlanner::Stance start;
@@ -52,7 +63,7 @@ void FootstepPlannerNode::planCallback(
       lookupTransform(map_frame, contact).transform);
   }
   auto goal = start.pose;  // TODO: set goal pose
-  auto plan = footstep_planner_.plan(start, goal);
+  auto plan = footstep_planner_->plan(start, goal);
 
   PoseArray footholds_msg;
   footholds_msg.header.frame_id = map_frame;
@@ -91,6 +102,16 @@ void FootstepPlannerNode::planCallback(
   path_pubs_.at(0)->publish(body_path_msg);
   footholds_pub_->publish(footholds_msg);
   response->success = true;
+}
+
+rcl_interfaces::msg::SetParametersResult FootstepPlannerNode::parameterCallback(
+  const std::vector<rclcpp::Parameter> & parameters)
+{
+  auto result = KinematicsNode::parameterCallback(parameters);
+  for (const auto & param : parameters) {
+    footstep_planner_->setParameter(param, result);
+  }
+  return result;
 }
 
 int main(int argc, char * argv[])
