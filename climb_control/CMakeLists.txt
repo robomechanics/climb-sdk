@@ -12,6 +12,7 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(climb_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(climb_util REQUIRED)
 find_package(climb_kinematics REQUIRED)
@@ -32,7 +33,7 @@ ament_target_dependencies(${PROJECT_NAME} climb_util climb_kinematics
 
 add_executable(controller_node src/controller_node.cpp)
 ament_target_dependencies(controller_node rclcpp sensor_msgs geometry_msgs
-  climb_msgs)
+  climb_msgs std_srvs)
 target_link_libraries(controller_node ${PROJECT_NAME})
 
 install(TARGETS controller_node

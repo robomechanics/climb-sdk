@@ -10,7 +10,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(climb_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
@@ -18,14 +21,13 @@ find_package(pcl_ros REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(climb_util REQUIRED)
 find_package(climb_kinematics REQUIRED)
-find_package(climb_control REQUIRED)
+# find_package(climb_control REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/footstep_planner.cpp
 )
 ament_target_dependencies(${PROJECT_NAME} climb_util climb_kinematics
-  climb_control rclcpp climb_msgs sensor_msgs geometry_msgs tf2_ros pcl_ros
-  pcl_conversions)
+  rclcpp climb_msgs sensor_msgs geometry_msgs tf2_ros pcl_ros)
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
@@ -33,8 +35,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 target_link_libraries(${PROJECT_NAME} Eigen3::Eigen)
 
 add_executable(footstep_planner_node src/footstep_planner_node.cpp)
-ament_target_dependencies(footstep_planner_node rclcpp rclcpp_action climb_msgs
-  sensor_msgs geometry_msgs tf2_ros pcl_ros pcl_conversions)
+ament_target_dependencies(footstep_planner_node rclcpp climb_msgs nav_msgs
+  sensor_msgs geometry_msgs std_msgs std_srvs tf2_ros pcl_ros pcl_conversions)
 target_link_libraries(footstep_planner_node ${PROJECT_NAME})
 
 install(TARGETS

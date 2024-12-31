@@ -121,6 +121,10 @@ void HardwareNode::actuatorEnableCallback(
   } else {
     response->success = interface_->disable(ids);
   }
+  if (!response->success) {
+    response->message = request->enable ?
+      "Failed to enable actuators" : "Failed to disable actuators";
+  }
 }
 
 rcl_interfaces::msg::SetParametersResult HardwareNode::parameterCallback(

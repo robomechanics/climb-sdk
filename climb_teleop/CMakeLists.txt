@@ -10,6 +10,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(climb_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(keyboard_handler REQUIRED)
 find_package(fmt REQUIRED)
@@ -26,7 +27,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 add_executable(teleop_node src/teleop_node.cpp)
 ament_target_dependencies(teleop_node rclcpp rclcpp_action climb_msgs
-  climb_util climb_kinematics)
+  climb_util climb_kinematics std_srvs)
 target_include_directories(teleop_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>

@@ -46,6 +46,17 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(control_launch_path)
     )
 
+    # Footstep planner
+    footstep_planner = Node(
+        package='climb_footstep_planner',
+        executable='footstep_planner_node',
+        name='footstep_planner',
+        namespace=namespace,
+        output='screen',
+        parameters=[{"tf_prefix": namespace},
+                    global_config_path, robot_config_path]
+    )
+
     # Camera setup
     camera_launch = IncludeLaunchDescription(
         XMLLaunchDescriptionSource(camera_launch_path),
@@ -61,6 +72,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         controller_launch,
+        footstep_planner,
         camera_launch,
         camera_transform
     ])

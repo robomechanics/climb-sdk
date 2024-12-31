@@ -15,10 +15,13 @@
   <build_depend>pcl_conversions</build_depend>
   <build_depend>climb_util</build_depend>
   <build_depend>climb_kinematics</build_depend>
-  <build_depend>climb_control</build_depend>
+  <!-- <build_depend>climb_control</build_depend> -->
 
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
   <depend>climb_msgs</depend>
   <depend>tf2_ros</depend>
 

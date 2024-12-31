@@ -19,7 +19,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/StepOverrideCommand.msg"
   "msg/TeleopMessage.msg"
   "srv/ActuatorEnable.srv"
-  "srv/ControllerEnable.srv"
   "srv/KeyInput.srv"
   DEPENDENCIES std_msgs geometry_msgs
 )

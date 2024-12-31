@@ -36,7 +36,8 @@ TeleopNode::TeleopNode()
   actuator_enable_client_ =
     this->create_client<ActuatorEnable>("actuator_enable");
   controller_enable_client_ =
-    this->create_client<ControllerEnable>("controller_enable");
+    this->create_client<SetBool>("controller_enable");
+  plan_client_ = this->create_client<Trigger>("plan");
   joint_cmd_pub_ = this->create_publisher<JointCommand>("joint_commands", 1);
   ee_cmd_pub_ = this->create_publisher<EndEffectorCommand>(
     "end_effector_commands", 1);
@@ -98,6 +99,10 @@ void TeleopNode::addCommands()
   key_input_parser_.defineCommand(
     "step CONTACT",
     std::bind(&TeleopNode::stepCommandCallback, this, _1));
+  // Plan footsteps
+  key_input_parser_.defineCommand(
+    "plan",
+    std::bind(&TeleopNode::planCommandCallback, this, _1));
 }
 
 void TeleopNode::keyCallback(
@@ -123,26 +128,29 @@ KeyInputParser::Response TeleopNode::enableCommandCallback(
       return KeyInputParser::Response{
         request->enable ? "Enabled" : "Disabled", false};
     } else {
-      return KeyInputParser::Response{
-        request->enable ? "Failed to enable" : "Failed to disable", false};
+      return KeyInputParser::Response{response->message, false};
     }
-  } else {
-    return KeyInputParser::Response{
-      "Hardware node is not responding", false};
   }
-  return KeyInputParser::Response{
-    request->enable ? "Enabled" : "Disabled", false};
+  return KeyInputParser::Response{"Robot driver node is not responding", false};
 }
 
 KeyInputParser::Response TeleopNode::controlCommandCallback(
   const std::vector<std::string> & tokens)
 {
-  controller_enable_ = tokens.at(1) == "on";
-  auto request = std::make_shared<ControllerEnable::Request>();
-  request->enable = controller_enable_;
+  auto request = std::make_shared<SetBool::Request>();
+  request->data = tokens.at(1) == "on";
   auto result = controller_enable_client_->async_send_request(request);
-  return KeyInputParser::Response{
-    controller_enable_ ? "Control on" : "Control off", false};
+  auto status = result.wait_for(std::chrono::milliseconds(100));
+  if (status == std::future_status::ready) {
+    auto response = result.get();
+    if (response->success) {
+      return KeyInputParser::Response{
+        request->data ? "Control on" : "Control off", false};
+    } else {
+      return KeyInputParser::Response{response->message, false};
+    }
+  }
+  return KeyInputParser::Response{"Controller node is not responding", false};
 }
 
 KeyInputParser::Response TeleopNode::setCommandCallback(
@@ -320,6 +328,24 @@ KeyInputParser::Response TeleopNode::stepCommandCallback(
     });
   return KeyInputParser::Response{
     fmt::format("Taking step {}", goal.frame), true};
+}
+
+KeyInputParser::Response TeleopNode::planCommandCallback(
+  const std::vector<std::string> & tokens [[maybe_unused]])
+{
+  auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
+  auto result = plan_client_->async_send_request(request);
+  auto status = result.wait_for(std::chrono::milliseconds(100));
+  if (status == std::future_status::ready) {
+    auto response = result.get();
+    if (response->success) {
+      return KeyInputParser::Response{"Planned footsteps", false};
+    } else {
+      return KeyInputParser::Response{response->message, false};
+    }
+  }
+  return KeyInputParser::Response{
+    "Footstep planner node is not responding", false};
 }
 
 Eigen::Vector<double, 6> TeleopNode::getTwist(char key) const

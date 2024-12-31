@@ -9,7 +9,7 @@
 #include <climb_msgs/msg/joint_command.hpp>
 #include <climb_msgs/msg/contact_force.hpp>
 #include <climb_msgs/msg/end_effector_command.hpp>
-#include <climb_msgs/srv/controller_enable.hpp>
+#include <std_srvs/srv/set_bool.hpp>
 
 #include <climb_kinematics/kinematics_node.hpp>
 #include "climb_control/contact_estimator.hpp"
@@ -21,7 +21,7 @@ using sensor_msgs::msg::JointState;
 using climb_msgs::msg::JointCommand;
 using climb_msgs::msg::ContactForce;
 using climb_msgs::msg::EndEffectorCommand;
-using climb_msgs::srv::ControllerEnable;
+using std_srvs::srv::SetBool;
 
 /**
  * @brief ROS node that determines optimal joint commands to maximize adhesion
@@ -62,8 +62,8 @@ private:
    * @param[out] response Response containing the result of the request
    */
   void controllerEnableCallback(
-    const ControllerEnable::Request::SharedPtr request,
-    ControllerEnable::Response::SharedPtr response);
+    const SetBool::Request::SharedPtr request,
+    SetBool::Response::SharedPtr response);
 
   /**
    * @brief Update modified parameters
@@ -88,7 +88,7 @@ private:
   // Contact command subscriber
   rclcpp::Subscription<EndEffectorCommand>::SharedPtr ee_cmd_sub_;
   // Controller enable service
-  rclcpp::Service<ControllerEnable>::SharedPtr controller_enable_srv_;
+  rclcpp::Service<SetBool>::SharedPtr controller_enable_srv_;
   // TF broadcaster
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   // Parameter callback handle

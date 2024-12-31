@@ -61,19 +61,19 @@ To streamline development, Climb-SDK can be integrated with [Visual Studio Code]
 `climber_base.launch.py` launches the hardware stack and user interface. This enables joint-level control of the robot.
 
 ```
-ros2 launch climb_main climber_base.launch.py
+ros2 launch loris_bringup climber_base.launch.py
 ```
 
 `climber_control.launch.py` additionally launches the low-level control stack. This enables a climbing gait with teleoperated or blind foothold selection.
 
 ```
-ros2 launch climb_main climber_control.launch.py
+ros2 launch loris_bringup climber_control.launch.py
 ```
 
 `climber_plan.launch.py` launches the full planning stack. This enables fully autonomous climbing using the depth camera.
 
 ```
-ros2 launch climb_main climber_plan.launch.py
+ros2 launch loris_bringup climber_plan.launch.py
 ```
 
 `sim.launch.py` in the `climb_sim` package launches a Gazebo simulation of the robot.

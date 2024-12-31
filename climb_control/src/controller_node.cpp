@@ -34,7 +34,7 @@ ControllerNode::ControllerNode()
   joint_cmd_pub_ = this->create_publisher<JointCommand>("joint_commands", 1);
   contact_force_pub_ =
     this->create_publisher<ContactForce>("contact_forces", 1);
-  controller_enable_srv_ = this->create_service<ControllerEnable>(
+  controller_enable_srv_ = this->create_service<SetBool>(
     "controller_enable",
     std::bind(&ControllerNode::controllerEnableCallback, this, _1, _2));
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
@@ -211,13 +211,13 @@ void ControllerNode::endEffectorCmdCallback(
 }
 
 void ControllerNode::controllerEnableCallback(
-  const ControllerEnable::Request::SharedPtr request,
-  ControllerEnable::Response::SharedPtr response)
+  const SetBool::Request::SharedPtr request,
+  SetBool::Response::SharedPtr response)
 {
-  if (request->enable) {
+  if (request->data) {
     force_controller_->reset();
   }
-  enabled_ = request->enable;
+  enabled_ = request->data;
   response->success = true;
 }
 
