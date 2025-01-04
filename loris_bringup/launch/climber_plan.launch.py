@@ -68,7 +68,8 @@ def generate_launch_description():
     camera_transform = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        arguments=['--frame-id', 'camera_link', '--child-frame-id', 'loris/camera_link']
+        arguments=['--frame-id', 'camera_link', '--child-frame-id', 'loris/camera_link',
+                   "--ros-args", "--log-level", "ERROR"]
     )
 
     return LaunchDescription([
