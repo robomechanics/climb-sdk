@@ -1,9 +1,19 @@
 #include "climb_footstep_planner/footstep_planner.hpp"
 #include <climb_kinematics/kinematics_interfaces/kdl_interface.hpp>
+#include <pcl/features/normal_3d.h>
+#include <pcl/features/principal_curvatures.h>
+
+using namespace std::chrono_literals;
 
 FootstepPlanner::FootstepPlanner()
 {
   robot_ = std::make_unique<KdlInterface>();
+  map_ = std::make_shared<PointCloud>();
+  normals_ = std::make_shared<NormalCloud>();
+  curvatures_ = std::make_shared<CurvatureCloud>();
+  cost_ = std::make_shared<CostCloud>();
+  kdtree_ = std::make_shared<pcl::search::KdTree<pcl::PointXYZ>>(false);
+  gravity_ = Eigen::Vector3d(0.0, 0.0, 1.0);
 }
 
 bool FootstepPlanner::initialize(const std::string & robot_description, std::string & message)
@@ -17,11 +27,24 @@ bool FootstepPlanner::isInitialized(std::string & message)
     message = "Waiting for robot description...";
     return false;
   }
-  if (!map_cloud_.size()) {
+  if (!map_->size()) {
     message = "Waiting for point cloud...";
     return false;
   }
   return true;
+}
+
+void FootstepPlanner::update(const PointCloud::Ptr & map_cloud)
+{
+  map_ = map_cloud;
+  normals_->clear();
+  cost_->clear();
+  kdtree_->setInputCloud(map_);
+}
+
+void FootstepPlanner::updateGravity(const Eigen::Quaterniond & orientation)
+{
+  gravity_ = orientation * Eigen::Vector3d(0.0, 0.0, -1.0);
 }
 
 std::vector<FootstepPlanner::Stance> FootstepPlanner::plan(
@@ -31,6 +54,34 @@ std::vector<FootstepPlanner::Stance> FootstepPlanner::plan(
   goal_ = goal;
   plan_.clear();
   plan_.push_back(start);
+
+  // Compute normals
+  pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
+  ne.setInputCloud(map_);
+  ne.setSearchMethod(kdtree_);
+  ne.setRadiusSearch(0.1);
+  ne.compute(*normals_);
+  n_ = normals_->getMatrixXfMap(3, 8, 0);
+
+  // Compute curvature
+  pcl::PrincipalCurvaturesEstimation<pcl::PointXYZ, pcl::Normal, pcl::PrincipalCurvatures> pc;
+  pc.setInputCloud(map_);
+  pc.setInputNormals(normals_);
+  pc.setSearchMethod(kdtree_);
+  pc.setRadiusSearch(0.1);
+  pc.compute(*curvatures_);
+  
+  t_ = curvatures_->getMatrixXfMap().block(0, 0, 3, curvatures_->getMatrixXfMap().cols());
+  k_ = curvatures_->getMatrixXfMap().block(3, 0, 2, curvatures_->getMatrixXfMap().cols());
+
+  // Compute cost
+  p_ = map_->getMatrixXfMap(3, 4, 0);
+  c_ = gravity_.cast<float>().transpose() * n_;   // Incline-based cost
+  // c_ = k_.colwise().sum();                        // Curvature-based cost
+  cost_->resize(map_->size());
+  cost_->getMatrixXfMap(4, 8, 0) = map_->getMatrixXfMap(4, 4, 0);
+  cost_->getMatrixXfMap(1, 8, 4) = c_;
+
   return plan_;
 }
 

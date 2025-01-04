@@ -18,6 +18,9 @@ FootstepPlannerNode::FootstepPlannerNode()
   point_cloud_sub_ = create_subscription<PointCloud2>(
     "map_cloud", 1,
     std::bind(&FootstepPlannerNode::pointCloudCallback, this, _1));
+  imu_sub_ = create_subscription<Imu>(
+    "/imu/data", 1, std::bind(&FootstepPlannerNode::imuCallback, this, _1));
+  cost_pub_ = create_publisher<PointCloud2>("cost_cloud", 1);
   footholds_pub_ = create_publisher<PoseArray>("planned_footholds", 1);
   path_pubs_.push_back(create_publisher<Path>("body_path", 1));
   plan_service_ = create_service<Trigger>(
@@ -39,8 +42,17 @@ void FootstepPlannerNode::descriptionCallback(const String::SharedPtr msg)
 void FootstepPlannerNode::pointCloudCallback(
   const PointCloud2::SharedPtr msg)
 {
-  pcl::fromROSMsg(*msg, point_cloud_);
-  footstep_planner_->update(point_cloud_);
+  PointCloud::Ptr point_cloud = std::make_unique<PointCloud>();
+  pcl::fromROSMsg(*msg, *point_cloud);
+  footstep_planner_->update(std::move(point_cloud));
+}
+
+void FootstepPlannerNode::imuCallback(const Imu::SharedPtr msg)
+{
+  Eigen::Isometry3d map_to_imu = RosUtils::transformToEigen(
+    lookupMapTransform("/" + msg->header.frame_id).transform);
+  footstep_planner_->updateGravity(
+    map_to_imu.rotation() * -RosUtils::vector3ToEigen(msg->linear_acceleration).normalized());
 }
 
 void FootstepPlannerNode::planCallback(
@@ -64,6 +76,12 @@ void FootstepPlannerNode::planCallback(
   }
   auto goal = start.pose;  // TODO: set goal pose
   auto plan = footstep_planner_->plan(start, goal);
+
+  PointCloud2 cost_msg;
+  pcl::toROSMsg(*footstep_planner_->getCostCloud(), cost_msg);
+  cost_msg.header.frame_id = map_frame;
+  cost_msg.header.stamp = now();
+  cost_pub_->publish(cost_msg);
 
   PoseArray footholds_msg;
   footholds_msg.header.frame_id = map_frame;

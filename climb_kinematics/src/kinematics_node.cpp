@@ -78,21 +78,18 @@ TransformStamped KinematicsNode::lookupTransform(
   return transform;
 }
 
-TransformStamped KinematicsNode::lookupMapToBodyTransform(
-  const rclcpp::Time & time)
+TransformStamped KinematicsNode::lookupMapTransform(
+  const std::string & child_frame, const rclcpp::Time & time)
 {
   TransformStamped transform;
   try {
-    transform = lookupTransform("/map", robot_->getBodyFrame(), time);
+    transform = lookupTransform("/map", child_frame, time);
   } catch (const tf2::TransformException &) {
     try {
-      transform = lookupTransform("map", robot_->getBodyFrame(), time);
+      transform = lookupTransform("map", child_frame, time);
     } catch (const tf2::TransformException &) {
-      try {
-        transform =
-          lookupTransform("camera_link", robot_->getBodyFrame(), time);
-      } catch (const tf2::TransformException &) {
-      }
+      transform =
+        lookupTransform(robot_->getBodyFrame(), child_frame, time);
     }
   }
   return transform;
