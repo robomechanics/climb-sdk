@@ -25,6 +25,7 @@ find_package(climb_kinematics REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/footstep_planner.cpp
+  src/terrain_generator.cpp
 )
 ament_target_dependencies(${PROJECT_NAME} climb_util climb_kinematics
   rclcpp climb_msgs sensor_msgs geometry_msgs tf2_ros pcl_ros)

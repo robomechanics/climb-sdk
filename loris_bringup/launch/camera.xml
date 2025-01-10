@@ -31,7 +31,7 @@
         <arg name="depth_topic" value="/camera/aligned_depth_to_color/image_raw" />
         <arg name="camera_info_topic" value="/camera/color/camera_info" />
         <arg name="depth_camera_info_topic" value="/camera/depth/camera_info" />
-        <arg name="rtabmapviz" value="false" />
+        <arg name="rtabmap_viz" value="false" />
         <arg name="frame_id" value="camera_link" />
         <arg name="wait_imu_to_init" value="true" />
         <arg name="namespace" value="rtabmap" />

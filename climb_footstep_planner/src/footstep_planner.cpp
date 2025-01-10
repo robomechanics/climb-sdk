@@ -34,9 +34,11 @@ bool FootstepPlanner::isInitialized(std::string & message)
   return true;
 }
 
-void FootstepPlanner::update(const PointCloud::Ptr & map_cloud)
+void FootstepPlanner::update(
+  const PointCloud::Ptr & map_cloud, const Eigen::Isometry3d & viewpoint)
 {
   map_ = map_cloud;
+  viewpoint_ = viewpoint;
   normals_->clear();
   cost_->clear();
   kdtree_->setInputCloud(map_);
@@ -60,6 +62,8 @@ std::vector<FootstepPlanner::Stance> FootstepPlanner::plan(
   ne.setInputCloud(map_);
   ne.setSearchMethod(kdtree_);
   ne.setRadiusSearch(0.1);
+  Eigen::Vector3d viewpoint = viewpoint_.translation();
+  ne.setViewPoint(viewpoint[0], viewpoint[1], viewpoint[2]);
   ne.compute(*normals_);
   n_ = normals_->getMatrixXfMap(3, 8, 0);
 
@@ -70,7 +74,7 @@ std::vector<FootstepPlanner::Stance> FootstepPlanner::plan(
   pc.setSearchMethod(kdtree_);
   pc.setRadiusSearch(0.1);
   pc.compute(*curvatures_);
-  
+
   t_ = curvatures_->getMatrixXfMap().block(0, 0, 3, curvatures_->getMatrixXfMap().cols());
   k_ = curvatures_->getMatrixXfMap().block(3, 0, 2, curvatures_->getMatrixXfMap().cols());
 

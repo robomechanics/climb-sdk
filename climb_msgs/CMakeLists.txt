@@ -20,6 +20,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/TeleopMessage.msg"
   "srv/ActuatorEnable.srv"
   "srv/KeyInput.srv"
+  "srv/SetString.srv"
   DEPENDENCIES std_msgs geometry_msgs
 )
 

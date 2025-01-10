@@ -11,12 +11,13 @@ Optional Launch Arguments:
 """
 
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.substitutions import (
     LaunchConfiguration,
     PathJoinSubstitution,
     TextSubstitution
 )
+from launch.conditions import IfCondition, UnlessCondition
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
@@ -27,6 +28,7 @@ robot = LaunchConfiguration("robot")
 namespace = LaunchConfiguration("namespace")
 global_config = LaunchConfiguration("global_config")
 robot_config = LaunchConfiguration("robot_config")
+camera = LaunchConfiguration("camera")
 
 # Find ROS packages
 main_pkg = FindPackageShare("loris_bringup")
@@ -41,6 +43,13 @@ camera_launch_path = PathJoinSubstitution([main_pkg, "launch", "camera.xml"])
 
 
 def generate_launch_description():
+    # Launch arguments
+    camera_arg = DeclareLaunchArgument(
+        "camera",
+        default_value="true",
+        description="Launch the Realsense camera"
+    )
+
     # Low-level controller launch file
     controller_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(control_launch_path)
@@ -61,6 +70,7 @@ def generate_launch_description():
     # Camera setup
     camera_launch = IncludeLaunchDescription(
         XMLLaunchDescriptionSource(camera_launch_path),
+        condition=IfCondition(camera),
         launch_arguments={
             'rviz': 'False'
         }.items()
@@ -68,13 +78,22 @@ def generate_launch_description():
     camera_transform = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
+        condition=IfCondition(camera),
         arguments=['--frame-id', 'camera_link', '--child-frame-id', 'loris/camera_link',
                    "--ros-args", "--log-level", "ERROR"]
     )
+    map_transform = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        condition=UnlessCondition(camera),
+        arguments=['--frame-id', "loris/map", '--child-frame-id', "map",
+                   "--ros-args", "--log-level", "ERROR"])
 
     return LaunchDescription([
+        camera_arg,
         controller_launch,
         footstep_planner,
         camera_launch,
-        camera_transform
+        camera_transform,
+        map_transform
     ])

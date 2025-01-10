@@ -38,6 +38,7 @@ TeleopNode::TeleopNode()
   controller_enable_client_ =
     this->create_client<SetBool>("controller_enable");
   plan_client_ = this->create_client<Trigger>("plan");
+  simulate_client_ = this->create_client<SetString>("simulate");
   joint_cmd_pub_ = this->create_publisher<JointCommand>("joint_commands", 1);
   ee_cmd_pub_ = this->create_publisher<EndEffectorCommand>(
     "end_effector_commands", 1);
@@ -103,6 +104,10 @@ void TeleopNode::addCommands()
   key_input_parser_.defineCommand(
     "plan",
     std::bind(&TeleopNode::planCommandCallback, this, _1));
+  // Load simulated point cloud
+  key_input_parser_.defineCommand(
+    "simulate STRING",
+    std::bind(&TeleopNode::simulateCommandCallback, this, _1));
 }
 
 void TeleopNode::keyCallback(
@@ -340,6 +345,25 @@ KeyInputParser::Response TeleopNode::planCommandCallback(
     auto response = result.get();
     if (response->success) {
       return KeyInputParser::Response{"Planned footsteps", false};
+    } else {
+      return KeyInputParser::Response{response->message, false};
+    }
+  }
+  return KeyInputParser::Response{
+    "Footstep planner node is not responding", false};
+}
+
+KeyInputParser::Response TeleopNode::simulateCommandCallback(
+  const std::vector<std::string> & tokens)
+{
+  auto request = std::make_shared<SetString::Request>();
+  request->data = tokens.at(1);
+  auto result = simulate_client_->async_send_request(request);
+  auto status = result.wait_for(std::chrono::milliseconds(100));
+  if (status == std::future_status::ready) {
+    auto response = result.get();
+    if (response->success) {
+      return KeyInputParser::Response{"Loaded point cloud", false};
     } else {
       return KeyInputParser::Response{response->message, false};
     }

@@ -11,6 +11,7 @@
 #include <std_srvs/srv/set_bool.hpp>
 #include <climb_msgs/srv/key_input.hpp>
 #include <climb_msgs/srv/actuator_enable.hpp>
+#include <climb_msgs/srv/set_string.hpp>
 #include <climb_msgs/msg/joint_command.hpp>
 #include <climb_msgs/msg/end_effector_command.hpp>
 #include <climb_msgs/msg/step_override_command.hpp>
@@ -23,6 +24,7 @@ using std_srvs::srv::SetBool;
 using climb_msgs::action::StepCommand;
 using climb_msgs::srv::KeyInput;
 using climb_msgs::srv::ActuatorEnable;
+using climb_msgs::srv::SetString;
 using climb_msgs::msg::JointCommand;
 using climb_msgs::msg::EndEffectorCommand;
 using climb_msgs::msg::StepOverrideCommand;
@@ -125,6 +127,14 @@ private:
     const std::vector<std::string> & tokens);
 
   /**
+   * @brief Load a simulated point cloud
+   * @param tokens The command tokens
+   * @return The response message
+   */
+  KeyInputParser::Response simulateCommandCallback(
+    const std::vector<std::string> & tokens);
+
+  /**
    * @brief Convert key press into a twist
    * @param key The key character (linear: wasdqe, angular: WASDQE)
    * @return The twist vector (linear, angular)
@@ -213,6 +223,8 @@ private:
   rclcpp::Client<SetBool>::SharedPtr controller_enable_client_;
   // Plan service client
   rclcpp::Client<Trigger>::SharedPtr plan_client_;
+  // Simulate point cloud service client
+  rclcpp::Client<SetString>::SharedPtr simulate_client_;
   // Step command action client
   rclcpp_action::Client<StepCommand>::SharedPtr step_cmd_client_;
   // Command callback group

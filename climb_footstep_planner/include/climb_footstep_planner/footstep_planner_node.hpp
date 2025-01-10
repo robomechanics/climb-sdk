@@ -3,6 +3,7 @@
 
 #include "climb_footstep_planner/footstep_planner.hpp"
 #include <climb_kinematics/kinematics_node.hpp>
+#include <climb_msgs/srv/set_string.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <pcl/common/common.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -14,6 +15,7 @@
 #include <nav_msgs/msg/path.hpp>
 #include <std_srvs/srv/trigger.hpp>
 
+using climb_msgs::srv::SetString;
 using std_msgs::msg::String;
 using sensor_msgs::msg::PointCloud2;
 using sensor_msgs::msg::Imu;
@@ -37,6 +39,9 @@ private:
   void planCallback(
     const Trigger::Request::SharedPtr request,
     Trigger::Response::SharedPtr response);
+  void simulateCallback(
+    const SetString::Request::SharedPtr request,
+    SetString::Response::SharedPtr response);
 
   std::unique_ptr<FootstepPlanner> footstep_planner_;
   rclcpp::Subscription<PointCloud2>::SharedPtr point_cloud_sub_;
@@ -45,6 +50,7 @@ private:
   rclcpp::Publisher<PoseArray>::SharedPtr footholds_pub_;
   std::vector<rclcpp::Publisher<Path>::SharedPtr> path_pubs_;
   rclcpp::Service<Trigger>::SharedPtr plan_service_;
+  rclcpp::Service<SetString>::SharedPtr simulate_service_;
 };
 
 #endif  // FOOTSTEP_PLANNER_NODE_HPP

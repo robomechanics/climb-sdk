@@ -14,8 +14,9 @@ alias gz='ign gazebo'
 
 # Aliases for frequently used ROS2 launch files
 alias climber_base='ros2 launch loris_bringup climber_base.launch.py'
-alias climber='ros2 launch loris_bringup climber_control.launch.py'
-alias climber_plan='ros2 launch loris_bringup climber_plan.launch.py'
+alias climber_control='ros2 launch loris_bringup climber_control.launch.py'
+alias climber_plan='ros2 launch loris_bringup climber_plan.launch.py camera:=false'
+alias climber='ros2 launch loris_bringup climber_plan.launch.py'
 alias sim='ros2 launch climb_sim sim.launch.py'
 display() {
     ros2 launch "$1_description" display.launch.py

@@ -29,7 +29,8 @@ public:
 
   bool isInitialized(std::string & message);
 
-  void update(const PointCloud::Ptr & map_cloud);
+  void update(
+    const PointCloud::Ptr & map_cloud, const Eigen::Isometry3d & viewpoint);
 
   void updateGravity(const Eigen::Quaterniond & orientation);
 
@@ -53,6 +54,7 @@ private:
 
   std::shared_ptr<KinematicsInterface> robot_;
   Eigen::Vector3d gravity_;
+  Eigen::Isometry3d viewpoint_;
   PointCloud::Ptr map_;
   NormalCloud::Ptr normals_;
   CurvatureCloud::Ptr curvatures_;

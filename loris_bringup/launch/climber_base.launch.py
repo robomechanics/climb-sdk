@@ -149,7 +149,7 @@ def generate_launch_description():
         name="map_transform",
         output="screen",
         arguments=["0", "0", "0", "0", "0", "0",
-                   "loris/camera_link", "loris/map",
+                   "loris/root", "map",
                    "--ros-args", "--log-level", "ERROR"],
         condition=IfCondition(LaunchConfiguration("override_map_transform"))
     )

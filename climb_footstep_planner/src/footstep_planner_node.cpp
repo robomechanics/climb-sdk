@@ -1,5 +1,7 @@
 #include "climb_footstep_planner/footstep_planner_node.hpp"
+#include "climb_footstep_planner/terrain_generator.hpp"
 #include <climb_util/ros_utils.hpp>
+#include <pcl/common/transforms.h>
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -25,6 +27,9 @@ FootstepPlannerNode::FootstepPlannerNode()
   path_pubs_.push_back(create_publisher<Path>("body_path", 1));
   plan_service_ = create_service<Trigger>(
     "plan", std::bind(&FootstepPlannerNode::planCallback, this, _1, _2));
+  simulate_service_ = create_service<SetString>(
+    "simulate",
+    std::bind(&FootstepPlannerNode::simulateCallback, this, _1, _2));
   RCLCPP_INFO(this->get_logger(), "Footstep planner node initialized");
 }
 
@@ -44,7 +49,9 @@ void FootstepPlannerNode::pointCloudCallback(
 {
   PointCloud::Ptr point_cloud = std::make_unique<PointCloud>();
   pcl::fromROSMsg(*msg, *point_cloud);
-  footstep_planner_->update(std::move(point_cloud));
+  Eigen::Isometry3d viewpoint = RosUtils::transformToEigen(
+    lookupMapTransform("camera_link").transform);
+  footstep_planner_->update(std::move(point_cloud), viewpoint);
 }
 
 void FootstepPlannerNode::imuCallback(const Imu::SharedPtr msg)
@@ -119,6 +126,46 @@ void FootstepPlannerNode::planCallback(
   }
   path_pubs_.at(0)->publish(body_path_msg);
   footholds_pub_->publish(footholds_msg);
+  response->success = true;
+}
+
+void FootstepPlannerNode::simulateCallback(
+  const SetString::Request::SharedPtr request,
+  SetString::Response::SharedPtr response)
+{
+  double res = 0.01;
+  PointCloud::Ptr point_cloud = std::make_unique<PointCloud>();
+  Eigen::Isometry3d viewpoint = RosUtils::transformToEigen(
+    lookupMapTransform("camera_link").transform);
+  if (request->data == "corner") {
+    *point_cloud += terrain::planeXY({0, 0, 0}, 1, 1, res);
+    *point_cloud += terrain::planeYZ({0.5, 0, 0.5}, 1, 1, res);
+  } else if (request->data == "plane") {
+    *point_cloud += terrain::planeXY({0, 0, 0}, 2, 2, res);
+  } else if (request->data == "gap") {
+    *point_cloud += terrain::planeXY({0, 0, 0}, 1, 1, res);
+    *point_cloud += terrain::planeXY({1.1, 0, 0}, 1, 1, res);
+  } else if (request->data == "uneven") {
+    *point_cloud += terrain::unevenXY({0, 0, 0}, 2, 2, 0.3, res);
+    viewpoint.translate(Eigen::Vector3d{0, 0, 1000});
+  } else if (request->data == "steep") {
+    *point_cloud += terrain::unevenXY({0, 0, 0}, 2, 2, 0.6, res);
+    viewpoint.translate(Eigen::Vector3d{0, 0, 1000});
+  } else {
+    response->success = false;
+    response->message = "Environment not found";
+    return;
+  }
+  Eigen::Isometry3d transform = Eigen::Isometry3d::Identity();
+  transform.translate(Eigen::Vector3d{0, 0, -0.1});
+  pcl::transformPointCloud(*point_cloud, *point_cloud, transform.matrix());
+
+  PointCloud2 cloud_msg;
+  pcl::toROSMsg(*point_cloud, cloud_msg);
+  cloud_msg.header.frame_id = lookupMapToBodyTransform().header.frame_id;
+  cloud_msg.header.stamp = now();
+  cost_pub_->publish(cloud_msg);
+  footstep_planner_->update(std::move(point_cloud), viewpoint);
   response->success = true;
 }
 
