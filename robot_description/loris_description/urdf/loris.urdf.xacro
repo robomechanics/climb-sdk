@@ -99,10 +99,10 @@
       izz="${mass * izz}" />
   </xacro:macro>
 
-  <!-- Root frame -->
-  <link name="root" />
-  <joint name="root_joint" type="fixed">
-    <parent link="root" />
+  <!-- Base frame -->
+  <link name="base_link" />
+  <joint name="base_joint" type="fixed">
+    <parent link="base_link" />
     <child link="body_front" />
   </joint>
 
@@ -213,9 +213,9 @@
     </collision>
   </link>
   <joint name="mast_joint" type="fixed">
-    <origin xyz="-0.0247 0 0" />
-    <parent link="mast" />
-    <child link="root" />
+    <origin xyz="0.0247 0 0" />
+    <parent link="body_front" />
+    <child link="mast" />
   </joint>
   <link name="camera_mount">
     <inertial>
@@ -237,9 +237,9 @@
   </link>
   <joint
     name="camera_mast_joint" type="fixed">
-    <origin xyz="0 0 ${-camera_height}" />
-    <parent link="camera_mount" />
-    <child link="mast" />
+    <origin xyz="0 0 ${camera_height}" />
+    <parent link="mast" />
+    <child link="camera_mount" />
   </joint>
   <link
     name="camera">
@@ -261,17 +261,15 @@
     </collision>
   </link>
   <joint name="camera_pitch_joint" type="fixed">
-    <origin xyz="${-0.0120 * cos(camera_pitch * deg)} 0
-      ${-0.0120 * sin(camera_pitch * deg)}"
-      rpy="0 ${-camera_pitch * deg} 0" />
-    <parent link="camera" />
-    <child link="camera_mount" />
+    <origin xyz="0.0120 0 0" rpy="0 ${camera_pitch * deg} 0" />
+    <parent link="camera_mount" />
+    <child link="camera" />
   </joint>
   <link name="camera_link" />
   <joint name="camera_link_joint" type="fixed">
-    <origin xyz="-0.0164 -0.0175 0" />
-    <parent link="camera_link" />
-    <child link="camera" />
+    <origin xyz="0.0164 0.0175 0" />
+    <parent link="camera" />
+    <child link="camera_link" />
   </joint>
 
   <!-- Limb Macro -->

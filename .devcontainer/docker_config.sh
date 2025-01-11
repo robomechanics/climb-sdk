@@ -50,6 +50,15 @@ rosclean() {
     fi
 }
 
+# Shortcut to lint ROS2 packages
+rosformat() {
+    if [ $# -eq 0 ]; then
+        ament_uncrustify /workspace/src/ --reformat | grep -v "No code style divergence"
+    else
+        ament_uncrustify /workspace/src/climb-sdk/"$1" --reformat | grep -v "No code style divergence"
+    fi
+}
+
 # Shortcut to kill ROS2 nodes
 roskill() {
     if [ $# -eq 0 ]; then

@@ -86,9 +86,9 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: root
+    Fixed Frame: base_link
     Frame Rate: 30
-  Name: root
+  Name: base_link
   Tools:
     - Class: rviz_default_plugins/Interact
       Hide Inactive Objects: true

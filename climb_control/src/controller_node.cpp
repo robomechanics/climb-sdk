@@ -13,32 +13,37 @@ ControllerNode::ControllerNode()
   force_estimator_ = std::make_unique<ForceEstimator>(robot_);
   force_controller_ = std::make_unique<ForceController>(robot_);
 
+  // Initialize gravity estimate
+  gravity_ = {0, 0, -9.81};
+  gravity_covariance_ = Eigen::Matrix3d::Identity();
+
   // Declare parameters
-  this->declare_parameter("debug", false);
-  this->declare_parameter("sim_wrench", std::vector<double>());
-  this->declare_parameter("default_configuration", "");
+  declare_parameter("debug", false);
+  declare_parameter("sim_wrench", std::vector<double>());
+  declare_parameter("default_configuration", "");
+  declare_parameter("compute_odometry", false);
   for (const auto & p : contact_estimator_->getParameters()) {
-    this->declare_parameter(p.name, p.default_value, p.descriptor);
+    declare_parameter(p.name, p.default_value, p.descriptor);
   }
   for (const auto & p : force_estimator_->getParameters()) {
-    this->declare_parameter(p.name, p.default_value, p.descriptor);
+    declare_parameter(p.name, p.default_value, p.descriptor);
   }
   for (const auto & p : force_controller_->getParameters()) {
-    this->declare_parameter(p.name, p.default_value, p.descriptor);
+    declare_parameter(p.name, p.default_value, p.descriptor);
   }
 
   // Define publishers and subscribers
-  ee_cmd_sub_ = this->create_subscription<EndEffectorCommand>(
+  imu_sub_ = create_subscription<Imu>(
+    "imu", 1, std::bind(&ControllerNode::imuCallback, this, _1));
+  ee_cmd_sub_ = create_subscription<EndEffectorCommand>(
     "end_effector_commands", 1,
     std::bind(&ControllerNode::endEffectorCmdCallback, this, _1));
-  joint_cmd_pub_ = this->create_publisher<JointCommand>("joint_commands", 1);
-  contact_force_pub_ =
-    this->create_publisher<ContactForce>("contact_forces", 1);
-  controller_enable_srv_ = this->create_service<SetBool>(
+  joint_cmd_pub_ = create_publisher<JointCommand>("joint_commands", 1);
+  contact_force_pub_ = create_publisher<ContactForce>("contact_forces", 1);
+  controller_enable_srv_ = create_service<SetBool>(
     "controller_enable",
     std::bind(&ControllerNode::controllerEnableCallback, this, _1, _2));
-  tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
-  RCLCPP_INFO(this->get_logger(), "Controller node initialized");
+  RCLCPP_INFO(get_logger(), "Controller node initialized");
 }
 
 void ControllerNode::update()
@@ -49,9 +54,7 @@ void ControllerNode::update()
   robot_->updateContactFrames(frames);
 
   // Estimate contact forces
-  Imu imu;
-  imu.linear_acceleration.x = -1.0;   // TODO: Read from IMU
-  Eigen::VectorXd forces = force_estimator_->update(imu);
+  Eigen::VectorXd forces = force_estimator_->update(gravity_, gravity_covariance_);
 
   // Adjust forces to match simulated wrench if specified
   if (sim_wrench_.size()) {
@@ -63,7 +66,7 @@ void ControllerNode::update()
   // Log current forces
   if (debug_) {
     RCLCPP_INFO_STREAM(
-      this->get_logger(), "Current forces: " << std::fixed << std::setprecision(
+      get_logger(), "Current forces: " << std::fixed << std::setprecision(
         2) << forces.transpose());
   }
 
@@ -78,11 +81,11 @@ void ControllerNode::update()
     // nominal_pose.linear() = Eigen::Quaterniond::FromTwoVectors(
     //   -Eigen::Vector3d::UnitZ(), ground.normal).toRotationMatrix();
     TransformStamped goal_pose;
-    goal_pose.header.frame_id = name_ + "/" + robot_->getBodyFrame();
-    goal_pose.header.stamp = this->get_clock()->now();
-    goal_pose.child_frame_id = name_ + "/goal_pose";
+    goal_pose.header.frame_id = robot_->getBodyFrame();
+    goal_pose.header.stamp = now();
+    goal_pose.child_frame_id = "goal_pose";
     goal_pose.transform = RosUtils::eigenToTransform(nominal_pose);
-    tf_broadcaster_->sendTransform(goal_pose);
+    sendTransform(goal_pose);
 
     bool success = force_controller_->updateDecoupled(forces, nominal_pose);
 
@@ -90,7 +93,7 @@ void ControllerNode::update()
     if (success && force_controller_->getJointDisplacement().norm() > 1e-6) {
       // Initialize joint command message
       JointCommand cmd_msg;
-      cmd_msg.header.stamp = this->get_clock()->now();
+      cmd_msg.header.stamp = now();
       cmd_msg.name = robot_->getJointNames();
       Eigen::VectorXd joint_position = force_controller_->getJointPosition();
       cmd_msg.position = std::vector<double>(
@@ -115,25 +118,25 @@ void ControllerNode::update()
       // Log controller results
       if (debug_) {
         RCLCPP_INFO_STREAM(
-          this->get_logger(),
+          get_logger(),
           "Margin: " << force_controller_->getMargin() <<
             ", Error: " << force_controller_->getError());
         RCLCPP_INFO_STREAM(
-          this->get_logger(),
+          get_logger(),
           "Goal force: " << force_controller_->getContactForce().transpose());
         RCLCPP_INFO_STREAM(
-          this->get_logger(),
+          get_logger(),
           "Goal effort: " << force_controller_->getJointEffort().transpose());
         RCLCPP_INFO_STREAM(
-          this->get_logger(),
+          get_logger(),
           "Joint displacement: " <<
             force_controller_->getJointDisplacement().transpose());
         RCLCPP_INFO_STREAM(
-          this->get_logger(),
+          get_logger(),
           "Body displacement: " <<
             force_controller_->getBodyDisplacement().transpose());
         RCLCPP_INFO_STREAM(
-          this->get_logger(),
+          get_logger(),
           "Force displacement: " <<
             (force_controller_->getContactForce() - forces).transpose());
       }
@@ -141,58 +144,46 @@ void ControllerNode::update()
   }
 
   // Publish contact frames
-  const auto time = this->get_clock()->now();
-  const std::string prefix = name_ + "/";
   for (auto & frame : frames) {
-    frame.header.stamp = time;
-    frame.header.frame_id.insert(0, prefix);
-    frame.child_frame_id.insert(0, prefix);
-    tf_broadcaster_->sendTransform(frame);
+    frame.header.stamp = now();
+    sendTransform(frame);
   }
 
-  // Update map frame
-  TransformStamped map_to_body = lookupMapToBodyTransform();
-  if (!map_to_body.header.frame_id.empty()) {
-    Eigen::Isometry3d transform =
-      RosUtils::transformToEigen(map_to_body.transform);
+  // Update odometry
+  if (compute_odometry_) {
+    TransformStamped odom_msg = lookupTransform("/odom", robot_->getBodyFrame());
+    Eigen::Isometry3d transform = RosUtils::transformToEigen(odom_msg.transform);
     EigenUtils::applyChildTwistInPlace(transform, body_twist);
-    geometry_msgs::msg::TransformStamped map_frame;
-    map_frame.header.stamp = this->get_clock()->now();
-    map_frame.header.frame_id = name_ + "/" + robot_->getBodyFrame();
-    map_frame.child_frame_id = name_ + "/map";
-    map_frame.transform = RosUtils::eigenToTransform(transform.inverse());
-    tf_broadcaster_->sendTransform(map_frame);
+    odom_msg.transform = RosUtils::eigenToTransform(transform);
+    odom_msg.header.stamp = now();
+    sendTransform(odom_msg);
   }
 
   // Publish contact forces
   auto contact_force =
-    force_estimator_->getContactForceMessage(forces, this->get_clock()->now());
+    force_estimator_->getContactForceMessage(forces, now());
   contact_force_pub_->publish(contact_force);
   // Publish individual contact wrenches for RViz
   auto contact_wrenches =
-    force_estimator_->splitContactForceMessage(contact_force, name_);
+    force_estimator_->splitContactForceMessage(contact_force);
   for (size_t i = 0; i < contact_wrenches.size(); i++) {
     if (contact_force_pubs_.size() == i) {
       contact_force_pubs_.push_back(
-        this->create_publisher<WrenchStamped>(
+        create_publisher<WrenchStamped>(
           "contact_force_" + std::to_string(i + 1), 10));
     }
+    prefixFrameId(contact_wrenches[i].header.frame_id);
     contact_force_pubs_.at(i)->publish(contact_wrenches[i]);
   }
   // Display gravity wrench for RViz
   auto gravity_wrench =
-    force_estimator_->getGravityForceMessage(
-    forces, this->get_clock()->now(), name_);
+    force_estimator_->getGravityForceMessage(forces, now());
   if (contact_force_pubs_.size() == contact_wrenches.size()) {
     contact_force_pubs_.push_back(
-      this->create_publisher<WrenchStamped>("gravity_force", 10));
+      create_publisher<WrenchStamped>("gravity_force", 10));
   }
+  prefixFrameId(gravity_wrench.header.frame_id);
   contact_force_pubs_.back()->publish(gravity_wrench);
-  // Store gravity force for next iteration
-  gravity_ <<
-    gravity_wrench.wrench.force.x,
-    gravity_wrench.wrench.force.y,
-    gravity_wrench.wrench.force.z;
 }
 
 void ControllerNode::jointCallback(const JointState::SharedPtr msg)
@@ -202,6 +193,23 @@ void ControllerNode::jointCallback(const JointState::SharedPtr msg)
   }
   robot_->updateJointState(*msg);
   update();
+}
+
+void ControllerNode::imuCallback(const Imu::SharedPtr msg)
+{
+  TransformStamped transform;
+  try {
+    transform = lookupTransform(
+      robot_->getBodyFrame(), "/" + msg->header.frame_id);
+  } catch (const tf2::TransformException &) {
+    return;
+  }
+  Eigen::Matrix3d rotation = RosUtils::quaternionToEigen(
+    transform.transform.rotation).toRotationMatrix();
+  gravity_ = -rotation * RosUtils::vector3ToEigen(msg->linear_acceleration);
+  Eigen::Matrix<double, 3, 3, Eigen::RowMajor> covariance(
+    msg->linear_acceleration_covariance.data());
+  gravity_covariance_ = rotation * covariance * rotation.transpose();
 }
 
 void ControllerNode::endEffectorCmdCallback(
@@ -228,6 +236,8 @@ rcl_interfaces::msg::SetParametersResult ControllerNode::parameterCallback(
   for (const auto & param : parameters) {
     if (param.get_name() == "debug") {
       debug_ = param.as_bool();
+    } else if (param.get_name() == "compute_odometry") {
+      compute_odometry_ = param.as_bool();
     } else if (param.get_name() == "effort_limit") {
       // Declared by force_controller
       max_effort_ = param.as_double();
@@ -241,7 +251,7 @@ rcl_interfaces::msg::SetParametersResult ControllerNode::parameterCallback(
       }
     } else if (param.get_name() == "default_configuration") {
       const auto & parameters =
-        this->get_node_parameters_interface()->get_parameter_overrides();
+        get_node_parameters_interface()->get_parameter_overrides();
       auto param_name = "configurations." + param.as_string();
       if (param.as_string().empty()) {
         force_controller_->setNominalConfiguration(

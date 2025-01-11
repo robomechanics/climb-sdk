@@ -28,7 +28,7 @@ protected:
     // Set parameters
     rcl_interfaces::msg::SetParametersResult result;
     result.successful = true;
-    robot_->setParameter("body_frame", "root", result);
+    robot_->setParameter("body_frame", "base_link", result);
     robot_->setParameter(
       "end_effector_frames", std::vector<std::string> {
       "left_foot", "right_foot"}, result);
@@ -111,7 +111,7 @@ TEST_F(KinematicsTest, ContactFrames)
     0, 0, 1;
   EXPECT_NEAR_EIGEN(transform.rotation(), R_expected, TOL) <<
     "Incorrect left contact rotation";
-  Eigen::Isometry3d inverse = robot_->getTransform("left_contact", "root");
+  Eigen::Isometry3d inverse = robot_->getTransform("left_contact", "base_link");
   EXPECT_NEAR_EIGEN(inverse.rotation(), R_expected.transpose(), TOL) <<
     "Incorrect inverse transform";
 }

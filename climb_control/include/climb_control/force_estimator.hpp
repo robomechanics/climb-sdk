@@ -42,19 +42,25 @@ public:
   /**
    * @brief Estimate contact force from the given effort and IMU data
    * @param[in] effort Latest joint effort measurement
-   * @param[in] imu Latest IMU data
+   * @param[in] gravity Latest gravity vector in body
+   * @param[in] covariance Gravity covariance matrix
    * @return Vector of estimated forces (robot on world)
    */
-  Eigen::VectorXd update(const Eigen::VectorXd & effort, const Imu & imu);
+  Eigen::VectorXd update(
+    const Eigen::VectorXd & effort, const Eigen::Vector3d & gravity,
+    const Eigen::Matrix3d & gravity_covariance);
 
   /**
    * @brief Estimate contact force from the latest robot data and given IMU data
-   * @param[in] imu Latest IMU data
+   * @param[in] gravity Latest gravity vector in body
+   * @param[in] covariance Gravity covariance matrix
    * @return Vector of estimated forces (robot on world)
    */
-  Eigen::VectorXd update(const Imu & imu)
+  Eigen::VectorXd update(
+    const Eigen::Vector3d & gravity,
+    const Eigen::Matrix3d & gravity_covariance)
   {
-    return update(robot_->getJointEffort(), imu);
+    return update(robot_->getJointEffort(), gravity, gravity_covariance);
   }
 
   /**
@@ -75,22 +81,19 @@ public:
   /**
    * @brief Convert ContactForce message to individual WrenchStamped messages
    * @param[in] message ContactForce message
-   * @param[in] tf_prefix Optional prefix for contact frame names
    * @return Vector of WrenchStamped messages for each contact frame
    */
   std::vector<WrenchStamped> splitContactForceMessage(
-    const ContactForce & message, const std::string & tf_prefix);
+    const ContactForce & message);
 
   /**
    * @brief Convert contact force vector to a gravity WrenchStamped message
    * @param[in] forces Vector of contact forces
    * @param[in] stamp Timestamp of contact force measurement
-   * @param[in] tf_prefix Optional prefix for contact frame names
    * @return WrenchStamped message for external wrench on body
    */
   WrenchStamped getGravityForceMessage(
-    const Eigen::VectorXd & forces, const rclcpp::Time & stamp,
-    const std::string & tf_prefix);
+    const Eigen::VectorXd & forces, const rclcpp::Time & stamp);
 
   void declareParameters() override;
 

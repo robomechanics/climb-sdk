@@ -38,9 +38,9 @@ std::vector<TransformStamped> ContactEstimator::update(
 {
   std::vector<TransformStamped> transforms;
   transforms.reserve(robot_->getNumContacts());
-  const auto ground = getGroundPlane();
-  const auto & ee_frames = robot_->getEndEffectorFrames();
-  const auto & contact_frames = robot_->getContactFrames();
+  auto ground = getGroundPlane();
+  auto ee_frames = robot_->getEndEffectorFrames();
+  auto contact_frames = robot_->getContactFrames();
   for (int i = 0; i < robot_->getNumContacts(); ++i) {
     TransformStamped transform;
     transform.header.frame_id = ee_frames[i];

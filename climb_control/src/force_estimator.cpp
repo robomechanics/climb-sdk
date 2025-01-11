@@ -32,22 +32,19 @@ Eigen::VectorXd ForceEstimator::update(const Eigen::VectorXd & effort)
 }
 
 Eigen::VectorXd ForceEstimator::update(
-  const Eigen::VectorXd & effort, const Imu & imu)
+  const Eigen::VectorXd & effort, const Eigen::Vector3d & gravity,
+  const Eigen::Matrix3d & gravity_covariance)
 {
   // Update effort estimate
   Eigen::VectorXd u = filterEffort(effort);
 
   // Estimate external wrench from IMU data
-  Eigen::Vector3d g;
-  g << imu.linear_acceleration.x, imu.linear_acceleration.y,
-    imu.linear_acceleration.z;
   Eigen::Matrix<double, 6, 3> g_to_f_ext;
   g_to_f_ext << Eigen::Matrix3d::Identity(3, 3), robot_->getSkew(robot_->getCenterOfMass());
-  if (g.norm() > 0) {
-    g_to_f_ext *= robot_->getMass() * g_ / g.norm();
+  if (gravity.norm() > 0) {
+    g_to_f_ext *= robot_->getMass() * g_ / gravity.norm();
   }
-  Eigen::VectorXd f_ext = g_to_f_ext * g;
-  // TODO: use IMU orientation instead of acceleration if provided
+  Eigen::VectorXd f_ext = g_to_f_ext * gravity;
 
   // Compute robot kinematics
   Eigen::MatrixXd Jh = robot_->getHandJacobian();
@@ -73,10 +70,8 @@ Eigen::VectorXd ForceEstimator::update(
 
   // Solve over-determined system
   // If covariance is unknown, assume equal weighting
-  if (effort_variance_.size() == 0 ||
-    imu.linear_acceleration_covariance.size() == 0)
-  {
-    return (A.transpose() * A).ldlt().solve(A.transpose() * b);
+  if (effort_variance_.size() == 0 || gravity_covariance(0) == -1) {
+    return A.completeOrthogonalDecomposition().solve(b);
   }
   // If effort variance size is mismatched just use the first element
   if (effort_variance_.size() != u.size()) {
@@ -84,9 +79,8 @@ Eigen::VectorXd ForceEstimator::update(
   }
   // Compute individual sensor covariance matrices
   Eigen::MatrixXd u_cov = effort_variance_.asDiagonal();
-  Eigen::Matrix<double, 3, 3, Eigen::RowMajor> g_cov(
-    imu.linear_acceleration_covariance.data());
-  Eigen::MatrixXd f_cov = g_to_f_ext * g_cov * g_to_f_ext.transpose();
+  Eigen::MatrixXd f_cov =
+    g_to_f_ext * gravity_covariance * g_to_f_ext.transpose();
   // Compute inverse of combined sensor covariance matrix
   Eigen::MatrixXd sigma_inv = Eigen::MatrixXd::Zero(A.rows(), A.rows());
   sigma_inv.block(0, 0, u.size(), u.size()) =
@@ -147,16 +141,15 @@ ContactForce ForceEstimator::getContactForceMessage(
 }
 
 std::vector<WrenchStamped> ForceEstimator::splitContactForceMessage(
-  const ContactForce & message, const std::string & tf_prefix)
+  const ContactForce & message)
 {
   using RosUtils::operator-;
-  std::string prefix = tf_prefix + "/";
   std::vector<WrenchStamped> messages;
   messages.reserve(message.frame.size());
   for (size_t i = 0; i < message.frame.size(); i++) {
     WrenchStamped wrench;
     wrench.header.stamp = message.header.stamp;
-    wrench.header.frame_id = prefix + message.frame[i];
+    wrench.header.frame_id = message.frame[i];
     wrench.wrench = -(message.wrench[i]);
     messages.push_back(std::move(wrench));
   }
@@ -164,13 +157,12 @@ std::vector<WrenchStamped> ForceEstimator::splitContactForceMessage(
 }
 
 WrenchStamped ForceEstimator::getGravityForceMessage(
-  const Eigen::VectorXd & forces, const rclcpp::Time & stamp,
-  const std::string & tf_prefix)
+  const Eigen::VectorXd & forces, const rclcpp::Time & stamp)
 {
   WrenchStamped message;
   Eigen::Matrix<double, 6, Eigen::Dynamic> Gs = -robot_->getGraspMap();
   Eigen::Vector<double, 6> wrench = -Gs * forces;
-  message.header.frame_id = tf_prefix + "/" + robot_->getBodyFrame();
+  message.header.frame_id = robot_->getBodyFrame();
   message.header.stamp = stamp;
   message.wrench = RosUtils::eigenToWrench(wrench);
   return message;

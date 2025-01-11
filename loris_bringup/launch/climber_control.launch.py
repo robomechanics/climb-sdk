@@ -14,8 +14,7 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.substitutions import (
     LaunchConfiguration,
-    PathJoinSubstitution,
-    TextSubstitution
+    PathJoinSubstitution
 )
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -27,19 +26,26 @@ namespace = LaunchConfiguration("namespace")
 global_config = LaunchConfiguration("global_config")
 robot_config = LaunchConfiguration("robot_config")
 xacro_args = LaunchConfiguration("xacro_args")
+odometry = LaunchConfiguration("odometry")
 
 # Find ROS packages
 main_pkg = FindPackageShare("loris_bringup")
-robot_pkg = FindPackageShare([robot, TextSubstitution(text="_description")])
+robot_pkg = FindPackageShare([robot, "_description"])
 
 # Find resource paths
 global_config_path = PathJoinSubstitution([main_pkg, "config", global_config])
 robot_config_path = PathJoinSubstitution([robot_pkg, "config", robot_config])
-base_launch_path = PathJoinSubstitution(
-    [main_pkg, "launch", "climber_base.launch.py"])
+base_launch_path = PathJoinSubstitution([main_pkg, "launch", "climber_base.launch.py"])
 
 
 def generate_launch_description():
+    # Launch arguments
+    odometry_arg = DeclareLaunchArgument(
+        "odometry",
+        default_value="true",
+        description="Estimate odometry with dead reckoning"
+    )
+
     # Override default xacro arguments in base launch file
     xacro_args_arg = DeclareLaunchArgument(
         "xacro_args",
@@ -50,8 +56,9 @@ def generate_launch_description():
     # Base launch file
     base = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(base_launch_path),
-        launch_arguments={'xacro_args': xacro_args,
-                          'override_map_transform': "False"}.items()
+        launch_arguments={"xacro_args": xacro_args,
+                          "static_odom_transform": "False",
+                          "static_map_transform": odometry}.items()
     )
 
     # Low-level controller
@@ -61,8 +68,9 @@ def generate_launch_description():
         executable="controller_node",
         name="controller",
         output="screen",
-        parameters=[{"tf_prefix": namespace},
-                    global_config_path, robot_config_path]
+        parameters=[global_config_path, robot_config_path,
+                    {"compute_odometry": odometry}],
+        remappings=[(["/", namespace, "/imu"], "/imu/data")]
     )
 
     # Gait planner
@@ -72,11 +80,11 @@ def generate_launch_description():
         executable="gait_planner_node",
         name="gait_planner",
         output="screen",
-        parameters=[{"tf_prefix": namespace},
-                    global_config_path, robot_config_path]
+        parameters=[global_config_path, robot_config_path]
     )
 
     return LaunchDescription([
+        odometry_arg,
         xacro_args_arg,
         base,
         controller,

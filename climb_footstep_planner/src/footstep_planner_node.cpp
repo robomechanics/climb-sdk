@@ -50,14 +50,14 @@ void FootstepPlannerNode::pointCloudCallback(
   PointCloud::Ptr point_cloud = std::make_unique<PointCloud>();
   pcl::fromROSMsg(*msg, *point_cloud);
   Eigen::Isometry3d viewpoint = RosUtils::transformToEigen(
-    lookupMapTransform("camera_link").transform);
+    lookupTransform("/map", "camera_link").transform);
   footstep_planner_->update(std::move(point_cloud), viewpoint);
 }
 
 void FootstepPlannerNode::imuCallback(const Imu::SharedPtr msg)
 {
   Eigen::Isometry3d map_to_imu = RosUtils::transformToEigen(
-    lookupMapTransform("/" + msg->header.frame_id).transform);
+    lookupTransform("/map", "/" + msg->header.frame_id).transform);
   footstep_planner_->updateGravity(
     map_to_imu.rotation() * -RosUtils::vector3ToEigen(msg->linear_acceleration).normalized());
 }
@@ -73,7 +73,7 @@ void FootstepPlannerNode::planCallback(
     return;
   }
   FootstepPlanner::Stance start;
-  auto body_transform = lookupMapToBodyTransform();
+  auto body_transform = lookupTransform("/map", robot_->getBodyFrame());
   auto map_frame = body_transform.header.frame_id;
   start.pose = RosUtils::transformToEigen(body_transform.transform);
   start.joint_positions = robot_->getJointPosition();
@@ -136,7 +136,7 @@ void FootstepPlannerNode::simulateCallback(
   double res = 0.01;
   PointCloud::Ptr point_cloud = std::make_unique<PointCloud>();
   Eigen::Isometry3d viewpoint = RosUtils::transformToEigen(
-    lookupMapTransform("camera_link").transform);
+    lookupTransform("/map", "camera_link").transform);
   if (request->data == "corner") {
     *point_cloud += terrain::planeXY({0, 0, 0}, 1, 1, res);
     *point_cloud += terrain::planeYZ({0.5, 0, 0.5}, 1, 1, res);
@@ -162,7 +162,7 @@ void FootstepPlannerNode::simulateCallback(
 
   PointCloud2 cloud_msg;
   pcl::toROSMsg(*point_cloud, cloud_msg);
-  cloud_msg.header.frame_id = lookupMapToBodyTransform().header.frame_id;
+  cloud_msg.header.frame_id = "map";
   cloud_msg.header.stamp = now();
   cost_pub_->publish(cloud_msg);
   footstep_planner_->update(std::move(point_cloud), viewpoint);

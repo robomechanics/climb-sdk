@@ -15,24 +15,25 @@ GaitPlannerNode::GaitPlannerNode()
 
   // Declare parameters
   for (const auto & p : gait_planner_->getParameters()) {
-    this->declare_parameter(p.name, p.default_value, p.descriptor);
+    declare_parameter(p.name, p.default_value, p.descriptor);
   }
 
   // Initialize subscribers and publishers
-  contact_force_sub_ = this->create_subscription<ContactForce>(
+  contact_force_sub_ = create_subscription<ContactForce>(
     "contact_forces", 1,
     std::bind(&GaitPlannerNode::contactForceCallback, this, std::placeholders::_1));
-  step_override_cmd_sub_ = this->create_subscription<StepOverrideCommand>(
+  step_override_cmd_sub_ = create_subscription<StepOverrideCommand>(
     "step_override_commands", 1,
     std::bind(&GaitPlannerNode::stepOverrideCommandCallback, this, std::placeholders::_1));
-  end_effector_cmd_pub_ = this->create_publisher<EndEffectorCommand>("end_effector_commands", 1);
-  foothold_pub_ = this->create_publisher<PoseArray>("footholds", 1);
+  end_effector_cmd_pub_ =
+    create_publisher<EndEffectorCommand>("end_effector_commands", 1);
+  foothold_pub_ = create_publisher<PoseArray>("footholds", 1);
   step_cmd_srv_ = rclcpp_action::create_server<StepCommand>(
     this, "step_command",
     std::bind(&GaitPlannerNode::goalCallback, this, _1, _2),
     std::bind(&GaitPlannerNode::cancelCallback, this, _1),
     std::bind(&GaitPlannerNode::acceptedCallback, this, _1));
-  RCLCPP_INFO(this->get_logger(), "Step planner node initialized");
+  RCLCPP_INFO(get_logger(), "Step planner node initialized");
 }
 
 void GaitPlannerNode::contactForceCallback(const ContactForce::SharedPtr msg)
@@ -40,24 +41,20 @@ void GaitPlannerNode::contactForceCallback(const ContactForce::SharedPtr msg)
   if (!robot_->isInitialized()) {
     return;
   }
-  TransformStamped map_to_body = lookupMapToBodyTransform();
-  if (map_to_body.header.frame_id.empty()) {
-    return;
-  }
 
   // Update step progress
-  gait_planner_->update(*msg, map_to_body);
+  gait_planner_->update(*msg, lookupTransform("/map", robot_->getBodyFrame()));
   processStateChanges();
 
   // Publish end effector command
   auto cmd = gait_planner_->getCommand();
-  cmd.header.stamp = this->now();
+  cmd.header.stamp = now();
   end_effector_cmd_pub_->publish(cmd);
 
   // Publish footholds
   PoseArray footholds;
-  footholds.header.frame_id = name_ + "/map";
-  footholds.header.stamp = this->now();
+  footholds.header.frame_id = getPrefixedFrameId("/map");
+  footholds.header.stamp = now();
   for (const auto & frame : robot_->getContactFrames()) {
     footholds.poses.push_back(
       RosUtils::eigenToPose(gait_planner_->getFoothold(frame)));

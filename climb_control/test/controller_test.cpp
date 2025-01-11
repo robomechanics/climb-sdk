@@ -30,7 +30,7 @@ protected:
     // Set parameters
     rcl_interfaces::msg::SetParametersResult result;
     result.successful = true;
-    robot_->setParameter("body_frame", "root", result);
+    robot_->setParameter("body_frame", "base_link", result);
     robot_->setParameter(
       "end_effector_frames", std::vector<std::string> {
       "left_foot", "right_foot"}, result);
@@ -104,14 +104,9 @@ TEST_F(ControllerTest, ForceEstimator)
     "Incorrect force estimate without IMU";
 
   // Estimate with IMU
-  Imu imu;
-  imu.orientation_covariance[0] = -1;
-  imu.linear_acceleration.x = 7;
-  imu.linear_acceleration.z = -7;
-  imu.linear_acceleration_covariance[0] = 1;
-  imu.linear_acceleration_covariance[4] = 1;
-  imu.linear_acceleration_covariance[8] = 1;
-  forces_robot_on_world = estimator.update(imu);
+  Eigen::Vector3d g{7, 0, -7};
+  Eigen::Matrix3d gcov = Eigen::Matrix3d::Identity();
+  forces_robot_on_world = estimator.update(g, gcov);
   forces = -forces_robot_on_world;
   EXPECT_NEAR_EIGEN(forces, forces_expected, TOL) <<
     "Incorrect force estimate with IMU";

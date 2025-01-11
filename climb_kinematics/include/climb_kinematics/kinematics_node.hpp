@@ -5,6 +5,7 @@
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_ros/transform_listener.h>
+#include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/buffer.h>
 #include <tf2/exceptions.h>
 #include <std_msgs/msg/string.hpp>
@@ -45,11 +46,23 @@ protected:
   virtual void jointCallback(const JointState::SharedPtr msg);
 
   /**
-   * @brief Lookup most recent transform in TF buffer by applying TF prefix
+   * @brief Apply prefix to TF frame ID unless frame ID leads with a slash
+   * @param frame_id TF frame ID to prefix with TF namespace
+   * @return TF frame ID with prefix applied or with leading slash removed
+   */
+  std::string getPrefixedFrameId(const std::string & frame_id);
+
+  /**
+   * @brief Apply prefix to TF frame ID in place unless frame ID leads with a slash
+   * @param[in, out] frame_id TF frame ID
+   */
+  void prefixFrameId(std::string & frame_id);
+
+  /**
+   * @brief Lookup most recent transform in TF buffer with TF prefix applied
+   * to frame IDs (unless prefixed with a slash)
    * @param[in] parent_frame Parent frame of transform
-   * (prefix with slash to avoid applying TF prefix)
    * @param[in] child_frame Child frame of transform
-   * (prefix with slash to avoid applying TF prefix)
    * @param[in] time Requested time of transform
    * @return Transform from parent to child frame
    * @throws tf2::TransformException if transform is unavailable
@@ -59,27 +72,18 @@ protected:
     const rclcpp::Time & time = rclcpp::Time(0));
 
   /**
-   * @brief Lookup transform from map to a given child frame, 
-   * falling back to local map frame estimate if SLAM is not running
-   * @param[in] child_frame Child frame of transform
-   * (prefix with slash to avoid applying TF prefix)
-   * @param[in] time Requested time of transform
-   * @return Transform from map to child frame
-   * @throws tf2::TransformException if transform is unavailable
+   * @brief Send a TF transform with TF prefix applied to frame IDs
+   * (unless prefixed with a slash)
    */
-  TransformStamped lookupMapTransform(
-    const std::string & child_frame, const rclcpp::Time & time = rclcpp::Time(0));
+  void sendTransform(TransformStamped transform);
 
   /**
-   * @brief Lookup transform from map to body frame, falling back to local
-   * estimate if SLAM is not running
-   * @param[in] time Requested time of transform
-   * @return Transform from map to body frame
-   * @throws tf2::TransformException if transform is unavailable
+   * @brief Send an identity TF transform with TF prefix applied to frame IDs
+   * @param[in] parent_frame Parent frame of transform
+   * @param[in] child_frame Child frame of transform
    */
-  TransformStamped lookupMapToBodyTransform(
-    const rclcpp::Time & time = rclcpp::Time(0))
-  {return lookupMapTransform(robot_->getBodyFrame(), time);}
+  void sendIdentityTransform(
+    const std::string & parent_frame, const std::string & child_frame);
 
   /**
    * @brief Update modified parameters
@@ -89,8 +93,6 @@ protected:
   virtual rcl_interfaces::msg::SetParametersResult parameterCallback(
     const std::vector<rclcpp::Parameter> & parameters);
 
-  // TF prefix
-  std::string name_;
   // Kinematics interface
   std::shared_ptr<KinematicsInterface> robot_;
   // Tf buffer
@@ -103,6 +105,8 @@ private:
   rclcpp::Subscription<JointState>::SharedPtr joint_sub_;
   // Tf listener
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  // TF broadcaster
+  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   // Parameter callback handle
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
     param_handle_;

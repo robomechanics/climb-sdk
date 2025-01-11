@@ -29,7 +29,7 @@ protected:
     // Set parameters
     rcl_interfaces::msg::SetParametersResult result;
     result.successful = true;
-    robot_->setParameter("body_frame", "root", result);
+    robot_->setParameter("body_frame", "base_link", result);
     robot_->setParameter(
       "end_effector_frames", std::vector<std::string> {
       "left_foot", "right_foot"}, result);

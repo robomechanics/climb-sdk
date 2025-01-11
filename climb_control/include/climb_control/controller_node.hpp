@@ -2,9 +2,9 @@
 #define CONTROLLER_NODE_HPP
 
 #include <rclcpp/rclcpp.hpp>
-#include <tf2_ros/transform_broadcaster.h>
 
 #include <sensor_msgs/msg/joint_state.hpp>
+#include <sensor_msgs/msg/imu.hpp>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
 #include <climb_msgs/msg/joint_command.hpp>
 #include <climb_msgs/msg/contact_force.hpp>
@@ -18,6 +18,7 @@
 
 using geometry_msgs::msg::WrenchStamped;
 using sensor_msgs::msg::JointState;
+using sensor_msgs::msg::Imu;
 using climb_msgs::msg::JointCommand;
 using climb_msgs::msg::ContactForce;
 using climb_msgs::msg::EndEffectorCommand;
@@ -49,6 +50,12 @@ private:
    * @param[in] msg Message containing joint state
    */
   void jointCallback(const JointState::SharedPtr msg) override;
+
+  /**
+   * @brief Update gravity vector estimate with the latest data
+   * @param[in] msg Message containing imu data
+   */
+  void imuCallback(const Imu::SharedPtr msg);
 
   /**
    * @brief Update controller with the latest end effector command
@@ -85,12 +92,12 @@ private:
   rclcpp::Publisher<ContactForce>::SharedPtr contact_force_pub_;
   // Individual contact force publishers (for Rviz)
   std::vector<rclcpp::Publisher<WrenchStamped>::SharedPtr> contact_force_pubs_;
+  // IMU subscriber
+  rclcpp::Subscription<Imu>::SharedPtr imu_sub_;
   // Contact command subscriber
   rclcpp::Subscription<EndEffectorCommand>::SharedPtr ee_cmd_sub_;
   // Controller enable service
   rclcpp::Service<SetBool>::SharedPtr controller_enable_srv_;
-  // TF broadcaster
-  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   // Parameter callback handle
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
     param_handle_;
@@ -98,10 +105,14 @@ private:
   bool enabled_;
   // Debug flag
   bool debug_;
+  // Override odometry flag
+  bool compute_odometry_;
   // Maximum joint effort
   double max_effort_;
-  // Most recent gravity vector estimate
+  // Most recent gravity direction vector estimate in body frame
   Eigen::Vector3d gravity_;
+  // Most recent gravity covariance matrix estimate in body frame
+  Eigen::Matrix3d gravity_covariance_;
   // Simulated wrench for offline testing
   Eigen::VectorXd sim_wrench_;
 };

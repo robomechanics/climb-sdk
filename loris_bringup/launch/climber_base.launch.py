@@ -15,8 +15,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.substitutions import (
     LaunchConfiguration,
     Command,
-    PathJoinSubstitution,
-    TextSubstitution
+    PathJoinSubstitution
 )
 from launch.conditions import IfCondition
 from launch_ros.actions import Node
@@ -31,11 +30,12 @@ robot_config = LaunchConfiguration("robot_config")
 urdf = LaunchConfiguration("urdf")
 rviz = LaunchConfiguration("rviz")
 xacro_args = LaunchConfiguration("xacro_args")
-override_map_transform = LaunchConfiguration("override_map_transform")
+static_map_transform = LaunchConfiguration("static_map_transform")
+static_odom_transform = LaunchConfiguration("static_odom_transform")
 
 # Find ROS packages
 main_pkg = FindPackageShare("loris_bringup")
-robot_pkg = FindPackageShare([robot, TextSubstitution(text="_description")])
+robot_pkg = FindPackageShare([robot, "_description"])
 
 # Find resource paths
 global_config_path = PathJoinSubstitution([main_pkg, "config", global_config])
@@ -68,17 +68,17 @@ def generate_launch_description():
     )
     robot_config_arg = DeclareLaunchArgument(
         "robot_config",
-        default_value=[robot, TextSubstitution(text=".yaml")],
+        default_value=[robot, ".yaml"],
         description="Robot parameters file in {robot}_description/config/"
     )
     urdf_arg = DeclareLaunchArgument(
         "urdf",
-        default_value=[robot, TextSubstitution(text=".urdf.xacro")],
+        default_value=[robot, ".urdf.xacro"],
         description="Robot description file in {robot}_description/urdf/"
     )
     rviz_arg = DeclareLaunchArgument(
         "rviz",
-        default_value=[robot, TextSubstitution(text=".rviz")],
+        default_value=[robot, ".rviz"],
         description="Rviz configuration file in {robot}_description/rviz/"
     )
     xacro_args_arg = DeclareLaunchArgument(
@@ -86,8 +86,13 @@ def generate_launch_description():
         default_value="wrist_joint:=fixed",
         description="Xacro arguments of the form 'param:=value')"
     )
-    map_transform_arg = DeclareLaunchArgument(
-        "override_map_transform",
+    static_odom_transform_arg = DeclareLaunchArgument(
+        "static_odom_transform",
+        default_value="true",
+        description="Provide a static transform to the odom frame"
+    )
+    static_map_transform_arg = DeclareLaunchArgument(
+        "static_map_transform",
         default_value="true",
         description="Provide a static transform to the map frame"
     )
@@ -102,7 +107,7 @@ def generate_launch_description():
         arguments=["--ros-args", "--log-level", "error"],
         parameters=[{
             "robot_description": description,
-            "frame_prefix": [namespace, TextSubstitution(text="/")]
+            "frame_prefix": [namespace, "/"]
         }, global_config_path]
     )
     robot_driver = Node(
@@ -128,10 +133,9 @@ def generate_launch_description():
         executable="teleop_node",
         name="teleop",
         output="screen",
-        parameters=[{"tf_prefix": namespace},
-                    global_config_path, robot_config_path],
-        remappings=[('/loris/key_input', '/key_input'),
-                    ('/loris/key_output', '/key_output')]
+        parameters=[global_config_path, robot_config_path],
+        remappings=[(["/", namespace, "/key_input"], '/key_input'),
+                    (["/", namespace, "/key_key_output"], '/key_output')]
     )
     key_input = Node(
         package="climb_teleop",
@@ -142,16 +146,20 @@ def generate_launch_description():
         prefix="xterm -T 'Climb-SDK' -fa 'Monospace' -fs 14 -e"
     )
 
-    # Static transform for map frame
+    # Static transforms
     map_transform = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
-        name="map_transform",
-        output="screen",
-        arguments=["0", "0", "0", "0", "0", "0",
-                   "loris/root", "map",
+        arguments=["--frame-id", "map", "--child-frame-id", "odom",
                    "--ros-args", "--log-level", "ERROR"],
-        condition=IfCondition(LaunchConfiguration("override_map_transform"))
+        condition=IfCondition(static_map_transform)
+    )
+    odom_transform = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        arguments=["--frame-id", "odom", "--child-frame-id", [namespace, "/base_link"],
+                   "--ros-args", "--log-level", "ERROR"],
+        condition=IfCondition(static_odom_transform)
     )
 
     return LaunchDescription([
@@ -162,11 +170,13 @@ def generate_launch_description():
         urdf_arg,
         rviz_arg,
         xacro_args_arg,
-        map_transform_arg,
+        static_odom_transform_arg,
+        static_map_transform_arg,
         robot_state_publisher,
         robot_driver,
         rviz2,
         teleop,
         key_input,
-        map_transform
+        map_transform,
+        odom_transform
     ])
