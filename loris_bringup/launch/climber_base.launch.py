@@ -8,6 +8,8 @@ Optional Launch Arguments:
     robot_config: Robot parameters file in {robot}_description/config/
     urdf: Robot description file in {robot}_description/urdf/
     rviz: Rviz configuration file in {robot}_description/rviz/
+    xacro_args: Xacro arguments of the form 'param:=value')
+    publish_map: Publish static map and odom frame transforms (True/False)
 """
 
 from launch import LaunchDescription
@@ -30,8 +32,7 @@ robot_config = LaunchConfiguration("robot_config")
 urdf = LaunchConfiguration("urdf")
 rviz = LaunchConfiguration("rviz")
 xacro_args = LaunchConfiguration("xacro_args")
-static_map_transform = LaunchConfiguration("static_map_transform")
-static_odom_transform = LaunchConfiguration("static_odom_transform")
+publish_map = LaunchConfiguration("publish_map")
 
 # Find ROS packages
 main_pkg = FindPackageShare("loris_bringup")
@@ -86,15 +87,10 @@ def generate_launch_description():
         default_value="wrist_joint:=fixed",
         description="Xacro arguments of the form 'param:=value')"
     )
-    static_odom_transform_arg = DeclareLaunchArgument(
-        "static_odom_transform",
-        default_value="true",
-        description="Provide a static transform to the odom frame"
-    )
-    static_map_transform_arg = DeclareLaunchArgument(
-        "static_map_transform",
-        default_value="true",
-        description="Provide a static transform to the map frame"
+    publish_map_arg = DeclareLaunchArgument(
+        "publish_map",
+        default_value="True",
+        description="Publish global map/odom frame transforms (True/False)"
     )
 
     # Robot hardware stack
@@ -134,8 +130,8 @@ def generate_launch_description():
         name="teleop",
         output="screen",
         parameters=[global_config_path, robot_config_path],
-        remappings=[(["/", namespace, "/key_input"], '/key_input'),
-                    (["/", namespace, "/key_key_output"], '/key_output')]
+        remappings=[(["/", namespace, "/key_input"], "/key_input"),
+                    (["/", namespace, "/key_output"], "/key_output")]
     )
     key_input = Node(
         package="climb_teleop",
@@ -152,14 +148,15 @@ def generate_launch_description():
         executable="static_transform_publisher",
         arguments=["--frame-id", "map", "--child-frame-id", "odom",
                    "--ros-args", "--log-level", "ERROR"],
-        condition=IfCondition(static_map_transform)
+        condition=IfCondition(publish_map)
     )
     odom_transform = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
-        arguments=["--frame-id", "odom", "--child-frame-id", [namespace, "/base_link"],
+        arguments=["--frame-id", "odom",
+                   "--child-frame-id", [namespace, "/base_link"],
                    "--ros-args", "--log-level", "ERROR"],
-        condition=IfCondition(static_odom_transform)
+        condition=IfCondition(publish_map)
     )
 
     return LaunchDescription([
@@ -170,8 +167,7 @@ def generate_launch_description():
         urdf_arg,
         rviz_arg,
         xacro_args_arg,
-        static_odom_transform_arg,
-        static_map_transform_arg,
+        publish_map_arg,
         robot_state_publisher,
         robot_driver,
         rviz2,

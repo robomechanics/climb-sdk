@@ -69,6 +69,7 @@ ActuatorState DummyInterface::readActuatorState()
       state.error.push_back(0);
     }
   }
+  state.header.frame_id = "dummy";
   return state;
 }
 
@@ -94,6 +95,7 @@ JointState DummyInterface::readJointState()
       state.effort.push_back(eff[joint]);
     }
   }
+  state.header.frame_id = "dummy";
   return state;
 }
 

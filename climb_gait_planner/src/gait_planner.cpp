@@ -110,12 +110,12 @@ void GaitPlanner::update(
       case State::STANCE:     // Wait for disengage command
         displacement =
           basis.transpose() * EigenUtils::getTwist(origin, ee_pose);
-        if (displacement.norm() > retry_distance_) {
+        if (!auto_advance_ && displacement.norm() > retry_distance_) {
           // footstep.state = State::SLIP;
         }
         break;
       case State::DISENGAGE:  // Disengage foot until contact is lost
-        if (force.norm() < disengage_tolerance_) {
+        if (auto_advance_ || force.norm() < disengage_tolerance_) {
           footstep.state = State::LIFT;
         }
         break;
@@ -123,7 +123,7 @@ void GaitPlanner::update(
         displacement = EigenUtils::getTwist(origin, ee_pose);
         if (displacement(2) > step_height_) {
           footstep.state = State::SWING;
-        } else if (force.norm() > snag_threshold_) {
+        } else if (!auto_advance_ && force.norm() > snag_threshold_) {
           footstep.state = State::SNAG;
           footstep.origin = transform_ * ee_pose;
         }
@@ -134,20 +134,25 @@ void GaitPlanner::update(
         displacement = basis.transpose() * displacement;
         if (displacement.norm() < foothold_tolerance_) {
           footstep.state = State::PLACE;
-        } else if (force.norm() > snag_threshold_) {
+        } else if (!auto_advance_ && force.norm() > snag_threshold_) {
           footstep.state = State::SNAG;
           footstep.origin = transform_ * ee_pose;
         }
         break;
       case State::PLACE:      // Lower foot until contact is detected
-        if (force[0] > contact_threshold_) {
+        displacement = EigenUtils::getTwist(ee_pose, foothold);
+        if ((!auto_advance_ && force[0] > contact_threshold_) ||
+          (auto_advance_ && displacement(2) >= 0))
+        {
           footstep.state = State::ENGAGE;
           footstep.foothold = transform_ * ee_pose;
         }
         break;
       case State::ENGAGE:     // Engage foot until force is reached
         displacement = basis.transpose() * EigenUtils::getTwist(ee_pose, foothold);
-        if ((force - engage_force_).norm() < engage_tolerance_) {
+        if (auto_advance_ ||
+          (force - engage_force_).norm() < engage_tolerance_)
+        {
           footstep.state = State::STANCE;
           footstep.origin = transform_ * ee_pose;
           footstep.foothold = footstep.origin;
@@ -180,8 +185,10 @@ EndEffectorCommand GaitPlanner::getCommand()
 {
   EndEffectorCommand cmd;
   Eigen::Vector<double, 6> vel;
+  Eigen::MatrixXd basis;
   double theta;
   for (const auto & [contact, footstep] : footsteps_) {
+    basis = robot_->getWrenchBasis(contact);
     switch (footstep.paused ? State::STOP : footstep.state) {
       case State::STANCE:
         cmd.frame.push_back(contact);
@@ -214,12 +221,12 @@ EndEffectorCommand GaitPlanner::getCommand()
       case State::SWING:
         cmd.frame.push_back(contact);
         cmd.mode.push_back(EndEffectorCommand::MODE_FREE);
-        vel = EigenUtils::getTwist(
+        vel = basis * basis.transpose() * EigenUtils::getTwist(
           Eigen::Isometry3d::Identity(),
           robot_->getTransform(contact).inverse() *
           EigenUtils::getTransform({0, 0, step_height_, 0, 0, 0}) *
-          transform_.inverse() * footstep.foothold,
-          swing_velocity_);
+          transform_.inverse() * footstep.foothold);
+        vel = vel.normalized() * std::min(vel.norm(), swing_velocity_);
         cmd.twist.push_back(RosUtils::eigenToTwist(vel));
         cmd.wrench.push_back(Wrench());
         break;
@@ -272,6 +279,9 @@ GaitPlanner::State GaitPlanner::getState(const std::string & contact) const
 void GaitPlanner::declareParameters()
 {
   declareParameter(
+    "auto_advance", false,
+    "Automatically advance the step upon reaching the expected pose");
+  declareParameter(
     "step_height", 0.05,
     "Height of the swing end effector above the surface");
   declareParameter(
@@ -315,7 +325,9 @@ void GaitPlanner::declareParameters()
 void GaitPlanner::setParameter(
   const Parameter & param, SetParametersResult & result)
 {
-  if (param.get_name() == "step_height") {
+  if (param.get_name() == "auto_advance") {
+    auto_advance_ = param.as_bool();
+  } else if (param.get_name() == "step_height") {
     step_height_ = param.as_double();
   } else if (param.get_name() == "step_length") {
     step_length_ = param.as_double();

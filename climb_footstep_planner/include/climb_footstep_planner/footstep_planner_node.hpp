@@ -51,6 +51,7 @@ private:
   std::vector<rclcpp::Publisher<Path>::SharedPtr> path_pubs_;
   rclcpp::Service<Trigger>::SharedPtr plan_service_;
   rclcpp::Service<SetString>::SharedPtr simulate_service_;
+  int seed_;
 };
 
 #endif  // FOOTSTEP_PLANNER_NODE_HPP

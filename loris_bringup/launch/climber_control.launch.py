@@ -8,6 +8,8 @@ Optional Launch Arguments:
     robot_config: Robot parameters file in {robot}_description/config/
     urdf: Robot description file in {robot}_description/urdf/
     rviz: Rviz configuration file in {robot}_description/rviz/
+    xacro_args: Xacro arguments of the form 'param:=value')
+    odometry: Estimate odometry with dead reckoning (True/False)
 """
 
 from launch import LaunchDescription
@@ -42,8 +44,8 @@ def generate_launch_description():
     # Launch arguments
     odometry_arg = DeclareLaunchArgument(
         "odometry",
-        default_value="true",
-        description="Estimate odometry with dead reckoning"
+        default_value="True",
+        description="Estimate odometry with dead reckoning (True/False)"
     )
 
     # Override default xacro arguments in base launch file
@@ -57,8 +59,7 @@ def generate_launch_description():
     base = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(base_launch_path),
         launch_arguments={"xacro_args": xacro_args,
-                          "static_odom_transform": "False",
-                          "static_map_transform": odometry}.items()
+                          "publish_map": "False"}.items()
     )
 
     # Low-level controller

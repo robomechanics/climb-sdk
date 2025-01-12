@@ -43,7 +43,7 @@ public:
    * @brief Estimate contact force from the given effort and IMU data
    * @param[in] effort Latest joint effort measurement
    * @param[in] gravity Latest gravity vector in body
-   * @param[in] covariance Gravity covariance matrix
+   * @param[in] gravity_covariance Gravity covariance matrix
    * @return Vector of estimated forces (robot on world)
    */
   Eigen::VectorXd update(
@@ -53,7 +53,7 @@ public:
   /**
    * @brief Estimate contact force from the latest robot data and given IMU data
    * @param[in] gravity Latest gravity vector in body
-   * @param[in] covariance Gravity covariance matrix
+   * @param[in] gravity_covariance Gravity covariance matrix
    * @return Vector of estimated forces (robot on world)
    */
   Eigen::VectorXd update(

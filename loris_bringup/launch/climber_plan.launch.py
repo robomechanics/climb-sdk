@@ -8,6 +8,8 @@ Optional Launch Arguments:
     robot_config: Robot parameters file in {robot}_description/config/
     urdf: Robot description file in {robot}_description/urdf/
     rviz: Rviz configuration file in {robot}_description/rviz/
+    xacro_args: Xacro arguments of the form 'param:=value')
+    camera: Launch the RealSense navigation stack (True/False)
 """
 
 from launch import LaunchDescription
@@ -45,8 +47,8 @@ def generate_launch_description():
     # Launch arguments
     camera_arg = DeclareLaunchArgument(
         "camera",
-        default_value="true",
-        description="Launch the Realsense camera"
+        default_value="True",
+        description="Launch the RealSense navigation stack (True/False)"
     )
 
     # Low-level controller launch file
@@ -57,11 +59,11 @@ def generate_launch_description():
 
     # Footstep planner
     footstep_planner = Node(
-        package='climb_footstep_planner',
-        executable='footstep_planner_node',
-        name='footstep_planner',
+        package="climb_footstep_planner",
+        executable="footstep_planner_node",
+        name="footstep_planner",
         namespace=namespace,
-        output='screen',
+        output="screen",
         parameters=[global_config_path, robot_config_path],
         remappings=[(["/", namespace, "/map_cloud"], "/rtabmap/cloud_map")]
     )
@@ -71,13 +73,14 @@ def generate_launch_description():
         XMLLaunchDescriptionSource(camera_launch_path),
         condition=IfCondition(camera),
         launch_arguments={
-            'rviz': 'False'
+            "rviz": "False"
         }.items()
     )
     camera_transform = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
-        arguments=["--frame-id", [namespace, "/camera_link"], "--child-frame-id", "camera_link",
+        arguments=["--frame-id", [namespace, "/camera_link"],
+                   "--child-frame-id", "camera_link",
                    "--ros-args", "--log-level", "ERROR"],
         condition=IfCondition(camera)
     )
@@ -87,5 +90,5 @@ def generate_launch_description():
         controller_launch,
         footstep_planner,
         camera_transform,
-        camera_launch
+        camera_launch  # Place this last to avoid namespace parameter collision
     ])

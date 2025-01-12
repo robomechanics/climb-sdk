@@ -17,6 +17,7 @@ FootstepPlannerNode::FootstepPlannerNode()
       this->declare_parameter(p.name, p.default_value, p.descriptor);
     }
   }
+  declare_parameter("seed", 0);
   point_cloud_sub_ = create_subscription<PointCloud2>(
     "map_cloud", 1,
     std::bind(&FootstepPlannerNode::pointCloudCallback, this, _1));
@@ -135,37 +136,80 @@ void FootstepPlannerNode::simulateCallback(
 {
   double res = 0.01;
   PointCloud::Ptr point_cloud = std::make_unique<PointCloud>();
-  Eigen::Isometry3d viewpoint = RosUtils::transformToEigen(
-    lookupTransform("/map", "camera_link").transform);
-  if (request->data == "corner") {
+  Eigen::Isometry3d transform = Eigen::Isometry3d::Identity();
+  Eigen::Isometry3d viewpoint = Eigen::Isometry3d::Identity();
+  if (seed_) {
+    std::srand(seed_);
+  } else {
+    std::srand(std::time(nullptr));
+    int seed = std::rand() % 1000 + 1;
+    std::srand(seed);
+    RCLCPP_INFO(this->get_logger(), "Terrain generation seed: %d", seed);
+  }
+  if (request->data == "floor") {
+    *point_cloud += terrain::planeXY({0, 0, 0}, 2, 2, res);
+    viewpoint.translate(Eigen::Vector3d{0, 0, 1000});
+  } else if (request->data == "corner") {
     *point_cloud += terrain::planeXY({0, 0, 0}, 1, 1, res);
     *point_cloud += terrain::planeYZ({0.5, 0, 0.5}, 1, 1, res);
-  } else if (request->data == "plane") {
-    *point_cloud += terrain::planeXY({0, 0, 0}, 2, 2, res);
+    viewpoint.translate(Eigen::Vector3d{-1000, 0, 1000});
+  } else if (request->data == "wall") {
+    *point_cloud += terrain::planeYZ({0, 0, 0}, 2, 2, res);
+    transform.rotate(Eigen::AngleAxisd(-M_PI / 2, Eigen::Vector3d::UnitY()));
+    viewpoint.translate(Eigen::Vector3d{-1000, 0, 0});
+  } else if (request->data == "corner2") {
+    *point_cloud += terrain::planeYZ({0, 0, 0}, 1, 1, res);
+    *point_cloud += terrain::planeXY({0.5, 0, 0.5}, 1, 1, res);
+    transform.rotate(Eigen::AngleAxisd(-M_PI / 2, Eigen::Vector3d::UnitY()));
+    viewpoint.translate(Eigen::Vector3d{-1000, 0, 1000});
   } else if (request->data == "gap") {
     *point_cloud += terrain::planeXY({0, 0, 0}, 1, 1, res);
     *point_cloud += terrain::planeXY({1.1, 0, 0}, 1, 1, res);
+    viewpoint.translate(Eigen::Vector3d{0, 0, 1000});
   } else if (request->data == "uneven") {
     *point_cloud += terrain::unevenXY({0, 0, 0}, 2, 2, 0.3, res);
     viewpoint.translate(Eigen::Vector3d{0, 0, 1000});
-  } else if (request->data == "steep") {
+  } else if (request->data == "rocky") {
     *point_cloud += terrain::unevenXY({0, 0, 0}, 2, 2, 0.6, res);
     viewpoint.translate(Eigen::Vector3d{0, 0, 1000});
+  } else if (request->data == "cliff") {
+    *point_cloud += terrain::unevenYZ({0, 0, 0}, 2, 2, 0.3, res);
+    viewpoint.translate(Eigen::Vector3d{-1000, 0, 0});
+    transform.rotate(Eigen::AngleAxisd(-M_PI / 2, Eigen::Vector3d::UnitY()));
   } else {
     response->success = false;
     response->message = "Environment not found";
     return;
   }
-  Eigen::Isometry3d transform = Eigen::Isometry3d::Identity();
-  transform.translate(Eigen::Vector3d{0, 0, -0.1});
-  pcl::transformPointCloud(*point_cloud, *point_cloud, transform.matrix());
+
+  double offset = 0;
+  int count = 0;
+  for (const auto & contact : robot_->getContactFrames()) {
+    if (robot_->getContactType(contact) != ContactType::TAIL) {
+      offset += robot_->getTransform(contact).translation()(2);
+      ++count;
+    }
+  }
+  offset /= count;
+  transform = transform * Eigen::Translation3d(0, 0, -offset);
 
   PointCloud2 cloud_msg;
   pcl::toROSMsg(*point_cloud, cloud_msg);
-  cloud_msg.header.frame_id = "map";
+  cloud_msg.header.frame_id = getPrefixedFrameId("/map");
   cloud_msg.header.stamp = now();
   cost_pub_->publish(cloud_msg);
   footstep_planner_->update(std::move(point_cloud), viewpoint);
+
+  Eigen::Isometry3d odomToBody =
+    RosUtils::transformToEigen(
+    lookupTransform("/odom", robot_->getBodyFrame()).transform);
+  Eigen::Isometry3d mapToOdom = transform * odomToBody.inverse();
+  TransformStamped transform_msg;
+  transform_msg.header.frame_id = "/map";
+  transform_msg.child_frame_id = "/odom";
+  transform_msg.transform = RosUtils::eigenToTransform(mapToOdom);
+  transform_msg.header.stamp = now();
+  sendTransform(transform_msg);
   response->success = true;
 }
 
@@ -174,6 +218,9 @@ rcl_interfaces::msg::SetParametersResult FootstepPlannerNode::parameterCallback(
 {
   auto result = KinematicsNode::parameterCallback(parameters);
   for (const auto & param : parameters) {
+    if (param.get_name() == "seed") {
+      seed_ = param.as_int();
+    }
     footstep_planner_->setParameter(param, result);
   }
   return result;

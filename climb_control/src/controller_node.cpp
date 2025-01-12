@@ -13,15 +13,14 @@ ControllerNode::ControllerNode()
   force_estimator_ = std::make_unique<ForceEstimator>(robot_);
   force_controller_ = std::make_unique<ForceController>(robot_);
 
-  // Initialize gravity estimate
-  gravity_ = {0, 0, -9.81};
-  gravity_covariance_ = Eigen::Matrix3d::Identity();
-
-  // Declare parameters
+  // Parameter to print debugging information for the controller
   declare_parameter("debug", false);
-  declare_parameter("sim_wrench", std::vector<double>());
+  // Parameter to set the nominal configuration for the controller
   declare_parameter("default_configuration", "");
+  // Parameter to publish odometry estimates using dead reckoning
   declare_parameter("compute_odometry", false);
+  // Parameter to provide initial estimate of gravity vector in the body frame
+  declare_parameter("gravity_estimate", std::vector<double>());
   for (const auto & p : contact_estimator_->getParameters()) {
     declare_parameter(p.name, p.default_value, p.descriptor);
   }
@@ -30,6 +29,20 @@ ControllerNode::ControllerNode()
   }
   for (const auto & p : force_controller_->getParameters()) {
     declare_parameter(p.name, p.default_value, p.descriptor);
+  }
+
+  // Initialize odometry
+  gravity_covariance_ = Eigen::Matrix3d::Identity();
+  if (compute_odometry_) {
+    TransformStamped map_to_odom;
+    map_to_odom.header.frame_id = "/map";
+    map_to_odom.child_frame_id = "/odom";
+    auto q = Eigen::Quaterniond::FromTwoVectors(
+      -gravity_, Eigen::Vector3d::UnitZ());
+    gravity_ = q * gravity_;
+    map_to_odom.transform.rotation = RosUtils::eigenToQuaternion(q);
+    map_to_odom.header.stamp = now();
+    sendTransform(map_to_odom);
   }
 
   // Define publishers and subscribers
@@ -49,18 +62,21 @@ ControllerNode::ControllerNode()
 void ControllerNode::update()
 {
   // Update contact frames
-  std::vector<geometry_msgs::msg::TransformStamped> frames;
-  frames = contact_estimator_->update(gravity_);
+  TransformStamped body_to_map =
+    lookupTransform(robot_->getBodyFrame(), "/map");
+  Eigen::Matrix3d rotation = RosUtils::quaternionToEigen(
+    body_to_map.transform.rotation).toRotationMatrix();
+  auto frames = contact_estimator_->update(rotation * gravity_);
   robot_->updateContactFrames(frames);
 
   // Estimate contact forces
-  Eigen::VectorXd forces = force_estimator_->update(gravity_, gravity_covariance_);
-
-  // Adjust forces to match simulated wrench if specified
-  if (sim_wrench_.size()) {
-    Eigen::MatrixXd Gs = -robot_->getGraspMap();
-    forces += Gs.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(
-      sim_wrench_ - Gs * forces);
+  Eigen::VectorXd forces;
+  if (use_gravity_) {
+    forces = force_estimator_->update(
+      rotation * gravity_,
+      rotation * gravity_covariance_ * rotation.transpose());
+  } else {
+    forces = force_estimator_->update();
   }
 
   // Log current forces
@@ -100,7 +116,7 @@ void ControllerNode::update()
         joint_position.data(), joint_position.data() + joint_position.size());
 
       // Set expected joint efforts for dummy interface or maximum effort limit
-      if (sim_wrench_.size()) {
+      if (offline_) {
         Eigen::VectorXd joint_effort = force_controller_->getJointEffort();
         cmd_msg.effort = std::vector<double>(
           joint_effort.data(), joint_effort.data() + joint_effort.size());
@@ -149,16 +165,6 @@ void ControllerNode::update()
     sendTransform(frame);
   }
 
-  // Update odometry
-  if (compute_odometry_) {
-    TransformStamped odom_msg = lookupTransform("/odom", robot_->getBodyFrame());
-    Eigen::Isometry3d transform = RosUtils::transformToEigen(odom_msg.transform);
-    EigenUtils::applyChildTwistInPlace(transform, body_twist);
-    odom_msg.transform = RosUtils::eigenToTransform(transform);
-    odom_msg.header.stamp = now();
-    sendTransform(odom_msg);
-  }
-
   // Publish contact forces
   auto contact_force =
     force_estimator_->getContactForceMessage(forces, now());
@@ -184,6 +190,27 @@ void ControllerNode::update()
   }
   prefixFrameId(gravity_wrench.header.frame_id);
   contact_force_pubs_.back()->publish(gravity_wrench);
+
+  if (compute_odometry_) {
+    // Update odometry via dead reckoning
+    TransformStamped odom_to_body =
+      lookupTransform("/odom", robot_->getBodyFrame());
+    Eigen::Isometry3d transform =
+      RosUtils::transformToEigen(odom_to_body.transform);
+    EigenUtils::applyChildTwistInPlace(transform, body_twist);
+    odom_to_body.transform = RosUtils::eigenToTransform(transform);
+    odom_to_body.header.stamp = now();
+    sendTransform(odom_to_body);
+    // Keep map transform alive
+    TransformStamped map_to_odom = lookupTransform("/map", "/odom");
+    map_to_odom.header.stamp = now();
+    sendTransform(map_to_odom);
+    // Update gravity estimate if IMU is disabled
+    if (!use_gravity_) {
+      gravity_ = rotation.inverse() *
+        RosUtils::vector3ToEigen(gravity_wrench.wrench.force);
+    }
+  }
 }
 
 void ControllerNode::jointCallback(const JointState::SharedPtr msg)
@@ -192,6 +219,8 @@ void ControllerNode::jointCallback(const JointState::SharedPtr msg)
     return;
   }
   robot_->updateJointState(*msg);
+  offline_ = msg->header.frame_id == "dummy";
+  use_gravity_ = use_gravity_ || offline_;
   update();
 }
 
@@ -199,8 +228,7 @@ void ControllerNode::imuCallback(const Imu::SharedPtr msg)
 {
   TransformStamped transform;
   try {
-    transform = lookupTransform(
-      robot_->getBodyFrame(), "/" + msg->header.frame_id);
+    transform = lookupTransform("/map", "/" + msg->header.frame_id);
   } catch (const tf2::TransformException &) {
     return;
   }
@@ -210,6 +238,7 @@ void ControllerNode::imuCallback(const Imu::SharedPtr msg)
   Eigen::Matrix<double, 3, 3, Eigen::RowMajor> covariance(
     msg->linear_acceleration_covariance.data());
   gravity_covariance_ = rotation * covariance * rotation.transpose();
+  use_gravity_ = true;
 }
 
 void ControllerNode::endEffectorCmdCallback(
@@ -238,17 +267,20 @@ rcl_interfaces::msg::SetParametersResult ControllerNode::parameterCallback(
       debug_ = param.as_bool();
     } else if (param.get_name() == "compute_odometry") {
       compute_odometry_ = param.as_bool();
+    } else if (param.get_name() == "gravity_estimate") {
+      if (param.as_double_array().size() == 3) {
+        gravity_ = Eigen::Vector3d(param.as_double_array().data());
+        use_gravity_ = true;
+      } else if (param.as_double_array().empty()) {
+        gravity_ = Eigen::Vector3d::UnitZ() * -9.81;
+        use_gravity_ = false;
+      } else {
+        result.successful = false;
+        result.reason = "Parameter must be length 3, or empty to disable";
+      }
     } else if (param.get_name() == "effort_limit") {
       // Declared by force_controller
       max_effort_ = param.as_double();
-    } else if (param.get_name() == "sim_wrench") {
-      std::vector<double> wrench = param.as_double_array();
-      if (wrench.size() == 0 || wrench.size() == 6) {
-        sim_wrench_ = Eigen::VectorXd::Map(wrench.data(), wrench.size()).eval();
-      } else {
-        result.successful = false;
-        result.reason = "Invalid wrench size (expected 0 or 6)";
-      }
     } else if (param.get_name() == "default_configuration") {
       const auto & parameters =
         get_node_parameters_interface()->get_parameter_overrides();

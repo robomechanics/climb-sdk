@@ -204,6 +204,7 @@ private:
   // Queue of state changes
   std::queue<StateChange> change_queue_;
   // Parameters
+  bool auto_advance_;
   double step_height_;
   double step_length_;
   double swing_velocity_;

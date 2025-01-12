@@ -101,20 +101,22 @@ private:
   // Parameter callback handle
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
     param_handle_;
-  // Enabled flag
-  bool enabled_;
-  // Debug flag
-  bool debug_;
-  // Override odometry flag
-  bool compute_odometry_;
-  // Maximum joint effort
-  double max_effort_;
-  // Most recent gravity direction vector estimate in body frame
+  // Most recent gravity direction vector estimate in map frame
   Eigen::Vector3d gravity_;
-  // Most recent gravity covariance matrix estimate in body frame
+  // Most recent gravity covariance matrix estimate in map frame
   Eigen::Matrix3d gravity_covariance_;
-  // Simulated wrench for offline testing
-  Eigen::VectorXd sim_wrench_;
+  // Flag to enable the controller
+  bool enabled_;
+  // Flag to use a dummy robot driver (publish joint efforts directly)
+  bool offline_;
+  // Flag to use the current gravity estimate for contact force estimation
+  bool use_gravity_;
+  // Parameter to print debugging messages
+  bool debug_;
+  // Parameter to publish odometry estimates using dead reckoning
+  bool compute_odometry_;
+  // Parameter for maximum joint effort (declared by force controller)
+  double max_effort_;
 };
 
 #endif  // CONTROLLER_NODE_HPP
