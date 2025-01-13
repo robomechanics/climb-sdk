@@ -104,7 +104,7 @@ void ControllerNode::update()
     goal_pose.transform = RosUtils::eigenToTransform(nominal_pose);
     sendTransform(goal_pose);
 
-    bool success = force_controller_->updateDecoupled(forces, nominal_pose);
+    bool success = force_controller_->update(forces, nominal_pose);
 
     // Publish joint commands
     if (success && force_controller_->getJointDisplacement().norm() > 1e-6) {
@@ -134,8 +134,7 @@ void ControllerNode::update()
       if (debug_) {
         RCLCPP_INFO_STREAM(
           get_logger(),
-          "Margin: " << force_controller_->getMargin() <<
-            ", Error: " << force_controller_->getError());
+          "Margin: " << force_controller_->getMargin());
         RCLCPP_INFO_STREAM(
           get_logger(),
           "Goal force: " << force_controller_->getContactForce().transpose());

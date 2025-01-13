@@ -13,7 +13,6 @@
       joint_effort_filter_window: 3
       verbose: False
       debug: False
-      stiffness: 1000.0
       microspine_max_force: 15.0
       clearance: 0.05
       effort_limit: 1.6

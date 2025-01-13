@@ -1,6 +1,6 @@
 #include "climb_control/force_controller.hpp"
 
-#include <climb_optimization/qp_interfaces/piqp_interface.hpp>
+#include <climb_optimization/qp_interfaces/osqp_interface.hpp>
 #include <climb_optimization/qp_problem.hpp>
 #include <climb_util/eigen_utils.hpp>
 #include <climb_util/ros_utils.hpp>
@@ -8,7 +8,7 @@
 ForceController::ForceController(std::shared_ptr<KinematicsInterface> robot)
 : robot_(robot)
 {
-  solver_ = std::make_unique<PiqpInterface>();
+  solver_ = std::make_unique<OsqpInterface>();
 }
 
 void ForceController::reset()
@@ -24,7 +24,7 @@ void ForceController::reset()
   position_cmd_ = robot_->getJointPosition();
 }
 
-bool ForceController::updateDecoupled(
+bool ForceController::update(
   const Eigen::VectorXd & force, const Eigen::Isometry3d & pose)
 {
   using Eigen::MatrixXd, Eigen::VectorXd;
@@ -109,13 +109,10 @@ bool ForceController::updateDecoupled(
     lower = lower.cwiseMin(ee);
     upper = upper.cwiseMax(ee);
   }
-  Eigen::Vector3d margin =
-    (lower + body_max_limits_) - (upper + body_min_limits_);
-  margin = margin.cwiseMin(0);
+  Eigen::Vector3d lb = body_min_limits_ + upper;
+  Eigen::Vector3d ub = body_max_limits_ + lower;
   problem.addBounds(
-    "com",
-    upper + body_min_limits_ + margin / 2,
-    lower + body_max_limits_ - margin / 2);
+    "com", lb.cwiseMin((lb + ub) / 2), ub.cwiseMax((lb + ub) / 2));
 
   // Solve the optimization problem
   bool success;
@@ -188,210 +185,6 @@ bool ForceController::updateDecoupled(
     dx_actual;
   effort_cmd_ = Jh.transpose() * force_cmd_ + N;
   return true;
-}
-
-bool ForceController::update(const Eigen::VectorXd & force)
-{
-  // VARIABLES
-  //   Joint displacement     (n joints)
-  //   Body displacement      (p dof)
-  //   Tracking error         (m constraints)
-  //   Stability margin       (1)
-
-  // CONSTRAINTS
-  //   Joint angle            (n)
-  //   Joint effort           (n)
-  //   Adhesion/tracking      (0-2m)
-  //   Equilibrium            (p)
-  //   Obstacle               (o)
-
-  using Eigen::MatrixXd, Eigen::VectorXd;
-  if (end_effector_goals_.empty()) {
-    reset();
-  }
-
-  // Contact kinematics
-  int n = robot_->getNumJoints();           // Number of joints
-  int m = robot_->getNumConstraints();      // Number of contact constraints
-  int p = 6;                                // Number of body degrees of freedom
-  MatrixXd Jh = robot_->getHandJacobian();  // Hand Jacobian (m x n)
-  MatrixXd Gs = -robot_->getGraspMap();     // Self-manip grasp map (p x m)
-  MatrixXd A(m, n + p);                     // Constraint matrix (m x (n + p))
-  A << Jh, -Gs.transpose();
-  MatrixXd K =                              // Stiffness matrix (m x m)
-    MatrixXd::Identity(m, m) * stiffness_;
-  int ind = 0;
-  for (const auto & frame : robot_->getContactFrames()) {
-    int c = robot_->getNumConstraints(frame);
-    if (end_effector_goals_.at(frame).mode == EndEffectorCommand::MODE_FREE) {
-      K.diagonal().segment(ind, c).setZero();
-    }
-    ind += c;
-  }
-
-  // Joint state vectors
-  VectorXd q = robot_->getJointPosition();
-  VectorXd qmin = robot_->getJointPositionMin();
-  VectorXd qmax = robot_->getJointPositionMax();
-  q = q.cwiseMin(qmax).cwiseMax(qmin);
-  VectorXd u = robot_->getJointEffort();
-  VectorXd umin = robot_->getJointEffortMin();
-  VectorXd umax = robot_->getJointEffortMax();
-  if (max_effort_ > 0) {
-    umax = umax.cwiseMin(max_effort_);
-    umin = umin.cwiseMax(-max_effort_);
-  }
-  if (!configuration_.size()) {
-    configuration_ = Eigen::VectorXd::Zero(n);
-  }
-
-  // Problem structure
-  QpProblem problem({"joint", "body", "error", "margin"}, {n, p, m, 1});
-  problem.addAlias("displacement", 0, n + p);
-
-  // Quadratic penalty on distance from home position
-  problem.addQuadraticCost("joint", joint_normalization_, configuration_ - q);
-  problem.addQuadraticCost("body", joint_normalization_, {});
-  problem.addQuadraticCost("error", joint_normalization_, {});
-  problem.addQuadraticCost("margin", joint_normalization_, {});
-
-  // Linear penalty on tracking error
-  problem.addLinearCost("error", tracking_);
-
-  // Maximize stability margin
-  problem.addLinearCost("margin", -stiffness_);
-
-  // Respect joint limits
-  problem.addBounds("joint", qmin - q, qmax - q);
-
-  // Respect joint effort limits
-  problem.addInequalityConstraint(
-    {"displacement"}, {Jh.transpose() * K * A},
-    umin - u, umax - u);
-
-  // Mode-dependent constraints for each contact
-  int row = 0;
-  for (auto frame : robot_->getContactFrames()) {
-    uint8_t mode = end_effector_goals_.at(frame).mode;
-    auto m_i = robot_->getNumConstraints(frame);
-    MatrixXd A_i = A.block(row, 0, m_i, n + p);
-    MatrixXd K_i = K.block(row, row, m_i, m_i);
-    MatrixXd I_i = MatrixXd::Identity(m, m).block(row, 0, m_i, m);
-    VectorXd force_i = force.segment(row, m_i);
-    if (mode == EndEffectorCommand::MODE_FREE) {
-      problem.addInequalityConstraint(
-        // -displacement - error <= -setpoint
-        {"displacement", "error"}, {-stiffness_ * A_i, -stiffness_ * I_i},
-        -stiffness_ * end_effector_goals_[frame].setpoint);
-      problem.addInequalityConstraint(
-        // displacement - error <= setpoint
-        {"displacement", "error"}, {stiffness_ * A_i, -stiffness_ * I_i},
-        stiffness_ * end_effector_goals_[frame].setpoint);
-    } else if (mode == EndEffectorCommand::MODE_TRANSITION) {
-      problem.addInequalityConstraint(
-        // -displacement - error <= -setpoint
-        {"displacement", "error"}, {-K_i * A_i, -K_i * I_i},
-        -(end_effector_goals_[frame].setpoint - force_i));
-      problem.addInequalityConstraint(
-        // displacement - error <= setpoint
-        {"displacement", "error"}, {K_i * A_i, -K_i * I_i},
-        end_effector_goals_[frame].setpoint - force_i);
-    } else if (mode == EndEffectorCommand::MODE_CONTACT) {
-      auto constraint = getAdhesionConstraint(frame);
-      problem.addInequalityConstraint(
-        // A_c * displacement <= b_c
-        {"displacement"},
-        {constraint.A * K_i * A_i},
-        (constraint.b - constraint.A * force_i));
-      problem.addEqualityConstraint({"error"}, {I_i}, 0.0);
-    } else if (mode == EndEffectorCommand::MODE_STANCE) {
-      auto constraint = getAdhesionConstraint(frame);
-      problem.addInequalityConstraint(
-        // A_c * displacement + margin <= b_c
-        {"displacement", "margin"},
-        {constraint.A * K_i * A_i,
-          VectorXd::Constant(constraint.b.size(), stiffness_)},
-        (constraint.b - constraint.A * force_i));
-      problem.addEqualityConstraint({"error"}, {I_i}, 0.0);
-    }
-    row += m_i;
-  }
-
-  // Static equilibrium constraint
-  // Mapping from center of mass displacement to body torque
-  Eigen::Matrix3d gskew = robot_->getSkew(Gs.topRows(3) * force);
-  // Total mass of the robot
-  double total_mass = robot_->getMass();
-  // Mapping from joint velocity to center of mass velocity in body frame
-  MatrixXd J_mass = MatrixXd::Zero(3, n);
-  // Mapping from body twist to center of mass velocity in body frame
-  MatrixXd G_mass = MatrixXd::Zero(3, p);
-  for (auto [link, mass] : robot_->getLinkMasses()) {
-    auto frame = link + "_inertial";
-    if (mass > mass_threshold_) {
-      J_mass += mass / total_mass * robot_->getJacobian(frame, true);
-      G_mass.leftCols(3) += mass / total_mass * Eigen::Matrix3d::Identity();
-      G_mass.rightCols(3) +=
-        mass / total_mass * robot_->getSkew(robot_->getTransform(frame).translation());
-    }
-  }
-  problem.addEqualityConstraint(
-    {"displacement"}, {Gs.topRows(3) * K * A}, 0.0);
-  problem.addEqualityConstraint(
-    {"displacement", "joint", "body"},
-    {Gs.bottomRows(3) * K * A, gskew * J_mass, gskew * G_mass}, 0.0);
-
-  // Obstacle collision constraints
-  for (const auto & obstacle : obstacles_) {
-    // Mapping from joint velocity to obstacle velocity in body frame
-    MatrixXd J_ob = robot_->getJacobian(obstacle.frame, true);
-    // Mapping from body twist to obstacle velocity in body frame
-    MatrixXd G_ob(3, p);
-    G_ob <<
-      Eigen::Matrix3d::Identity(),
-      robot_->getSkew(robot_->getTransform(obstacle.frame).translation());
-    Eigen::RowVector3d normal(obstacle.normal);
-    // normal * x <= dist
-    problem.addInequalityConstraint(
-      {"joint", "body"},
-      {stiffness_ * normal * J_ob, stiffness_ * normal * G_ob},
-      stiffness_ * VectorXd::Constant(1, std::max(0.0, obstacle.distance)));
-  }
-
-  problem.A *= constraint_scale_;
-  problem.b *= constraint_scale_;
-  problem.Aeq *= constraint_scale_;
-  problem.beq *= constraint_scale_;
-
-  // Solve QP
-  bool success;
-  if (solver_->getInitialized()) {
-    success = solver_->update(problem);
-  } else {
-    success = solver_->solve(problem);
-  }
-
-  // Store results
-  if (success) {
-    displacement_cmd_ = solver_->getSolution().head(n + p);
-    displacement_cmd_ /=
-      std::max(1.0, displacement_cmd_.cwiseAbs().maxCoeff() / joint_step_);
-    displacement_cmd_.head(n) =
-      displacement_cmd_.head(n).cwiseMin(qmax - q).cwiseMax(qmin - q);
-    margin_ = solver_->getSolution().tail(1)(0) * stiffness_;
-    error_ = solver_->getSolution().segment(n + p, m).maxCoeff();
-  } else {
-    displacement_cmd_ = VectorXd::Zero(n + p);
-    margin_ = -INFINITY;
-    error_ = INFINITY;
-  }
-  if (!position_cmd_.size()) {
-    position_cmd_ = q;
-  }
-  position_cmd_ += displacement_cmd_.head(n);
-  force_cmd_ = force + K * A * displacement_cmd_;
-  effort_cmd_ = u + Jh.transpose() * (force_cmd_ - force);
-  return success;
 }
 
 void ForceController::setEndEffectorCommand(const EndEffectorCommand & command)
@@ -483,9 +276,6 @@ ForceController::Constraint ForceController::getAdhesionConstraint(const std::st
 void ForceController::declareParameters()
 {
   declareParameter(
-    "stiffness", 1000.0,
-    "Expected compliance at the point of contact in N/m", 0.0);
-  declareParameter(
     "force_kp", 0.0001,
     "Contact force feedback gain in m/N", 0.0);
   declareParameter(
@@ -512,12 +302,6 @@ void ForceController::declareParameters()
     "clearance", 0.0,
     "Minimum height of body frame origin above ground plane in m");
   declareParameter(
-    "tracking", 1.0,
-    "Cost of end-effector error relative to stability margin in N/rad", 0.0);
-  declareParameter(
-    "mass_threshold", 0.0,
-    "Minimum link mass for center of mass optimization in kg", 0.0);
-  declareParameter(
     "microspine_pitch_angle", 0.35,
     "Maximum out-of-plane loading angle of microspine gripper in rad");
   declareParameter(
@@ -536,9 +320,6 @@ void ForceController::declareParameters()
     "effort_limit", 0.0,
     "Maximum joint effort in Nm (0 for no limit)", 0.0);
   declareParameter(
-    "constraint_scale", 1.0,
-    "Scale factor for constraints in optimization", 0.0);
-  declareParameter(
     "body_min_limits", std::vector<double>{0, 0, 0},
     "Minimum body displacement in body frame in m");
   declareParameter(
@@ -551,9 +332,7 @@ void ForceController::declareParameters()
 
 void ForceController::setParameter(const Parameter & param, SetParametersResult & result)
 {
-  if (param.get_name() == "stiffness") {
-    stiffness_ = param.as_double();
-  } else if (param.get_name() == "force_kp") {
+  if (param.get_name() == "force_kp") {
     force_kp_ = param.as_double();
   } else if (param.get_name() == "body_kp") {
     body_kp_ = param.as_double();
@@ -569,10 +348,6 @@ void ForceController::setParameter(const Parameter & param, SetParametersResult 
     body_normalization_ = param.as_double();
   } else if (param.get_name() == "clearance") {
     clearance_ = param.as_double();
-  } else if (param.get_name() == "tracking") {
-    tracking_ = param.as_double();
-  } else if (param.get_name() == "mass_threshold") {
-    mass_threshold_ = param.as_double();
   } else if (param.get_name() == "microspine_pitch_angle") {
     microspine_pitch_angle_ = param.as_double();
   } else if (param.get_name() == "microspine_yaw_angle") {
@@ -584,9 +359,7 @@ void ForceController::setParameter(const Parameter & param, SetParametersResult 
   } else if (param.get_name() == "microspine_max_force") {
     microspine_max_force_ = param.as_double();
   } else if (param.get_name() == "effort_limit") {
-    max_effort_ = param.as_double();
-  } else if (param.get_name() == "constraint_scale") {
-    constraint_scale_ = param.as_double();
+    max_effort_ = param.as_double() ? param.as_double() : INFINITY;
   } else if (param.get_name() == "body_min_limits") {
     std::vector<double> limits = param.as_double_array();
     if (limits.size() == 3) {

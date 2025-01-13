@@ -131,7 +131,9 @@ TEST_F(ControllerTest, ForceController)
 
   // Update controller output (ignore link masses)
   Eigen::Vector<double, 6> forces{-10, 0, -10, 10, 0, -10};
-  EXPECT_TRUE(controller.update(forces));
+  EXPECT_TRUE(
+    controller.update(forces, Eigen::Isometry3d::Identity())) <<
+    "Failed to update controller";
 
   // Check for static equilibrium (ignore link masses)
   Eigen::MatrixXd Gs = -robot_->getGraspMap();

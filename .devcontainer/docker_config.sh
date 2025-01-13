@@ -35,10 +35,11 @@ rosbuild() {
 rostest() {
     if [ $# -eq 0 ]; then
         colcon test
+        colcon test-result --verbose
     else
         colcon test --packages-select "$1"
+        colcon test-result --verbose --test-result-base build/"$1"
     fi
-    colcon test-result --verbose
 }
 
 # Shortcut to clean ROS2 packages

@@ -43,15 +43,7 @@ public:
    * @param[in] pose Nominal pose of the body frame in the current body frame
    * @return True if an optimal solution was found
    */
-  bool updateDecoupled(
-    const Eigen::VectorXd & force, const Eigen::Isometry3d & pose);
-
-  /**
-   * @brief Update the contact forces based on the given force command
-   * @param[in] force Current contact force estimates (robot on world)
-   * @return True if an optimal solution was found
-   */
-  bool update(const Eigen::VectorXd & force);
+  bool update(const Eigen::VectorXd & force, const Eigen::Isometry3d & pose);
 
   /**
    * @brief Set the desired behavior of each end-effector
@@ -139,12 +131,6 @@ public:
    */
   double getMargin() const {return margin_;}
 
-  /**
-   * @brief Get the maximum tracking error of the optimal solution
-   * @return Maximum tracking error of the optimal solution
-   */
-  double getError() const {return error_;}
-
   void declareParameters() override;
 
   void setParameter(
@@ -192,10 +178,6 @@ private:
   Eigen::VectorXd force_cmd_;
   // Stability margin of the optimal solution
   double margin_;
-  // Maximum tracking error of the optimal solution
-  double error_;
-  // Expected compliance at the point of contact in N/m
-  double stiffness_;
   // Contact force feedback gain in m/N
   double force_kp_;
   // Body position feedback gain in m/m
@@ -212,10 +194,6 @@ private:
   double body_normalization_;
   // Minimum height of body frame origin above ground plane
   double clearance_;
-  // Relative cost of end-effector error in 1/N
-  double tracking_;
-  // Minimum link mass for center of mass optimization in kg
-  double mass_threshold_;
   // Maximum out-of-plane loading angle of microspine gripper in rad
   double microspine_pitch_angle_;
   // Maximum in-plane loading angle of microspine gripper in rad
@@ -228,8 +206,6 @@ private:
   double microspine_max_force_;
   // Maximum joint effort in Nm
   double max_effort_;
-  // Scale factor for constraint matrices
-  double constraint_scale_;
   // Minimum body displacement in body frame in rad or m
   Eigen::Vector3d body_min_limits_;
   // Maximum body displacement in body frame in rad or m

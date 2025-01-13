@@ -1,12 +1,17 @@
 #include <gtest/gtest.h>
 
 #include <climb_util/test_utils.hpp>
-#include "climb_optimization/qp_interfaces/osqp_interface.hpp"
-#include "climb_optimization/qp_interfaces/piqp_interface.hpp"
 #include "climb_optimization/qp_problem.hpp"
+#ifdef BUILT_OSQP
+#include "climb_optimization/qp_interfaces/osqp_interface.hpp"
+#endif
+#ifdef BUILT_PIQP
+#include "climb_optimization/qp_interfaces/piqp_interface.hpp"
+#endif
 
 const double TOL = 1e-3;
 
+#ifdef BUILT_OSQP
 TEST(OptimizerTest, OsqpInterface)
 {
   // Setup problem:
@@ -40,7 +45,9 @@ TEST(OptimizerTest, OsqpInterface)
   cost = solver->getCost();
   EXPECT_NEAR(cost, cost_expected, TOL) << "Incorrect updated solution cost";
 }
+#endif
 
+#ifdef BUILT_PIQP
 TEST(OptimizerTest, PiqpInterface)
 {
   // Setup problem:
@@ -74,6 +81,7 @@ TEST(OptimizerTest, PiqpInterface)
   cost = solver->getCost();
   EXPECT_NEAR(cost, cost_expected, TOL) << "Incorrect updated solution cost";
 }
+#endif
 
 TEST(OptimizerTest, QpProblem)
 {
