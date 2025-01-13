@@ -1,17 +1,17 @@
-#include "climb_robot_driver/hardware_interfaces/dynamixel_interface.hpp"
+#include "climb_robot_driver/interfaces/dynamixel_interface.hpp"
 
 constexpr double PI = 3.14159;
-const std::pair<int, int> OPERATING_MODE_XM = {11, 1};
-const std::pair<int, int> TORQUE_ENABLE_XM = {64, 1};
-const std::pair<int, int> PRESENT_POSITION_XM = {132, 4};
-const std::pair<int, int> PRESENT_VELOCITY_XM = {128, 4};
-const std::pair<int, int> PRESENT_CURRENT_XM = {126, 2};
-const std::pair<int, int> GOAL_POSITION_XM = {116, 4};
-const std::pair<int, int> PROFILE_VELOCITY_XM = {112, 4};
-const std::pair<int, int> GOAL_CURRENT_XM = {102, 2};
-const std::pair<int, int> PRESENT_TEMPERATURE_XM = {146, 1};
-const std::pair<int, int> PRESENT_INPUT_VOLTAGE_XM = {144, 2};
-const std::pair<int, int> HARDWARE_ERROR_STATUS_XM = {70, 1};
+const std::pair<int, int> OPERATING_MODE_XM{11, 1};
+const std::pair<int, int> TORQUE_ENABLE_XM{64, 1};
+const std::pair<int, int> PRESENT_POSITION_XM{132, 4};
+const std::pair<int, int> PRESENT_VELOCITY_XM{128, 4};
+const std::pair<int, int> PRESENT_CURRENT_XM{126, 2};
+const std::pair<int, int> GOAL_POSITION_XM{116, 4};
+const std::pair<int, int> PROFILE_VELOCITY_XM{112, 4};
+const std::pair<int, int> GOAL_CURRENT_XM{102, 2};
+const std::pair<int, int> PRESENT_TEMPERATURE_XM{146, 1};
+const std::pair<int, int> PRESENT_INPUT_VOLTAGE_XM{144, 2};
+const std::pair<int, int> HARDWARE_ERROR_STATUS_XM{70, 1};
 
 DynamixelInterface::~DynamixelInterface()
 {
@@ -85,9 +85,8 @@ std::vector<double> DynamixelInterface::read(
   auto [index, length] = item;
   // Create or reset group read instance
   if (group_read.find(item) == group_read.end()) {
-    group_read[item] = std::shared_ptr<dynamixel::GroupSyncRead>(
-      new dynamixel::GroupSyncRead(
-        port_handler_.get(), handler.get(), index, length));
+    group_read[item] = std::make_shared<dynamixel::GroupSyncRead>(
+      port_handler_.get(), handler.get(), index, length);
   } else {
     group_read[item]->clearParam();
   }
@@ -132,9 +131,8 @@ bool DynamixelInterface::write(
   auto [index, length] = item;
   // Create or reset group write instance
   if (group_write.find(item) == group_write.end()) {
-    group_write[item] = std::shared_ptr<dynamixel::GroupSyncWrite>(
-      new dynamixel::GroupSyncWrite(
-        port_handler_.get(), handler.get(), index, length));
+    group_write[item] = std::make_shared<dynamixel::GroupSyncWrite>(
+      port_handler_.get(), handler.get(), index, length);
   } else {
     group_write[item]->clearParam();
   }

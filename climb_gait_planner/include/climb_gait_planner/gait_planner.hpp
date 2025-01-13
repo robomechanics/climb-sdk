@@ -1,15 +1,18 @@
-#ifndef GAIT_PLANNER_HPP
-#define GAIT_PLANNER_HPP
+#ifndef CLIMB_GAIT_PLANNER__GAIT_PLANNER_HPP_
+#define CLIMB_GAIT_PLANNER__GAIT_PLANNER_HPP_
 
+#include <Eigen/Geometry>
+#include <memory>
 #include <queue>
+#include <string>
+#include <unordered_map>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+
 #include <climb_msgs/msg/contact_force.hpp>
 #include <climb_msgs/msg/end_effector_command.hpp>
 #include <climb_msgs/action/step_command.hpp>
-#include <Eigen/Dense>
-
+#include <climb_kinematics/interfaces/kinematics_interface.hpp>
 #include <climb_util/parameterized.hpp>
-#include <climb_kinematics/kinematics_interfaces/kinematics_interface.hpp>
 
 using geometry_msgs::msg::TransformStamped;
 using climb_msgs::msg::ContactForce;
@@ -59,7 +62,7 @@ public:
    * @param[in] robot Kinematics interface for the robot
    * @return Constructed object of type GaitPlanner
    */
-  GaitPlanner(std::shared_ptr<KinematicsInterface> robot);
+  explicit GaitPlanner(std::shared_ptr<KinematicsInterface> robot);
 
   /**
    * @brief Reset the state machine
@@ -220,4 +223,4 @@ private:
   double angular_scaling_;
 };
 
-#endif  // GAIT_PLANNER_HPP
+#endif  // CLIMB_GAIT_PLANNER__GAIT_PLANNER_HPP_

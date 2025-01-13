@@ -1,6 +1,8 @@
 #include "climb_gait_planner/gait_planner_node.hpp"
-#include <climb_util/ros_utils.hpp>
+
 #include <geometry_msgs/msg/pose.hpp>
+
+#include <climb_util/ros_utils.hpp>
 
 using std::placeholders::_1;
 using std::placeholders::_2;

@@ -1,8 +1,12 @@
-#ifndef OSQP_INTERFACE_HPP
-#define OSQP_INTERFACE_HPP
+#ifndef CLIMB_OPTIMIZATION__QP_INTERFACES__OSQP_INTERFACE_HPP_
+#define CLIMB_OPTIMIZATION__QP_INTERFACES__OSQP_INTERFACE_HPP_
+
+#include <Eigen/Core>
+#include <osqp.h>
+#include <memory>
+#include <vector>
 
 #include "climb_optimization/qp_interfaces/qp_interface.hpp"
-#include <osqp.h>
 
 /**
  * @brief Interface for the OSQP (Operator Splitting Quadratic Program) solver
@@ -177,4 +181,4 @@ private:
   OSQPWorkspaceWrapper workspace_;              // OSQP workspace
 };
 
-#endif  // OSQP_INTERFACE_HPP
+#endif  // CLIMB_OPTIMIZATION__QP_INTERFACES__OSQP_INTERFACE_HPP_

@@ -1,4 +1,4 @@
-#include "climb_kinematics/kinematics_interfaces/kinematics_interface.hpp"
+#include "climb_kinematics/interfaces/kinematics_interface.hpp"
 
 KinematicsInterface::KinematicsInterface()
 {

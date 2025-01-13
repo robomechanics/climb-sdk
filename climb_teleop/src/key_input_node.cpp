@@ -25,28 +25,27 @@ KeyInputNode::KeyInputNode()
   auto service_param_desc = rcl_interfaces::msg::ParameterDescriptor{};
   service_param_desc.description = "Name of KeyInput service";
   service_param_desc.read_only = true;
-  this->declare_parameter("service", "key_input", service_param_desc);
-  std::string service = this->get_parameter("service").as_string();
+  declare_parameter("service", "key_input", service_param_desc);
+  std::string service = get_parameter("service").as_string();
 
   // Get topic name as parameter
   auto topic_param_desc = rcl_interfaces::msg::ParameterDescriptor{};
   topic_param_desc.description =
     "Name of KeyInput topic for asynchronous responses";
   topic_param_desc.read_only = true;
-  this->declare_parameter("topic", "key_output", topic_param_desc);
-  std::string topic = this->get_parameter("topic").as_string();
+  declare_parameter("topic", "key_output", topic_param_desc);
+  std::string topic = get_parameter("topic").as_string();
 
   // Timeout for service requests
   auto timeout_param_desc = rcl_interfaces::msg::ParameterDescriptor{};
   timeout_param_desc.description = "Timeout for service requests in ms";
   timeout_param_desc.read_only = true;
-  this->declare_parameter("timeout", 1000, timeout_param_desc);
-  timeout_ = std::chrono::milliseconds(
-    this->get_parameter("timeout").as_int());
+  declare_parameter("timeout", 1000, timeout_param_desc);
+  timeout_ = std::chrono::milliseconds(get_parameter("timeout").as_int());
 
   // Initialize service and subscriber
-  key_input_client_ = this->create_client<KeyInput>(service);
-  async_response_sub_ = this->create_subscription<TeleopMessage>(
+  key_input_client_ = create_client<KeyInput>(service);
+  async_response_sub_ = create_subscription<TeleopMessage>(
     topic, 1, std::bind(&KeyInputNode::keyOutputCallback, this, _1));
 }
 
@@ -149,7 +148,7 @@ void KeyInputNode::sendKeyInput(const std::string & input)
 {
   std::cout << "\33[2K\r" << std::flush;
   auto request = std::make_shared<KeyInput::Request>();
-  request->header.stamp = this->now();
+  request->header.stamp = now();
   request->input = input;
   request->realtime = realtime_;
   auto result = key_input_client_->async_send_request(request);
@@ -168,7 +167,7 @@ void KeyInputNode::sendKeyInput(const std::string & input)
 void KeyInputNode::autoComplete(const std::string & input)
 {
   auto request = std::make_shared<KeyInput::Request>();
-  request->header.stamp = this->now();
+  request->header.stamp = now();
   request->input = input;
   request->realtime = realtime_;
   request->autocomplete = true;

@@ -1,16 +1,17 @@
-#ifndef FORCE_ESTIMATOR_HPP
-#define FORCE_ESTIMATOR_HPP
+#ifndef CLIMB_CONTROL__FORCE_ESTIMATOR_HPP_
+#define CLIMB_CONTROL__FORCE_ESTIMATOR_HPP_
 
-#include <string>
-#include <queue>
 #include <Eigen/Geometry>
-#include <sensor_msgs/msg/imu.hpp>
+#include <memory>
+#include <queue>
+#include <string>
+#include <vector>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
-#include <climb_msgs/msg/contact_force.hpp>
-#include <climb_util/parameterized.hpp>
-#include <climb_kinematics/kinematics_interfaces/kinematics_interface.hpp>
 
-using sensor_msgs::msg::Imu;
+#include <climb_msgs/msg/contact_force.hpp>
+#include <climb_kinematics/interfaces/kinematics_interface.hpp>
+#include <climb_util/parameterized.hpp>
+
 using geometry_msgs::msg::WrenchStamped;
 using climb_msgs::msg::ContactForce;
 
@@ -24,10 +25,10 @@ public:
    * @brief Constructor for ForceEstimator
    * @param[in] robot Kinematics interface for the robot
    */
-  ForceEstimator(std::shared_ptr<KinematicsInterface> robot);
+  explicit ForceEstimator(std::shared_ptr<KinematicsInterface> robot);
 
   /**
-   * @brief Estimate contact force from the given effort data
+   * @brief Estimate contact force from the provided effort data
    * @param[in] effort Latest joint effort measurement
    * @return Vector of estimated forces (robot on world)
    */
@@ -40,7 +41,7 @@ public:
   Eigen::VectorXd update() {return update(robot_->getJointEffort());}
 
   /**
-   * @brief Estimate contact force from the given effort and IMU data
+   * @brief Estimate contact force from the provided effort and gravity vector
    * @param[in] effort Latest joint effort measurement
    * @param[in] gravity Latest gravity vector in body
    * @param[in] gravity_covariance Gravity covariance matrix
@@ -51,7 +52,8 @@ public:
     const Eigen::Matrix3d & gravity_covariance);
 
   /**
-   * @brief Estimate contact force from the latest robot data and given IMU data
+   * @brief Estimate contact force from the latest robot data and the provided
+   * gravity vector
    * @param[in] gravity Latest gravity vector in body
    * @param[in] gravity_covariance Gravity covariance matrix
    * @return Vector of estimated forces (robot on world)
@@ -128,4 +130,4 @@ private:
   int effort_count_;
 };
 
-#endif  // FORCE_ESTIMATOR_HPP
+#endif  // CLIMB_CONTROL__FORCE_ESTIMATOR_HPP_

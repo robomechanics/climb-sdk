@@ -1,4 +1,4 @@
-#include "climb_robot_driver/hardware_interfaces/hardware_interface.hpp"
+#include "climb_robot_driver/interfaces/hardware_interface.hpp"
 
 void HardwareInterface::addActuators(
   const std::vector<int> & ids, const std::vector<std::string> & joints,

@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
-#include "climb_robot_driver/hardware_interfaces/dynamixel_interface.hpp"
-#include "climb_robot_driver/hardware_interfaces/dummy_interface.hpp"
+
+#include "climb_robot_driver/interfaces/dynamixel_interface.hpp"
+#include "climb_robot_driver/interfaces/dummy_interface.hpp"
 
 class HardwareTest : public ::testing::Test
 {

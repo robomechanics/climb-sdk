@@ -1,6 +1,7 @@
 #include "climb_teleop/key_input_parser.hpp"
-#include <sstream>
+
 #include <iterator>
+#include <sstream>
 
 bool KeyInputParser::ChoiceToken::validate(const std::string & input) const
 {

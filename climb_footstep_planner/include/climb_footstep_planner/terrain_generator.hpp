@@ -1,8 +1,8 @@
-#ifndef TERRAIN_GENERATOR_HPP
-#define TERRAIN_GENERATOR_HPP
+#ifndef CLIMB_FOOTSTEP_PLANNER__TERRAIN_GENERATOR_HPP_
+#define CLIMB_FOOTSTEP_PLANNER__TERRAIN_GENERATOR_HPP_
 
-#include <pcl/common/common.h>
 #include <Eigen/Geometry>
+#include <pcl/common/common.h>
 
 /**
  * @brief Generate point clouds to represent geometric features
@@ -100,5 +100,5 @@ PointCloud unevenYZ(
 PointCloud unevenZX(
   Vector3d origin, double zsize, double xsize, double amplitude, double res);
 
-} // namespace terrain
-#endif  // TERRAIN_GENERATOR_HPP
+}  // namespace terrain
+#endif  // CLIMB_FOOTSTEP_PLANNER__TERRAIN_GENERATOR_HPP_

@@ -1,8 +1,9 @@
-#ifndef QP_PROBLEM_HPP
-#define QP_PROBLEM_HPP
+#ifndef CLIMB_OPTIMIZATION__QP_PROBLEM_HPP_
+#define CLIMB_OPTIMIZATION__QP_PROBLEM_HPP_
 
-#include <Eigen/Dense>
+#include <Eigen/Core>
 #include <map>
+#include <string>
 #include <vector>
 
 /**
@@ -252,4 +253,4 @@ private:
   std::map<std::string, Var> vars_;
 };
 
-#endif  // QP_PROBLEM_HPP
+#endif  // CLIMB_OPTIMIZATION__QP_PROBLEM_HPP_

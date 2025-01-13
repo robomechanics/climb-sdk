@@ -1,11 +1,16 @@
-#ifndef FORCE_CONTROLLER_HPP
-#define FORCE_CONTROLLER_HPP
+#ifndef CLIMB_CONTROL__FORCE_CONTROLLER_HPP_
+#define CLIMB_CONTROL__FORCE_CONTROLLER_HPP_
+
+#include <Eigen/Geometry>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include <climb_msgs/msg/end_effector_command.hpp>
-
-#include <climb_util/parameterized.hpp>
-#include <climb_kinematics/kinematics_interfaces/kinematics_interface.hpp>
+#include <climb_kinematics/interfaces/kinematics_interface.hpp>
 #include <climb_optimization/qp_interfaces/qp_interface.hpp>
+#include <climb_util/parameterized.hpp>
 
 using climb_msgs::msg::EndEffectorCommand;
 
@@ -25,7 +30,7 @@ public:
    * @brief Constructor for ForceController
    * @param[in] robot Kinematics interface for the robot
    */
-  ForceController(std::shared_ptr<KinematicsInterface> robot);
+  explicit ForceController(std::shared_ptr<KinematicsInterface> robot);
 
   /**
    * @brief Reset the controller setpoints
@@ -231,4 +236,4 @@ private:
   Eigen::Vector3d body_max_limits_;
 };
 
-#endif  // FORCE_CONTROLLER_HPP
+#endif  // CLIMB_CONTROL__FORCE_CONTROLLER_HPP_

@@ -1,23 +1,26 @@
-#ifndef TELEOP_NODE_HPP
-#define TELEOP_NODE_HPP
+#ifndef CLIMB_TELEOP__TELEOP_NODE_HPP_
+#define CLIMB_TELEOP__TELEOP_NODE_HPP_
 
-#include "climb_teleop/key_input_parser.hpp"
-#include <climb_kinematics/kinematics_node.hpp>
+#include <Eigen/Geometry>
+#include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
-#include <std_srvs/srv/trigger.hpp>
 #include <std_srvs/srv/set_bool.hpp>
-#include <climb_msgs/srv/key_input.hpp>
-#include <climb_msgs/srv/actuator_enable.hpp>
-#include <climb_msgs/srv/set_string.hpp>
-#include <climb_msgs/msg/joint_command.hpp>
+#include <std_srvs/srv/trigger.hpp>
+
+#include <climb_msgs/action/step_command.hpp>
 #include <climb_msgs/msg/end_effector_command.hpp>
+#include <climb_msgs/msg/joint_command.hpp>
 #include <climb_msgs/msg/step_override_command.hpp>
 #include <climb_msgs/msg/teleop_message.hpp>
-#include <climb_msgs/action/step_command.hpp>
-#include <Eigen/Dense>
+#include <climb_msgs/srv/actuator_enable.hpp>
+#include <climb_msgs/srv/key_input.hpp>
+#include <climb_msgs/srv/set_string.hpp>
+#include <climb_kinematics/kinematics_node.hpp>
+#include "climb_teleop/key_input_parser.hpp"
 
 using std_srvs::srv::Trigger;
 using std_srvs::srv::SetBool;
@@ -230,7 +233,7 @@ private:
   // Command callback group
   rclcpp::CallbackGroup::SharedPtr command_callback_group_;
   // Poses
-  std::map<std::string, std::vector<double>> configurations_;
+  std::unordered_map<std::string, std::vector<double>> configurations_;
   // Joint setpoints
   Eigen::VectorXd joint_setpoints_;
   // Joint step in rad
@@ -243,4 +246,4 @@ private:
   bool controller_enable_;
 };
 
-#endif  // TELEOP_NODE_HPP
+#endif  // CLIMB_TELEOP__TELEOP_NODE_HPP_

@@ -1,6 +1,9 @@
-#ifndef PARAMETERIZED_HPP
-#define PARAMETERIZED_HPP
+#ifndef CLIMB_UTIL__PARAMETERIZED_HPP_
+#define CLIMB_UTIL__PARAMETERIZED_HPP_
 
+#include <limits>
+#include <string>
+#include <vector>
 #include <rclcpp/rclcpp.hpp>
 
 using rcl_interfaces::msg::SetParametersResult;
@@ -168,4 +171,4 @@ protected:
   std::vector<ParameterDeclaration> parameters_;  // List of declared parameters
 };
 
-#endif  // PARAMETERIZED_HPP
+#endif  // CLIMB_UTIL__PARAMETERIZED_HPP_

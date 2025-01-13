@@ -1,4 +1,5 @@
 #include "climb_footstep_planner/terrain_generator.hpp"
+
 #include <pcl/common/transforms.h>
 
 namespace terrain
@@ -196,8 +197,8 @@ static Eigen::ArrayXXd perlin(int w, int h, int s)
     for (int y = 0; y < h; y++) {
       int i = x / s;
       int j = y / s;
-      double dx = double(x % s) / s;
-      double dy = double(y % s) / s;
+      double dx = static_cast<double>(x % s) / s;
+      double dy = static_cast<double>(y % s) / s;
       noise(x, y) += (gx(i, j) * dx + gy(i, j) * dy) *
         smoothStep(1 - dx) * smoothStep(1 - dy);
       noise(x, y) += (gx(i + 1, j) * (dx - 1) + gy(i + 1, j) * dy) *

@@ -1,10 +1,11 @@
-#ifndef HARDWARE_INTERFACE_HPP
-#define HARDWARE_INTERFACE_HPP
+#ifndef CLIMB_ROBOT_DRIVER__INTERFACES__HARDWARE_INTERFACE_HPP_
+#define CLIMB_ROBOT_DRIVER__INTERFACES__HARDWARE_INTERFACE_HPP_
 
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <sensor_msgs/msg/joint_state.hpp>
+
 #include <climb_msgs/msg/actuator_state.hpp>
 #include <climb_msgs/msg/joint_command.hpp>
 #include <climb_util/parameterized.hpp>
@@ -224,4 +225,4 @@ protected:
   std::unordered_map<int, double> ratios_by_id_;
 };
 
-#endif  // HARDWARE_INTERFACE_HPP
+#endif  // CLIMB_ROBOT_DRIVER__INTERFACES__HARDWARE_INTERFACE_HPP_

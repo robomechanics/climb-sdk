@@ -1,8 +1,10 @@
-#ifndef GAIT_PLANNER_NODE_HPP
-#define GAIT_PLANNER_NODE_HPP
+#ifndef CLIMB_GAIT_PLANNER__GAIT_PLANNER_NODE_HPP_
+#define CLIMB_GAIT_PLANNER__GAIT_PLANNER_NODE_HPP_
 
-#include "climb_gait_planner/gait_planner.hpp"
-
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
@@ -12,6 +14,7 @@
 #include <climb_msgs/msg/step_override_command.hpp>
 #include <climb_msgs/action/step_command.hpp>
 #include <climb_kinematics/kinematics_node.hpp>
+#include "climb_gait_planner/gait_planner.hpp"
 
 using geometry_msgs::msg::PoseArray;
 using climb_msgs::msg::ContactForce;
@@ -95,4 +98,4 @@ private:
   goal_handles_;
 };
 
-#endif  // GAIT_PLANNER_NODE_HPP
+#endif  // CLIMB_GAIT_PLANNER__GAIT_PLANNER_NODE_HPP_

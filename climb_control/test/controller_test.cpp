@@ -1,10 +1,11 @@
 #include <gtest/gtest.h>
 #include <fstream>
 #include <ament_index_cpp/get_package_share_directory.hpp>
+
+#include <climb_kinematics/interfaces/kdl_interface.hpp>
 #include <climb_util/test_utils.hpp>
-#include "climb_kinematics/kinematics_interfaces/kdl_interface.hpp"
-#include "climb_control/force_estimator.hpp"
 #include "climb_control/force_controller.hpp"
+#include "climb_control/force_estimator.hpp"
 
 const double TOL = 1e-6;
 

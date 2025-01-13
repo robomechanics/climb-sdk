@@ -1,17 +1,18 @@
-#ifndef KINEMATICS_NODE_HPP
-#define KINEMATICS_NODE_HPP
+#ifndef CLIMB_KINEMATICS__KINEMATICS_NODE_HPP_
+#define CLIMB_KINEMATICS__KINEMATICS_NODE_HPP_
 
-#include <string>
-#include <memory>
-#include <rclcpp/rclcpp.hpp>
-#include <tf2_ros/transform_listener.h>
-#include <tf2_ros/transform_broadcaster.h>
-#include <tf2_ros/buffer.h>
 #include <tf2/exceptions.h>
-#include <std_msgs/msg/string.hpp>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
+#include <memory>
+#include <string>
+#include <vector>
+#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
+#include <std_msgs/msg/string.hpp>
 
-#include "climb_kinematics/kinematics_interfaces/kinematics_interface.hpp"
+#include "climb_kinematics/interfaces/kinematics_interface.hpp"
 
 using std_msgs::msg::String;
 using sensor_msgs::msg::JointState;
@@ -112,4 +113,4 @@ private:
     param_handle_;
 };
 
-#endif  // KINEMATICS_NODE_HPP
+#endif  // CLIMB_KINEMATICS__KINEMATICS_NODE_HPP_

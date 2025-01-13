@@ -1,11 +1,11 @@
-#ifndef KEY_INPUT_PARSER_HPP
-#define KEY_INPUT_PARSER_HPP
+#ifndef CLIMB_TELEOP__KEY_INPUT_PARSER_HPP_
+#define CLIMB_TELEOP__KEY_INPUT_PARSER_HPP_
 
-#include <string>
-#include <vector>
 #include <functional>
-#include <unordered_map>
 #include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 /**
  * @brief Parses strings of input from the keyboard
@@ -54,7 +54,7 @@ public:
 
   struct ChoiceToken : Token
   {
-    ChoiceToken(const std::vector<std::shared_ptr<Token>> & tokens)
+    explicit ChoiceToken(const std::vector<std::shared_ptr<Token>> & tokens)
     : tokens(tokens) {}
     ChoiceToken(
       const std::string & name,
@@ -87,7 +87,7 @@ public:
 
   struct ConstantToken : Token
   {
-    ConstantToken(const std::string & value)
+    explicit ConstantToken(const std::string & value)
     : value(value) {}
     bool validate(const std::string & input) const override
     {return input == value;}
@@ -223,4 +223,4 @@ private:
   std::function<Response(const char)> input_callback_;
 };
 
-#endif  // KEY_INPUT_PARSER_HPP
+#endif  // CLIMB_TELEOP__KEY_INPUT_PARSER_HPP_

@@ -1,6 +1,7 @@
 #include "climb_control/controller_node.hpp"
-#include "climb_util/ros_utils.hpp"
-#include "climb_util/eigen_utils.hpp"
+
+#include <climb_util/eigen_utils.hpp>
+#include <climb_util/ros_utils.hpp>
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -112,14 +113,12 @@ void ControllerNode::update()
       cmd_msg.header.stamp = now();
       cmd_msg.name = robot_->getJointNames();
       Eigen::VectorXd joint_position = force_controller_->getJointPosition();
-      cmd_msg.position = std::vector<double>(
-        joint_position.data(), joint_position.data() + joint_position.size());
+      cmd_msg.position = RosUtils::eigenToVector(joint_position);
 
       // Set expected joint efforts for dummy interface or maximum effort limit
       if (offline_) {
         Eigen::VectorXd joint_effort = force_controller_->getJointEffort();
-        cmd_msg.effort = std::vector<double>(
-          joint_effort.data(), joint_effort.data() + joint_effort.size());
+        cmd_msg.effort = RosUtils::eigenToVector(joint_effort);
       } else {
         for (size_t i = 0; i < cmd_msg.name.size(); i++) {
           cmd_msg.effort.push_back(max_effort_);
@@ -291,7 +290,7 @@ rcl_interfaces::msg::SetParametersResult ControllerNode::parameterCallback(
       } else if (parameters.find(param_name) != parameters.end()) {
         auto config = parameters.at(param_name).get<std::vector<double>>();
         force_controller_->setNominalConfiguration(
-          Eigen::VectorXd::Map(config.data(), config.size()));
+          RosUtils::vectorToEigen(config));
       } else {
         result.successful = false;
         result.reason = "Configuration not found";

@@ -1,10 +1,10 @@
-#ifndef QP_INTERFACE_HPP
-#define QP_INTERFACE_HPP
+#ifndef CLIMB_OPTIMIZATION__QP_INTERFACES__QP_INTERFACE_HPP_
+#define CLIMB_OPTIMIZATION__QP_INTERFACES__QP_INTERFACE_HPP_
 
-#include "climb_optimization/qp_problem.hpp"
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
+#include <Eigen/Core>
+
 #include <climb_util/parameterized.hpp>
+#include "climb_optimization/qp_problem.hpp"
 
 /**
  * @brief Abstract interface for a quadratic program solver
@@ -104,7 +104,7 @@ public:
    */
   bool getInitialized() const {return initialized_;}
 
-  virtual void declareParameters() override;
+  void declareParameters() override;
 
 protected:
   Eigen::VectorXd solution_;    // Solution of the last solve
@@ -112,4 +112,4 @@ protected:
   bool initialized_;            // True if the solver has been initialized
 };
 
-#endif  // QP_INTERFACE_HPP
+#endif  // CLIMB_OPTIMIZATION__QP_INTERFACES__QP_INTERFACE_HPP_

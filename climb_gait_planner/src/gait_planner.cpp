@@ -1,4 +1,5 @@
 #include "climb_gait_planner/gait_planner.hpp"
+
 #include <climb_util/eigen_utils.hpp>
 #include <climb_util/ros_utils.hpp>
 

@@ -1,7 +1,11 @@
-#ifndef DUMMY_INTERFACE_HPP
-#define DUMMY_INTERFACE_HPP
+#ifndef CLIMB_ROBOT_DRIVER__INTERFACES__DUMMY_INTERFACE_HPP_
+#define CLIMB_ROBOT_DRIVER__INTERFACES__DUMMY_INTERFACE_HPP_
 
-#include <climb_robot_driver/hardware_interfaces/hardware_interface.hpp>
+#include <map>
+#include <string>
+#include <vector>
+
+#include "climb_robot_driver/interfaces/hardware_interface.hpp"
 
 /**
  * @brief Interface for communicating with a simulated robot for testing
@@ -36,4 +40,4 @@ private:
   std::map<int, double> effort_;    // Effort by ID
 };
 
-#endif  // DUMMY_INTERFACE_HPP
+#endif  // CLIMB_ROBOT_DRIVER__INTERFACES__DUMMY_INTERFACE_HPP_

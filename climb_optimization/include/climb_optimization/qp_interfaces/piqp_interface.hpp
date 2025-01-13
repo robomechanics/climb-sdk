@@ -1,8 +1,10 @@
-#ifndef PIQP_INTERFACE_HPP
-#define PIQP_INTERFACE_HPP
+#ifndef CLIMB_OPTIMIZATION__QP_INTERFACES__PIQP_INTERFACE_HPP_
+#define CLIMB_OPTIMIZATION__QP_INTERFACES__PIQP_INTERFACE_HPP_
+
+#include <Eigen/Core>
+#include <piqp/piqp.hpp>
 
 #include "climb_optimization/qp_interfaces/qp_interface.hpp"
-#include <piqp/piqp.hpp>
 
 /**
  * @brief Interface for the PIQP (Proximal Interior Point Quadratic
@@ -44,4 +46,4 @@ private:
   piqp::DenseSolver<double> solver_;
 };
 
-#endif  // PIQP_INTERFACE_HPP
+#endif  // CLIMB_OPTIMIZATION__QP_INTERFACES__PIQP_INTERFACE_HPP_

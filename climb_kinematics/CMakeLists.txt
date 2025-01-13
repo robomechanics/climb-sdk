@@ -21,8 +21,8 @@ find_package(urdf REQUIRED)
 find_package(climb_util REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
-  src/kinematics_interfaces/kinematics_interface.cpp
-  src/kinematics_interfaces/kdl_interface.cpp
+  src/interfaces/kinematics_interface.cpp
+  src/interfaces/kdl_interface.cpp
   src/kinematics_node.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -48,8 +48,7 @@ install(DIRECTORY include/
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  set(ament_cmake_copyright_FOUND TRUE) # skips copyright check
-  set(ament_cmake_cpplint_FOUND TRUE)   # skips cpplint
+  set(ament_cmake_copyright_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 
   ament_add_gtest(${PROJECT_NAME}_test test/kinematics_test.cpp)

@@ -1,7 +1,10 @@
 #include "climb_footstep_planner/footstep_planner_node.hpp"
-#include "climb_footstep_planner/terrain_generator.hpp"
+
+#include <pcl/common/common.h>
+#include <pcl_conversions/pcl_conversions.h>
+
 #include <climb_util/ros_utils.hpp>
-#include <pcl/common/transforms.h>
+#include "climb_footstep_planner/terrain_generator.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -11,10 +14,10 @@ FootstepPlannerNode::FootstepPlannerNode()
 {
   footstep_planner_ = std::make_unique<FootstepPlanner>();
   for (const auto & p : footstep_planner_->getParameters()) {
-    if (this->has_parameter(p.name)) {
-      this->set_parameter(this->get_parameter(p.name));
+    if (has_parameter(p.name)) {
+      set_parameter(get_parameter(p.name));
     } else {
-      this->declare_parameter(p.name, p.default_value, p.descriptor);
+      declare_parameter(p.name, p.default_value, p.descriptor);
     }
   }
   declare_parameter("seed", 0);
@@ -31,7 +34,7 @@ FootstepPlannerNode::FootstepPlannerNode()
   simulate_service_ = create_service<SetString>(
     "simulate",
     std::bind(&FootstepPlannerNode::simulateCallback, this, _1, _2));
-  RCLCPP_INFO(this->get_logger(), "Footstep planner node initialized");
+  RCLCPP_INFO(get_logger(), "Footstep planner node initialized");
 }
 
 void FootstepPlannerNode::descriptionCallback(const String::SharedPtr msg)
@@ -40,7 +43,7 @@ void FootstepPlannerNode::descriptionCallback(const String::SharedPtr msg)
   std::string error_message;
   if (!footstep_planner_->initialize(msg->data, error_message)) {
     RCLCPP_ERROR(
-      this->get_logger(),
+      get_logger(),
       "Failed to load robot description: %s", error_message.c_str());
   }
 }
@@ -48,7 +51,7 @@ void FootstepPlannerNode::descriptionCallback(const String::SharedPtr msg)
 void FootstepPlannerNode::pointCloudCallback(
   const PointCloud2::SharedPtr msg)
 {
-  PointCloud::Ptr point_cloud = std::make_unique<PointCloud>();
+  auto point_cloud = std::make_unique<pcl::PointCloud<pcl::PointXYZ>>();
   pcl::fromROSMsg(*msg, *point_cloud);
   Eigen::Isometry3d viewpoint = RosUtils::transformToEigen(
     lookupTransform("/map", "camera_link").transform);
@@ -120,8 +123,7 @@ void FootstepPlannerNode::planCallback(
   for (size_t i = 1; i < path_msgs.size() + 1; i++) {
     if (path_pubs_.size() == i) {
       path_pubs_.push_back(
-        this->create_publisher<Path>(
-          "foothold_path_" + std::to_string(i), 1));
+        create_publisher<Path>("foothold_path_" + std::to_string(i), 1));
     }
     path_pubs_.at(i)->publish(path_msgs[contact_frames[i - 1]]);
   }
@@ -144,7 +146,7 @@ void FootstepPlannerNode::simulateCallback(
     std::srand(std::time(nullptr));
     int seed = std::rand() % 1000 + 1;
     std::srand(seed);
-    RCLCPP_INFO(this->get_logger(), "Terrain generation seed: %d", seed);
+    RCLCPP_INFO(get_logger(), "Terrain generation seed: %d", seed);
   }
   if (request->data == "floor") {
     *point_cloud += terrain::planeXY({0, 0, 0}, 2, 2, res);

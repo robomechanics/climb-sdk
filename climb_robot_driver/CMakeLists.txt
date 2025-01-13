@@ -15,9 +15,9 @@ find_package(dynamixel_sdk REQUIRED)
 find_package(climb_util REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
-  src/hardware_interfaces/hardware_interface.cpp
-  src/hardware_interfaces/dynamixel_interface.cpp
-  src/hardware_interfaces/dummy_interface.cpp
+  src/interfaces/hardware_interface.cpp
+  src/interfaces/dynamixel_interface.cpp
+  src/interfaces/dummy_interface.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -36,8 +36,7 @@ install(TARGETS robot_driver_node
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  set(ament_cmake_copyright_FOUND TRUE) # skips copyright check
-  set(ament_cmake_cpplint_FOUND TRUE)   # skips cpplint
+  set(ament_cmake_copyright_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 
   ament_add_gtest(${PROJECT_NAME}_test test/hardware_interface_test.cpp)

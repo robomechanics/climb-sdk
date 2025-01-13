@@ -1,19 +1,20 @@
-#ifndef KINEMATICS_INTERFACE_HPP
-#define KINEMATICS_INTERFACE_HPP
+#ifndef CLIMB_KINEMATICS__INTERFACES__KINEMATICS_INTERFACE_HPP_
+#define CLIMB_KINEMATICS__INTERFACES__KINEMATICS_INTERFACE_HPP_
 
-#include <unordered_map>
-#include <vector>
-#include <string>
 #include <Eigen/Geometry>
 #include <urdf/model.h>
+#include <string>
+#include <unordered_map>
+#include <vector>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
+
 #include <climb_msgs/msg/joint_command.hpp>
 #include <climb_util/parameterized.hpp>
 
+using geometry_msgs::msg::TransformStamped;
 using sensor_msgs::msg::JointState;
 using climb_msgs::msg::JointCommand;
-using geometry_msgs::msg::TransformStamped;
 
 /**
  * @brief Contact type between end-effector and the environment
@@ -36,7 +37,7 @@ public:
    * Axes are ordered as [Fx, Fy, Fz, Tx, Ty, Tz]
    * A value of 1 indicates the axis is included in the basis
    */
-  const std::map<ContactType, std::vector<int>> WRENCH_BASES = {
+  const std::unordered_map<ContactType, std::vector<int>> WRENCH_BASES = {
     {ContactType::MICROSPINE, {1, 1, 1, 0, 0, 0}},
     {ContactType::TAIL, {1, 0, 0, 0, 0, 0}},
     {ContactType::MAGNET_WHEEL, {1, 1, 1, 0, 0, 0}},
@@ -523,4 +524,4 @@ protected:
   double mass_;                     // Total mass (kg)
 };
 
-#endif  // KINEMATICS_INTERFACE_HPP
+#endif  // CLIMB_KINEMATICS__INTERFACES__KINEMATICS_INTERFACE_HPP_

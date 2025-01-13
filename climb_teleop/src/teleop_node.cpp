@@ -1,6 +1,8 @@
 #include "climb_teleop/teleop_node.hpp"
-#include <rclcpp/executors.hpp>
+
 #include <fmt/core.h>
+#include <rclcpp/executors.hpp>
+
 #include <climb_util/ros_utils.hpp>
 
 using std::placeholders::_1;
@@ -11,7 +13,7 @@ TeleopNode::TeleopNode()
 {
   // Load poses from parameters
   const auto & parameters =
-    this->get_node_parameters_interface()->get_parameter_overrides();
+    get_node_parameters_interface()->get_parameter_overrides();
   for (const auto & [name, parameter] : parameters) {
     std::string prefix = "configurations.";
     if (name.compare(0, prefix.size(), prefix) == 0) {
@@ -20,32 +22,31 @@ TeleopNode::TeleopNode()
     }
   }
   // Define parameters
-  this->declare_parameter("joint_step", 0.02);    // rad
-  this->declare_parameter("linear_step", 0.002);  // m
-  this->declare_parameter("angular_step", 0.02);  // rad
+  declare_parameter("joint_step", 0.02);    // rad
+  declare_parameter("linear_step", 0.002);  // m
+  declare_parameter("angular_step", 0.02);  // rad
   // Define commands
   addCommands();
   // Create separate callback group to handle key commands in their own thread
-  command_callback_group_ = this->create_callback_group(
-    rclcpp::CallbackGroupType::MutuallyExclusive);
+  command_callback_group_ =
+    create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   // Initialize service, clients, and publishers
-  key_input_service_ = this->create_service<KeyInput>(
+  key_input_service_ = create_service<KeyInput>(
     "key_input", std::bind(&TeleopNode::keyCallback, this, _1, _2),
     rclcpp::ServicesQoS(), command_callback_group_);
-  key_output_pub_ = this->create_publisher<TeleopMessage>("key_output", 1);
-  actuator_enable_client_ =
-    this->create_client<ActuatorEnable>("actuator_enable");
-  controller_enable_client_ =
-    this->create_client<SetBool>("controller_enable");
-  plan_client_ = this->create_client<Trigger>("plan");
-  simulate_client_ = this->create_client<SetString>("simulate");
-  joint_cmd_pub_ = this->create_publisher<JointCommand>("joint_commands", 1);
-  ee_cmd_pub_ = this->create_publisher<EndEffectorCommand>(
-    "end_effector_commands", 1);
-  step_override_cmd_pub_ = this->create_publisher<StepOverrideCommand>(
-    "step_override_commands", 1);
-  step_cmd_client_ = rclcpp_action::create_client<StepCommand>(this, "step_command");
-  RCLCPP_INFO(this->get_logger(), "Teleop node initialized");
+  key_output_pub_ = create_publisher<TeleopMessage>("key_output", 1);
+  actuator_enable_client_ = create_client<ActuatorEnable>("actuator_enable");
+  controller_enable_client_ = create_client<SetBool>("controller_enable");
+  plan_client_ = create_client<Trigger>("plan");
+  simulate_client_ = create_client<SetString>("simulate");
+  joint_cmd_pub_ = create_publisher<JointCommand>("joint_commands", 1);
+  ee_cmd_pub_ =
+    create_publisher<EndEffectorCommand>("end_effector_commands", 1);
+  step_override_cmd_pub_ =
+    create_publisher<StepOverrideCommand>("step_override_commands", 1);
+  step_cmd_client_ =
+    rclcpp_action::create_client<StepCommand>(this, "step_command");
+  RCLCPP_INFO(get_logger(), "Teleop node initialized");
 }
 
 void TeleopNode::addCommands()
@@ -73,11 +74,11 @@ void TeleopNode::addCommands()
       return poses;
     });
   // Enable motors
-  this->key_input_parser_.defineCommand(
+  key_input_parser_.defineCommand(
     "[enable|disable]",
     std::bind(&TeleopNode::enableCommandCallback, this, _1));
   // Enable controller
-  this->key_input_parser_.defineCommand(
+  key_input_parser_.defineCommand(
     "control [on|off]",
     std::bind(&TeleopNode::controlCommandCallback, this, _1));
   // Set joint state
@@ -202,7 +203,7 @@ KeyInputParser::Response TeleopNode::twistCommandCallback(
   const std::vector<std::string> & tokens)
 {
   StepOverrideCommand command;
-  command.header.stamp = this->now();
+  command.header.stamp = now();
   command.header.frame_id = tokens.at(1);
   command.command = StepOverrideCommand::COMMAND_PAUSE;
   step_override_cmd_pub_->publish(command);
@@ -240,7 +241,7 @@ KeyInputParser::Response TeleopNode::stepCommandCallback(
 {
   auto goal = StepCommand::Goal();
   goal.frame = tokens.at(1);
-  goal.header.stamp = this->now();
+  goal.header.stamp = now();
   goal.default_foothold = true;
 
   auto options = rclcpp_action::Client<StepCommand>::SendGoalOptions();
@@ -442,7 +443,7 @@ void TeleopNode::setJoint(
     } else if (property == "effort") {
       command.effort.push_back(value);
     } else {
-      RCLCPP_WARN(this->get_logger(), "Invalid property: %s", property.c_str());
+      RCLCPP_WARN(get_logger(), "Invalid property: %s", property.c_str());
       return;
     }
   }
@@ -525,7 +526,7 @@ void TeleopNode::controlEndEffector(
     return;
   }
   EndEffectorCommand command;
-  command.header.stamp = this->now();
+  command.header.stamp = now();
   command.frame = {contact};
   command.mode = {EndEffectorCommand::MODE_FREE};
   command.twist = {RosUtils::eigenToTwist(twist)};

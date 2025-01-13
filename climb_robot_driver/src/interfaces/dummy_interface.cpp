@@ -1,4 +1,4 @@
-#include "climb_robot_driver/hardware_interfaces/dummy_interface.hpp"
+#include "climb_robot_driver/interfaces/dummy_interface.hpp"
 
 void DummyInterface::addActuators(
   const std::vector<int> & ids, const std::vector<std::string> & joints,

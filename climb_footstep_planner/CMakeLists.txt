@@ -46,8 +46,7 @@ install(TARGETS
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  set(ament_cmake_copyright_FOUND TRUE) # skips copyright check
-  set(ament_cmake_cpplint_FOUND TRUE)   # skips cpplint
+  set(ament_cmake_copyright_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 
   ament_add_gtest(${PROJECT_NAME}_test test/footstep_planner_test.cpp)

@@ -1,8 +1,9 @@
+#include <gtest/gtest.h>
+
+#include <climb_util/test_utils.hpp>
 #include "climb_optimization/qp_interfaces/osqp_interface.hpp"
 #include "climb_optimization/qp_interfaces/piqp_interface.hpp"
 #include "climb_optimization/qp_problem.hpp"
-#include <climb_util/test_utils.hpp>
-#include <gtest/gtest.h>
 
 const double TOL = 1e-3;
 

@@ -1,5 +1,6 @@
 #include "climb_control/contact_estimator.hpp"
-#include "climb_util/ros_utils.hpp"
+
+#include <climb_util/ros_utils.hpp>
 
 ContactEstimator::ContactEstimator(std::shared_ptr<KinematicsInterface> robot)
 : robot_(robot)
@@ -24,10 +25,7 @@ std::vector<TransformStamped> ContactEstimator::update(
     transform.child_frame_id = contact_frame;
     Eigen::Quaterniond q(
       getContactOrientation(ee_frame, contact_frame, normal, gravity));
-    transform.transform.rotation.x = q.x();
-    transform.transform.rotation.y = q.y();
-    transform.transform.rotation.z = q.z();
-    transform.transform.rotation.w = q.w();
+    transform.transform.rotation = RosUtils::eigenToQuaternion(q);
     transforms.push_back(transform);
   }
   return transforms;

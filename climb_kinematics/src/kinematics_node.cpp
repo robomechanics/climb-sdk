@@ -1,5 +1,6 @@
 #include "climb_kinematics/kinematics_node.hpp"
-#include "climb_kinematics/kinematics_interfaces/kdl_interface.hpp"
+
+#include "climb_kinematics/interfaces/kdl_interface.hpp"
 
 using std::placeholders::_1;
 
@@ -11,20 +12,20 @@ KinematicsNode::KinematicsNode(
   robot_ = std::make_shared<KdlInterface>();
 
   // Subscribe to parameter changes
-  param_handle_ = this->add_on_set_parameters_callback(
+  param_handle_ = add_on_set_parameters_callback(
     std::bind(&KinematicsNode::parameterCallback, this, _1));
   for (const auto & p : robot_->getParameters()) {
-    this->declare_parameter(p.name, p.default_value, p.descriptor);
+    declare_parameter(p.name, p.default_value, p.descriptor);
   }
 
   // Define publishers and subscribers
-  description_sub_ = this->create_subscription<String>(
+  description_sub_ = create_subscription<String>(
     "robot_description", rclcpp::QoS(1).transient_local(),
     std::bind(&KinematicsNode::descriptionCallback, this, _1));
-  joint_sub_ = this->create_subscription<JointState>(
+  joint_sub_ = create_subscription<JointState>(
     "joint_states", 1,
     std::bind(&KinematicsNode::jointCallback, this, _1));
-  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 }
@@ -34,7 +35,7 @@ void KinematicsNode::descriptionCallback(const String::SharedPtr msg)
   std::string error_message;
   if (!robot_->loadRobotDescription(msg->data, error_message)) {
     RCLCPP_ERROR(
-      this->get_logger(),
+      get_logger(),
       "Failed to load robot description: %s", error_message.c_str());
     return;
   }
@@ -126,12 +127,10 @@ rcl_interfaces::msg::SetParametersResult KinematicsNode::parameterCallback(
     bool initialized = robot_->isInitialized();
     robot_->setParameter(param, result);
     if (!initialized && robot_->isInitialized()) {
-      RCLCPP_INFO(
-        this->get_logger(),
-        "Kinematics interface initialized");
+      RCLCPP_INFO(get_logger(), "Kinematics interface initialized");
     } else if (initialized && !robot_->isInitialized()) {
       RCLCPP_WARN(
-        this->get_logger(),
+        get_logger(),
         "Kinematics interface disabled: %s", result.reason.c_str());
     }
   }

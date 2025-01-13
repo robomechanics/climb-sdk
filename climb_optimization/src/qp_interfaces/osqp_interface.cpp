@@ -1,5 +1,7 @@
 #include "climb_optimization/qp_interfaces/osqp_interface.hpp"
 
+#include <Eigen/Sparse>
+
 OsqpInterface::OsqpInterface()
 {
   settings_ = std::make_unique<OSQPSettings>();

@@ -1,19 +1,20 @@
-#ifndef FOOTSTEP_PLANNER_NODE_HPP
-#define FOOTSTEP_PLANNER_NODE_HPP
+#ifndef CLIMB_FOOTSTEP_PLANNER__FOOTSTEP_PLANNER_NODE_HPP_
+#define CLIMB_FOOTSTEP_PLANNER__FOOTSTEP_PLANNER_NODE_HPP_
 
-#include "climb_footstep_planner/footstep_planner.hpp"
-#include <climb_kinematics/kinematics_node.hpp>
-#include <climb_msgs/srv/set_string.hpp>
+#include <memory>
+#include <vector>
 #include <rclcpp/rclcpp.hpp>
-#include <pcl/common/common.h>
-#include <pcl_conversions/pcl_conversions.h>
 #include <std_msgs/msg/string.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <sensor_msgs/msg/imu.hpp>
+#include <std_srvs/srv/trigger.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/msg/imu.hpp>
 #include <nav_msgs/msg/path.hpp>
-#include <std_srvs/srv/trigger.hpp>
+
+#include <climb_msgs/srv/set_string.hpp>
+#include <climb_kinematics/kinematics_node.hpp>
+#include "climb_footstep_planner/footstep_planner.hpp"
 
 using climb_msgs::srv::SetString;
 using std_msgs::msg::String;
@@ -54,4 +55,4 @@ private:
   int seed_;
 };
 
-#endif  // FOOTSTEP_PLANNER_NODE_HPP
+#endif  // CLIMB_FOOTSTEP_PLANNER__FOOTSTEP_PLANNER_NODE_HPP_

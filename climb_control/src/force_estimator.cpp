@@ -1,5 +1,6 @@
 #include "climb_control/force_estimator.hpp"
-#include "climb_util/ros_utils.hpp"
+
+#include <climb_util/ros_utils.hpp>
 
 ForceEstimator::ForceEstimator(std::shared_ptr<KinematicsInterface> robot)
 : robot_(robot)

@@ -1,12 +1,16 @@
-#ifndef FOOTSTEP_PLANNER_HPP
-#define FOOTSTEP_PLANNER_HPP
+#ifndef CLIMB_FOOTSTEP_PLANNER__FOOTSTEP_PLANNER_HPP_
+#define CLIMB_FOOTSTEP_PLANNER__FOOTSTEP_PLANNER_HPP_
 
-#include <climb_kinematics/kinematics_interfaces/kinematics_interface.hpp>
-#include <climb_util/parameterized.hpp>
+#include <Eigen/Geometry>
 #include <pcl/common/common.h>
 #include <pcl/search/kdtree.h>
-#include <Eigen/Geometry>
+#include <string>
+#include <memory>
 #include <unordered_map>
+#include <vector>
+
+#include <climb_kinematics/interfaces/kinematics_interface.hpp>
+#include <climb_util/parameterized.hpp>
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 typedef pcl::PointCloud<pcl::Normal> NormalCloud;
@@ -69,4 +73,4 @@ private:
   pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree_;
 };
 
-#endif  // FOOTSTEP_PLANNER_HPP
+#endif  // CLIMB_FOOTSTEP_PLANNER__FOOTSTEP_PLANNER_HPP_

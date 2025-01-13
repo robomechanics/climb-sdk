@@ -1,7 +1,7 @@
-#ifndef EIGEN_UTILS_HPP
-#define EIGEN_UTILS_HPP
+#ifndef CLIMB_UTIL__EIGEN_UTILS_HPP_
+#define CLIMB_UTIL__EIGEN_UTILS_HPP_
 
-#include <Eigen/Dense>
+#include <Eigen/Geometry>
 
 /**
  * @brief Utility functions for working with Eigen types
@@ -89,4 +89,4 @@ Eigen::Vector<double, 6> getTwist(
 Eigen::Matrix3d getSkew(const Eigen::Vector3d & vector);
 }  // namespace EigenUtils
 
-#endif  // EIGEN_UTILS_HPP
+#endif  // CLIMB_UTIL__EIGEN_UTILS_HPP_

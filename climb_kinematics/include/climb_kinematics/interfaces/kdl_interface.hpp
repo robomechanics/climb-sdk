@@ -1,9 +1,15 @@
-#ifndef KDL_INTERFACE_HPP
-#define KDL_INTERFACE_HPP
+#ifndef CLIMB_KINEMATICS__INTERFACES__KDL_INTERFACE_HPP_
+#define CLIMB_KINEMATICS__INTERFACES__KDL_INTERFACE_HPP_
 
-#include "climb_kinematics/kinematics_interfaces/kinematics_interface.hpp"
-#include <kdl/tree.hpp>
+#include <Eigen/Geometry>
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include <utility>
 #include <kdl/jntarray.hpp>
+#include <kdl/tree.hpp>
+
+#include "climb_kinematics/interfaces/kinematics_interface.hpp"
 
 /**
  * @brief Hash function for std::pair
@@ -87,7 +93,7 @@ private:
    */
   KDL::Frame getTransformKdl(const std::string & parent, const std::string & child);
 
-  std::tuple<std::string, bool> findSuffix(
+  std::pair<std::string, bool> findSuffix(
     const std::string & name, const std::string & suffix);
 
   // KDL tree representing robot
@@ -109,4 +115,4 @@ private:
     Eigen::MatrixXd, pair_hash> jacobians_;
 };
 
-#endif  // KDL_INTERFACE_HPP
+#endif  // CLIMB_KINEMATICS__INTERFACES__KDL_INTERFACE_HPP_

@@ -1,5 +1,5 @@
-#ifndef TEST_UTILS_HPP
-#define TEST_UTILS_HPP
+#ifndef CLIMB_UTIL__TEST_UTILS_HPP_
+#define CLIMB_UTIL__TEST_UTILS_HPP_
 
 const double PI = 3.14159265;
 
@@ -13,4 +13,4 @@ const double PI = 3.14159265;
     #A << " =" << std::endl << A << std::endl << \
     #B << " =" << std::endl << B << std::endl
 
-#endif  // TEST_UTILS_HPP
+#endif  // CLIMB_UTIL__TEST_UTILS_HPP_

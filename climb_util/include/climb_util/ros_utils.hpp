@@ -1,15 +1,18 @@
-#ifndef ROS_UTILS_HPP
-#define ROS_UTILS_HPP
+#ifndef CLIMB_UTIL__ROS_UTILS_HPP_
+#define CLIMB_UTIL__ROS_UTILS_HPP_
 
-#include <Eigen/Dense>
+#include <Eigen/Geometry>
+#include <algorithm>
+#include <array>
+#include <vector>
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/point.hpp>
-#include <geometry_msgs/msg/vector3.hpp>
-#include <geometry_msgs/msg/quaternion.hpp>
-#include <geometry_msgs/msg/twist.hpp>
-#include <geometry_msgs/msg/wrench.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/transform.hpp>
+#include <geometry_msgs/msg/twist.hpp>
+#include <geometry_msgs/msg/vector3.hpp>
+#include <geometry_msgs/msg/wrench.hpp>
 
 /**
  * @brief Utility functions for converting between ROS messages and Eigen types
@@ -298,4 +301,4 @@ inline geometry_msgs::msg::Transform operator-(
 }
 }  // namespace RosUtils
 
-#endif  // ROS_UTILS_HPP
+#endif  // CLIMB_UTIL__ROS_UTILS_HPP_

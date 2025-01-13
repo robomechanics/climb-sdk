@@ -1,9 +1,9 @@
-#include "climb_kinematics/kinematics_interfaces/kdl_interface.hpp"
-#include <urdf/model.h>
-#include <kdl_parser/kdl_parser.hpp>
+#include "climb_kinematics/interfaces/kdl_interface.hpp"
+
+#include <kdl/chaindynparam.hpp>
 #include <kdl/chainfksolverpos_recursive.hpp>
 #include <kdl/chainjnttojacsolver.hpp>
-#include <kdl/chaindynparam.hpp>
+#include <kdl_parser/kdl_parser.hpp>
 
 bool KdlInterface::initialize(std::string & error_message)
 {
@@ -423,12 +423,12 @@ KdlInterface::Chain KdlInterface::getChain(
   return chains_[{parent, child}];
 }
 
-std::tuple<std::string, bool> KdlInterface::findSuffix(
+std::pair<std::string, bool> KdlInterface::findSuffix(
   const std::string & name, const std::string & suffix)
 {
   size_t i = name.find(suffix);
   if (i == name.size() - suffix.size()) {
-    return std::make_tuple(name.substr(0, i), true);
+    return std::make_pair(name.substr(0, i), true);
   }
-  return std::make_tuple(name, false);
+  return std::make_pair(name, false);
 }

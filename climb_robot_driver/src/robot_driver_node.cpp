@@ -1,6 +1,7 @@
 #include "climb_robot_driver/robot_driver_node.hpp"
-#include "climb_robot_driver/hardware_interfaces/dynamixel_interface.hpp"
-#include "climb_robot_driver/hardware_interfaces/dummy_interface.hpp"
+
+#include "climb_robot_driver/interfaces/dummy_interface.hpp"
+#include "climb_robot_driver/interfaces/dynamixel_interface.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -16,75 +17,73 @@ HardwareNode::HardwareNode()
   interface_ = std::make_unique<DynamixelInterface>();
 
   // Subscribe to parameter changes
-  param_handle_ = this->add_on_set_parameters_callback(
+  param_handle_ = add_on_set_parameters_callback(
     std::bind(&HardwareNode::parameterCallback, this, _1));
 
   // Declare parameters
-  this->declare_parameter("joint_names", std::vector<std::string>{});
-  this->declare_parameter("actuator_ids", std::vector<int>{});
-  this->declare_parameter("actuator_models", std::vector<std::string>{});
-  this->declare_parameter("joint_update_freq", 0.0);
-  this->declare_parameter("actuator_update_freq", 0.0);
+  declare_parameter("joint_names", std::vector<std::string>{});
+  declare_parameter("actuator_ids", std::vector<int>{});
+  declare_parameter("actuator_models", std::vector<std::string>{});
+  declare_parameter("joint_update_freq", 0.0);
+  declare_parameter("actuator_update_freq", 0.0);
   for (const auto & p : interface_->getParameters()) {
-    this->declare_parameter(p.name, p.default_value, p.descriptor);
+    declare_parameter(p.name, p.default_value, p.descriptor);
   }
 
   // Validate configuration
   if (ids_.empty()) {
-    RCLCPP_WARN(this->get_logger(), "Robot configuration has no actuators");
+    RCLCPP_WARN(get_logger(), "Robot configuration has no actuators");
   }
 
   // Define publishers and subscribers
-  joint_pub_ = this->create_publisher<JointState>("joint_states", 1);
-  actuator_pub_ = this->create_publisher<ActuatorState>("actuator_states", 1);
-  joint_cmd_sub_ = this->create_subscription<JointCommand>(
+  joint_pub_ = create_publisher<JointState>("joint_states", 1);
+  actuator_pub_ = create_publisher<ActuatorState>("actuator_states", 1);
+  joint_cmd_sub_ = create_subscription<JointCommand>(
     "joint_commands", 1,
     std::bind(&HardwareNode::jointCmdCallback, this, _1));
-  actuator_enable_srv_ = this->create_service<ActuatorEnable>(
+  actuator_enable_srv_ = create_service<ActuatorEnable>(
     "actuator_enable",
     std::bind(&HardwareNode::actuatorEnableCallback, this, _1, _2));
 
   // Attempt connection to robot
   RCLCPP_INFO(
-    this->get_logger(),
+    get_logger(),
     "Hardware node initialized; connecting to hardware interface...");
   if (interface_->connect()) {
-    RCLCPP_INFO(this->get_logger(), "Connected to hardware interface");
+    RCLCPP_INFO(get_logger(), "Connected to hardware interface");
     bool enabled = interface_->enable();
     if (enabled) {
-      RCLCPP_INFO(this->get_logger(), "Enabled actuators");
+      RCLCPP_INFO(get_logger(), "Enabled actuators");
     } else {
-      RCLCPP_WARN(this->get_logger(), "Failed to enable actuators");
+      RCLCPP_WARN(get_logger(), "Failed to enable actuators");
     }
   } else {
-    RCLCPP_WARN(this->get_logger(), "Failed to connect to hardware interface");
+    RCLCPP_WARN(get_logger(), "Failed to connect to hardware interface");
     interface_ = std::make_unique<DummyInterface>();
     updateActuators();
     for (const auto & p : interface_->getParameters()) {
-      this->declare_parameter(p.name, p.default_value, p.descriptor);
+      declare_parameter(p.name, p.default_value, p.descriptor);
     }
     interface_->connect();
     interface_->enable();
-    RCLCPP_INFO(this->get_logger(), "Switching to dummy interface");
+    RCLCPP_INFO(get_logger(), "Switching to dummy interface");
   }
 }
 
 void HardwareNode::update()
 {
-  auto now = this->get_clock()->now();
-  if (now - last_joint_update_ >= joint_update_period_) {
-    last_joint_update_ = now;
+  if (now() - last_joint_update_ >= joint_update_period_) {
+    last_joint_update_ = now();
     auto js = interface_->readJointState();
-    js.header.stamp = this->get_clock()->now();
-    this->joint_pub_->publish(js);
+    js.header.stamp = now();
+    joint_pub_->publish(js);
   }
 
-  now = this->get_clock()->now();
-  if (now - last_actuator_update_ >= actuator_update_period_) {
-    last_actuator_update_ = now;
+  if (now() - last_actuator_update_ >= actuator_update_period_) {
+    last_actuator_update_ = now();
     auto as = interface_->readActuatorState();
-    as.header.stamp = this->get_clock()->now();
-    this->actuator_pub_->publish(as);
+    as.header.stamp = now();
+    actuator_pub_->publish(as);
   }
 }
 
@@ -92,7 +91,7 @@ void HardwareNode::jointCmdCallback(const JointCommand::SharedPtr msg)
 {
   bool success = interface_->writeJointCommand(*msg);
   if (!success) {
-    RCLCPP_WARN(this->get_logger(), "Failed to send joint command");
+    RCLCPP_WARN(get_logger(), "Failed to send joint command");
   }
 }
 
@@ -176,7 +175,7 @@ void HardwareNode::updateActuators()
     }
   } else {
     RCLCPP_WARN(
-      this->get_logger(),
+      get_logger(),
       "Mismatched actuator IDs, joints, and models in robot configuration");
   }
 }

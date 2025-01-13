@@ -1,11 +1,14 @@
-#ifndef CONTACT_ESTIMATOR_HPP
-#define CONTACT_ESTIMATOR_HPP
+#ifndef CLIMB_CONTROL__CONTACT_ESTIMATOR_HPP_
+#define CLIMB_CONTROL__CONTACT_ESTIMATOR_HPP_
 
+#include <Eigen/Geometry>
+#include <memory>
+#include <string>
 #include <vector>
-#include <Eigen/Dense>
-#include <sensor_msgs/msg/point_cloud2.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
-#include <climb_kinematics/kinematics_interfaces/kinematics_interface.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+
+#include <climb_kinematics/interfaces/kinematics_interface.hpp>
 #include <climb_util/parameterized.hpp>
 
 using sensor_msgs::msg::PointCloud2;
@@ -37,7 +40,7 @@ public:
    * @brief Constructor for ContactEstimator
    * @param[in] robot Kinematics interface for the robot
    */
-  ContactEstimator(std::shared_ptr<KinematicsInterface> robot);
+  explicit ContactEstimator(std::shared_ptr<KinematicsInterface> robot);
 
   /**
    * @brief Reset the contact estimator
@@ -99,4 +102,4 @@ private:
   double min_incline_;
 };
 
-#endif  // CONTACT_ESTIMATOR_HPP
+#endif  // CLIMB_CONTROL__CONTACT_ESTIMATOR_HPP_

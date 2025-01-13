@@ -2,7 +2,9 @@
 
 namespace EigenUtils
 {
-using namespace Eigen;
+using Eigen::AngleAxisd;
+using Eigen::Isometry3d;
+using Eigen::Vector;
 
 Isometry3d applyTwist(const Isometry3d & transform, const Vector<double, 6> & twist)
 {

@@ -1,7 +1,9 @@
 #include "climb_footstep_planner/footstep_planner.hpp"
-#include <climb_kinematics/kinematics_interfaces/kdl_interface.hpp>
+
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/principal_curvatures.h>
+
+#include <climb_kinematics/interfaces/kdl_interface.hpp>
 
 using namespace std::chrono_literals;
 

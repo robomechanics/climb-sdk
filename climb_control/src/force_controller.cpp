@@ -1,10 +1,9 @@
 #include "climb_control/force_controller.hpp"
 
-#include <Eigen/Dense>
 #include <climb_optimization/qp_interfaces/piqp_interface.hpp>
 #include <climb_optimization/qp_problem.hpp>
-#include <climb_util/ros_utils.hpp>
 #include <climb_util/eigen_utils.hpp>
+#include <climb_util/ros_utils.hpp>
 
 ForceController::ForceController(std::shared_ptr<KinematicsInterface> robot)
 : robot_(robot)

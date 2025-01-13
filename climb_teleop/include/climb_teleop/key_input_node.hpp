@@ -1,12 +1,14 @@
-#ifndef KEY_INPUT_NODE_HPP
-#define KEY_INPUT_NODE_HPP
+#ifndef CLIMB_TELEOP__KEY_INPUT_NODE_HPP_
+#define CLIMB_TELEOP__KEY_INPUT_NODE_HPP_
 
+#include <chrono>
 #include <string>
 #include <vector>
 #include <rclcpp/rclcpp.hpp>
+#include <keyboard_handler/keyboard_handler.hpp>
+
 #include <climb_msgs/msg/teleop_message.hpp>
 #include <climb_msgs/srv/key_input.hpp>
-#include <keyboard_handler/keyboard_handler.hpp>
 
 using climb_msgs::msg::TeleopMessage;
 using climb_msgs::srv::KeyInput;
@@ -72,4 +74,4 @@ private:
   std::chrono::milliseconds timeout_;
 };
 
-#endif  // KEY_INPUT_NODE_HPP
+#endif  // CLIMB_TELEOP__KEY_INPUT_NODE_HPP_

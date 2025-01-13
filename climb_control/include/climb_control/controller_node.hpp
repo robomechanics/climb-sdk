@@ -1,20 +1,23 @@
-#ifndef CONTROLLER_NODE_HPP
-#define CONTROLLER_NODE_HPP
+#ifndef CLIMB_CONTROL__CONTROLLER_NODE_HPP_
+#define CLIMB_CONTROL__CONTROLLER_NODE_HPP_
+
+#include <Eigen/Geometry>
+#include <memory>
+#include <vector>
 
 #include <rclcpp/rclcpp.hpp>
-
-#include <sensor_msgs/msg/joint_state.hpp>
-#include <sensor_msgs/msg/imu.hpp>
 #include <geometry_msgs/msg/wrench_stamped.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
+#include <std_srvs/srv/set_bool.hpp>
+
 #include <climb_msgs/msg/joint_command.hpp>
 #include <climb_msgs/msg/contact_force.hpp>
 #include <climb_msgs/msg/end_effector_command.hpp>
-#include <std_srvs/srv/set_bool.hpp>
-
 #include <climb_kinematics/kinematics_node.hpp>
 #include "climb_control/contact_estimator.hpp"
-#include "climb_control/force_estimator.hpp"
 #include "climb_control/force_controller.hpp"
+#include "climb_control/force_estimator.hpp"
 
 using geometry_msgs::msg::WrenchStamped;
 using sensor_msgs::msg::JointState;
@@ -119,4 +122,4 @@ private:
   double max_effort_;
 };
 
-#endif  // CONTROLLER_NODE_HPP
+#endif  // CLIMB_CONTROL__CONTROLLER_NODE_HPP_

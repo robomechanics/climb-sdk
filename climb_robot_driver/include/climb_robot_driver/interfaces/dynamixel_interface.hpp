@@ -1,8 +1,14 @@
-#ifndef DXL_INTERFACE_HPP
-#define DXL_INTERFACE_HPP
+#ifndef CLIMB_ROBOT_DRIVER__INTERFACES__DYNAMIXEL_INTERFACE_HPP_
+#define CLIMB_ROBOT_DRIVER__INTERFACES__DYNAMIXEL_INTERFACE_HPP_
 
 #include <dynamixel_sdk/dynamixel_sdk.h>
-#include "climb_robot_driver/hardware_interfaces/hardware_interface.hpp"
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "climb_robot_driver/interfaces/hardware_interface.hpp"
 
 /**
  * @brief Hash function for std::pair
@@ -133,4 +139,4 @@ private:
   bool connected_ = false;      // Flag indicating if the port is open
 };
 
-#endif  // DXL_INTERFACE_HPP
+#endif  // CLIMB_ROBOT_DRIVER__INTERFACES__DYNAMIXEL_INTERFACE_HPP_

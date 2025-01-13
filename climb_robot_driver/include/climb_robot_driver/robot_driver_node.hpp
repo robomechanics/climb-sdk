@@ -1,17 +1,16 @@
-#ifndef HARDWARE_NODE_HPP
-#define HARDWARE_NODE_HPP
+#ifndef CLIMB_ROBOT_DRIVER__ROBOT_DRIVER_NODE_HPP_
+#define CLIMB_ROBOT_DRIVER__ROBOT_DRIVER_NODE_HPP_
 
-#include <vector>
+#include <memory>
 #include <string>
-
+#include <vector>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 
 #include <climb_msgs/msg/actuator_state.hpp>
 #include <climb_msgs/msg/joint_command.hpp>
 #include <climb_msgs/srv/actuator_enable.hpp>
-
-#include "climb_robot_driver/hardware_interfaces/hardware_interface.hpp"
+#include "climb_robot_driver/interfaces/hardware_interface.hpp"
 
 using sensor_msgs::msg::JointState;
 using climb_msgs::msg::JointCommand;
@@ -97,4 +96,4 @@ private:
   rclcpp::Time last_actuator_update_;
 };
 
-#endif  // HARDWARE_NODE_HPP
+#endif  // CLIMB_ROBOT_DRIVER__ROBOT_DRIVER_NODE_HPP_
