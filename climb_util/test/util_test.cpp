@@ -10,6 +10,7 @@
 #include "climb_util/test_utils.hpp"
 #include "climb_util/ros_utils.hpp"
 #include "climb_util/eigen_utils.hpp"
+#include "climb_util/geometry_utils.hpp"
 
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Vector3;
@@ -84,6 +85,57 @@ TEST(EigenUtilsTest, Skew)
   Eigen::Vector3d v2{4, 5, 6};
   Eigen::Matrix3d v1_skew = EigenUtils::getSkew(v1);
   EXPECT_NEAR_EIGEN(v1_skew * v2, v1.cross(v2), TOL) << "Skew matrix incorrect";
+}
+
+TEST(GeometryUtilsTest, Polytope)
+{
+  geometry_utils::Polytope p1;
+  p1.addFacet({1, 0, 0}, 1);
+  p1.addFacet({0, 1, 0}, 2);
+  p1.addFacet({0, 0, 1}, 3);
+  Eigen::MatrixXd A_expected = Eigen::Matrix3d::Identity();
+  EXPECT_NEAR_EIGEN(p1.A, A_expected, TOL) << "Constraint matrix incorrect";
+  Eigen::Vector3d b_expected_3{1, 2, 3};
+  EXPECT_NEAR_EIGEN(p1.b, b_expected_3, TOL) << "Constraint vector incorrect";
+
+  geometry_utils::Polytope p2 = geometry_utils::Polytope::createBox(
+    Eigen::Vector3d{-1, -2, -3}, Eigen::Vector3d{1, 2, 3});
+  Eigen::Vector<double, 6> b_expected;
+  b_expected << 1, 2, 3, 1, 2, 3;
+  EXPECT_NEAR_EIGEN(p2.b, b_expected, TOL) << "Box initialization incorrect";
+
+  Eigen::Vector3d x{0, -1, 2};
+  EXPECT_TRUE((p2.A * x - p2.b).maxCoeff() < 0) << "Point in polytope error";
+  x = {0, -3, 2};
+  EXPECT_TRUE((p2.A * x - p2.b).maxCoeff() > 0) << "Point in polytope error";
+
+  p2 += Eigen::Vector3d{1, 2, 3};
+  b_expected << 0, 0, 0, 2, 4, 6;
+  EXPECT_NEAR_EIGEN(p2.b, b_expected, TOL) << "Translation error";
+
+  p2 *= 0.5;
+  b_expected *= 0.5;
+  EXPECT_NEAR_EIGEN(p2.b, b_expected, TOL) << "Uniform scaling error";
+
+  p2.scale({0, 1, 2});
+  b_expected << 0, 0, 0, 0, 2, 6;
+  EXPECT_NEAR_EIGEN(p2.b, b_expected, TOL) << "Box non-uniform scaling error";
+
+  geometry_utils::Polytope p3 = geometry_utils::Polytope::createBox(
+    Eigen::Vector3d{-1, -1, -1}, Eigen::Vector3d{2, 2, 2});
+  auto p4 = p2.intersection(p3);
+  b_expected << 0, 0, 0, 0, 2, 2;
+  EXPECT_NEAR_EIGEN(p4.b, b_expected, TOL) << "Box intersection error";
+
+  p2 += p3;
+  b_expected << 1, 1, 1, 2, 4, 8;
+  EXPECT_NEAR_EIGEN(p2.b, b_expected, TOL) << "Box addition error";
+
+  p2 = Eigen::Isometry3d::Identity() * p2;
+  EXPECT_NEAR_EIGEN(p2.b, b_expected, TOL) << "Transformation error";
+
+  auto p5 = Eigen::Vector3d{2, 4, 6} - 2 * (-p4 / 2 + Eigen::Vector3d{1, 2, 3});
+  EXPECT_NEAR_EIGEN(p5.b, p4.b, TOL) << "Operator arithmetic error";
 }
 
 int main(int argc, char ** argv)

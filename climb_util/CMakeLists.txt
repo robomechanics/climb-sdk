@@ -15,6 +15,7 @@ find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 add_library(${PROJECT_NAME} SHARED
   src/parameterized.cpp
   src/eigen_utils.cpp
+  src/geometry_utils.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
