@@ -89,53 +89,112 @@ TEST(EigenUtilsTest, Skew)
 
 TEST(GeometryUtilsTest, Polytope)
 {
-  geometry_utils::Polytope p1;
-  p1.addFacet({1, 0, 0}, 1);
-  p1.addFacet({0, 1, 0}, 2);
-  p1.addFacet({0, 0, 1}, 3);
-  Eigen::MatrixXd A_expected = Eigen::Matrix3d::Identity();
-  EXPECT_NEAR_EIGEN(p1.A, A_expected, TOL) << "Constraint matrix incorrect";
-  Eigen::Vector3d b_expected_3{1, 2, 3};
-  EXPECT_NEAR_EIGEN(p1.b, b_expected_3, TOL) << "Constraint vector incorrect";
+  geometry_utils::Polytope p;  // x + y < 5, x > 0, y > 0, -1 < z < 1
+  p.addFacet({1, 1, 0}, 5);
+  p.addFacet({-1, 0, 0}, 0);
+  p.addFacet({0, -1, 0}, 0);
+  p.addFacet({0, 0, -1}, 1);
+  p.addFacet({0, 0, 1}, 1);
+  Eigen::MatrixXd A_expected(5, 3);
+  A_expected << 1, 1, 0, -1, 0, 0, 0, -1, 0, 0, 0, -1, 0, 0, 1;
+  EXPECT_NEAR_EIGEN(p.A, A_expected, TOL) << "Constraint matrix incorrect";
+  Eigen::Vector<double, 5> b_expected{5, 0, 0, 1, 1};
+  EXPECT_NEAR_EIGEN(p.b, b_expected, TOL) << "Constraint vector incorrect";
 
-  geometry_utils::Polytope p2 = geometry_utils::Polytope::createBox(
-    Eigen::Vector3d{-1, -2, -3}, Eigen::Vector3d{1, 2, 3});
-  Eigen::Vector<double, 6> b_expected;
-  b_expected << 1, 2, 3, 1, 2, 3;
-  EXPECT_NEAR_EIGEN(p2.b, b_expected, TOL) << "Box initialization incorrect";
+  Eigen::Vector3d x1{1, 1, 0};
+  Eigen::Vector3d x2{2, 2, 0};
+  Eigen::Vector3d x3{3, 3, 0};
+  Eigen::Vector3d d_expected{1, sqrt(2) / 2, -sqrt(2) / 2};
+  Eigen::Vector<bool, 3> c_expected{true, true, false};
+  Eigen::Matrix3d X;
+  X << x1, x2, x3;
+  EXPECT_TRUE(p.contains(x1)) << "Point in polytope error";
+  EXPECT_EQ(p.containsAll(X), c_expected) << "Bulk point in polytope error";
+  EXPECT_NEAR(p.distance(x1), d_expected(0), TOL) << "Distance error";
+  EXPECT_NEAR_EIGEN(p.distanceAll(X), d_expected, TOL) <<
+    "Bulk distance error";
+  EXPECT_NEAR(p.distance(x1, x2), 1.5 * sqrt(2), TOL) <<
+    "Distance along direction error";
 
-  Eigen::Vector3d x{0, -1, 2};
-  EXPECT_TRUE((p2.A * x - p2.b).maxCoeff() < 0) << "Point in polytope error";
-  x = {0, -3, 2};
-  EXPECT_TRUE((p2.A * x - p2.b).maxCoeff() > 0) << "Point in polytope error";
+  EXPECT_NEAR_EIGEN((p * -2).distanceAll(X * -2), d_expected * 2, TOL) <<
+    "Uniform scaling error (right multiplication)";
+  EXPECT_NEAR_EIGEN((-2 * p).distanceAll(-2 * X), d_expected * 2, TOL) <<
+    "Uniform scaling error (left multiplication)";
+  EXPECT_NEAR_EIGEN((p / -2).distanceAll(X / -2), d_expected / 2, TOL) <<
+    "Uniform scaling error (division)";
+  EXPECT_NEAR_EIGEN((-p).distanceAll(-X), d_expected, TOL) <<
+    "Uniform scaling error (negation)";
+  p *= -2;
+  EXPECT_NEAR_EIGEN(p.distanceAll(-2 * X), d_expected * 2, TOL) <<
+    "Uniform scaling in place error (multiplication)";
+  p /= -2;
+  EXPECT_NEAR_EIGEN(p.distanceAll(X), d_expected, TOL) <<
+    "Uniform scaling in place error (division)";
 
-  p2 += Eigen::Vector3d{1, 2, 3};
-  b_expected << 0, 0, 0, 2, 4, 6;
-  EXPECT_NEAR_EIGEN(p2.b, b_expected, TOL) << "Translation error";
+  Eigen::Vector3d v = Eigen::Vector3d{1, 2, 3};
+  Eigen::Isometry3d V = Eigen::Isometry3d::Identity();
+  V.translate(v);
+  EXPECT_NEAR_EIGEN((p + v).distanceAll(V * X), d_expected, TOL) <<
+    "Translation error (right addition)";
+  EXPECT_NEAR_EIGEN((v + p).distanceAll(V * X), d_expected, TOL) <<
+    "Translation error (left addition)";
+  EXPECT_NEAR_EIGEN((p - v).distanceAll(V.inverse() * X), d_expected, TOL) <<
+    "Translation error (right subtraction)";
+  EXPECT_NEAR_EIGEN((v - p).distanceAll(V * -X), d_expected, TOL) <<
+    "Translation error (left subtraction)";
+  p += v;
+  EXPECT_NEAR_EIGEN(p.distanceAll(V * X), d_expected, TOL) <<
+    "Translation in place error (addition)";
+  p -= v;
+  EXPECT_NEAR_EIGEN(p.distanceAll(X), d_expected, TOL) <<
+    "Translation in place error (subtraction)";
 
-  p2 *= 0.5;
-  b_expected *= 0.5;
-  EXPECT_NEAR_EIGEN(p2.b, b_expected, TOL) << "Uniform scaling error";
+  Eigen::Isometry3d T = Eigen::Isometry3d::Identity();
+  T.translate(v);
+  T.rotate(Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitZ()));
+  Eigen::Matrix3d R = T.rotation();
+  EXPECT_NEAR_EIGEN((R * p).distanceAll(R * X), d_expected, TOL) <<
+    "Transformation error (rotation)";
+  EXPECT_NEAR_EIGEN((T * p).distanceAll(T * X), d_expected, TOL) <<
+    "Transformation error (isometry)";
 
-  p2.scale({0, 1, 2});
-  b_expected << 0, 0, 0, 0, 2, 6;
-  EXPECT_NEAR_EIGEN(p2.b, b_expected, TOL) << "Box non-uniform scaling error";
+  Eigen::Array3d s{1, -2, 0};
+  Eigen::ArrayXd x1_scaled = x1.array() * s;
+  auto p_scaled = p.scaled(s);
+  Eigen::Vector3d d_s_expected = {
+    p.distance(x1, {1, 0, 0}) * s(0),
+    p.distance(x1, {0, 1, 0}) * s(1),
+    p.distance(x1, {0, 0, 1}) * s(2)};
+  EXPECT_NEAR(p_scaled.distance(x1_scaled, {1, 0, 0}), d_s_expected(0), TOL) <<
+    "Non-uniform scaling error";
 
-  geometry_utils::Polytope p3 = geometry_utils::Polytope::createBox(
-    Eigen::Vector3d{-1, -1, -1}, Eigen::Vector3d{2, 2, 2});
-  auto p4 = p2.intersection(p3);
-  b_expected << 0, 0, 0, 0, 2, 2;
-  EXPECT_NEAR_EIGEN(p4.b, b_expected, TOL) << "Box intersection error";
+  auto p_top = geometry_utils::Polytope(p.A.topRows(3), p.b.head(3));
+  auto p_bot = geometry_utils::Polytope(p.A.bottomRows(2), p.b.bottomRows(2));
+  p_top.intersect(p_bot);
+  EXPECT_NEAR_EIGEN(p_top.A, p.A, TOL) << "Intersection error";
+  EXPECT_NEAR_EIGEN(p_top.b, p.b, TOL) << "Intersection error";
 
-  p2 += p3;
-  b_expected << 1, 1, 1, 2, 4, 8;
-  EXPECT_NEAR_EIGEN(p2.b, b_expected, TOL) << "Box addition error";
+  auto b1 = geometry_utils::Polytope::createBox({-1, -2, -3}, {1, 2, 3});
+  auto b2 = geometry_utils::Polytope::createBox({-1, -1, -1}, {2, 2, 2});
+  geometry_utils::Polytope p1(b1.A, b1.b);
+  EXPECT_NEAR_EIGEN(
+    (b1 + v).distanceAll(X / 2), (p1 + v).distanceAll(X / 2), TOL) <<
+    "Box translation error";
+  EXPECT_NEAR_EIGEN(
+    (b1 * -2).distanceAll(X / 2), (p1 * -2).distanceAll(X / 2), TOL) <<
+    "Box uniform scaling error";
 
-  p2 = Eigen::Isometry3d::Identity() * p2;
-  EXPECT_NEAR_EIGEN(p2.b, b_expected, TOL) << "Transformation error";
+  auto b2_scaled = b2.scaled({-1, 2, 0});
+  Eigen::Vector<double, 6> b2_scaled_expected{2, 2, 0, 1, 4, 0};
+  EXPECT_NEAR_EIGEN(b2_scaled.b, b2_scaled_expected, TOL) <<
+    "Box non-uniform scaling error";
 
-  auto p5 = Eigen::Vector3d{2, 4, 6} - 2 * (-p4 / 2 + Eigen::Vector3d{1, 2, 3});
-  EXPECT_NEAR_EIGEN(p5.b, p4.b, TOL) << "Operator arithmetic error";
+  Eigen::Vector<double, 6> intersection_expected{1, 1, 1, 1, 2, 2};
+  EXPECT_NEAR_EIGEN(b1.intersection(b2).b, intersection_expected, TOL) <<
+    "Box intersection error";
+
+  Eigen::Vector<double, 6> sum_expected{2, 3, 4, 3, 4, 5};
+  EXPECT_NEAR_EIGEN((b1 + b2).b, sum_expected, TOL) << "Box addition error";
 }
 
 int main(int argc, char ** argv)

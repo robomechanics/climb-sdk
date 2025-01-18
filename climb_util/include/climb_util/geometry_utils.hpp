@@ -44,6 +44,38 @@ struct Polytope
   void addFacet(const Eigen::Vector3d & Ai, double bi);
 
   /**
+   * @brief Check if a point lies within the polytope
+   */
+  bool contains(const Eigen::Vector3d & point) const;
+
+  /**
+   * @brief Check if a set of points lie within the polytope
+   */
+  Eigen::Vector<bool, Eigen::Dynamic> containsAll(
+    const Eigen::Matrix<double, 3, Eigen::Dynamic> & points) const;
+
+  /**
+   * @brief Compute the distance from a point to the edge of the polytope
+   * (negative if point lies outside the polytope)
+   */
+  double distance(
+    const Eigen::Vector3d & point) const;
+
+  /**
+   * @brief Compute the distances from a set of points to the edge of the
+   * polytope (negative if point lies outside the polytope)
+   */
+  Eigen::VectorXd distanceAll(
+    const Eigen::Matrix<double, 3, Eigen::Dynamic> & points) const;
+
+  /**
+   * @brief Compute the distance to the edge of the polytope along a given
+   * direction vector (negative if point lies outside the polytope)
+   */
+  double distance(
+    const Eigen::Vector3d & point, const Eigen::Vector3d & direction);
+
+  /**
    * @brief Compute the intersection with another polytope
    * (redundant constraints are not removed)
    */
@@ -57,6 +89,11 @@ struct Polytope
 
   /**
    * @brief Scale the polytope along each axis
+   */
+  Polytope scaled(const Eigen::Vector3d & scale) const;
+
+  /**
+   * @brief Scale the polytope along each axis in place
    */
   void scale(const Eigen::Vector3d & scale);
 

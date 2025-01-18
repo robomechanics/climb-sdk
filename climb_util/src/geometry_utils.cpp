@@ -36,8 +36,41 @@ void Polytope::addFacet(const Eigen::Vector3d & Ai, double bi)
   A.conservativeResize(A.rows() + 1, Eigen::NoChange);
   A.row(A.rows() - 1) = Ai;
   b.conservativeResize(b.size() + 1);
-  b[b.size() - 1] = bi;
+  b(b.size() - 1) = bi;
   box = false;
+}
+
+bool Polytope::contains(const Eigen::Vector3d & point) const
+{
+  return (b - A * point).minCoeff() >= 0;
+}
+
+Eigen::Vector<bool, Eigen::Dynamic> Polytope::containsAll(
+  const Eigen::Matrix<double, 3, Eigen::Dynamic> & points) const
+{
+  return ((-A * points).colwise() + b).colwise().minCoeff().array() >= 0;
+}
+
+double Polytope::distance(const Eigen::Vector3d & point) const
+{
+  Eigen::ArrayXd norm = A.rowwise().norm();
+  return ((b - A * point).array().colwise() / norm).minCoeff();
+}
+
+Eigen::VectorXd Polytope::distanceAll(
+  const Eigen::Matrix<double, 3, Eigen::Dynamic> & points) const
+{
+  Eigen::ArrayXd norm = A.rowwise().norm();
+  return (((-A * points).colwise() + b).array().colwise() / norm)
+         .colwise().minCoeff();
+}
+
+double Polytope::distance(
+  const Eigen::Vector3d & point, const Eigen::Vector3d & direction)
+{
+  Eigen::ArrayXd scale = (A * direction.normalized()).array();
+  scale = (scale > 0).select(1.0 / scale, INFINITY);
+  return ((b - A * point).array() * scale).minCoeff();
 }
 
 void Polytope::intersect(const Polytope & other)
@@ -63,19 +96,31 @@ Polytope Polytope::intersection(const Polytope & other) const
 void Polytope::scale(const Eigen::Vector3d & scale)
 {
   if (box) {
-    b.head(3).array() *= scale.array();
-    b.tail(3).array() *= scale.array();
+    b.head(3).array() *= scale.cwiseAbs().array();
+    b.tail(3).array() *= scale.cwiseAbs().array();
+    for (int i = 0; i < 3; ++i) {
+      if (scale(i) < 0) {
+        b.row(i).swap(b.row(i + 3));
+      }
+    }
   } else {
     Eigen::Vector3d s = scale;
     for (int i = 0; i < s.size(); ++i) {
-      if (!s[i]) {
-        s[i] = 1.0;
+      if (!s(i)) {
+        s(i) = 1.0;
         addFacet(Eigen::Vector3d::Unit(i), 0);
         addFacet(-Eigen::Vector3d::Unit(i), 0);
       }
     }
     A = A * s.cwiseInverse().asDiagonal();
   }
+}
+
+Polytope Polytope::scaled(const Eigen::Vector3d & scale) const
+{
+  Polytope result(*this);
+  result.scale(scale);
+  return result;
 }
 
 Polytope & Polytope::operator+=(const Polytope & other)
@@ -98,7 +143,14 @@ Polytope & Polytope::operator+=(
 
 Polytope & Polytope::operator*=(double scale)
 {
-  b *= scale;
+  b *= abs(scale);
+  if (scale < 0) {
+    if (box) {
+      A.topRows(3).swap(A.bottomRows(3));
+    } else {
+      A *= -1;
+    }
+  }
   return *this;
 }
 
