@@ -10,24 +10,24 @@
 #include <geometry_msgs/msg/pose_array.hpp>
 
 #include <climb_msgs/msg/contact_force.hpp>
-#include <climb_msgs/msg/end_effector_command.hpp>
-#include <climb_msgs/msg/step_override_command.hpp>
-#include <climb_msgs/action/step_command.hpp>
+#include <climb_msgs/msg/controller_command.hpp>
+#include <climb_msgs/msg/footstep_update.hpp>
+#include <climb_msgs/action/footstep_command.hpp>
 #include <climb_kinematics/kinematics_node.hpp>
 #include "climb_gait_planner/gait_planner.hpp"
 
 using geometry_msgs::msg::PoseArray;
 using climb_msgs::msg::ContactForce;
-using climb_msgs::msg::EndEffectorCommand;
-using climb_msgs::msg::StepOverrideCommand;
-using climb_msgs::action::StepCommand;
+using climb_msgs::msg::ControllerCommand;
+using climb_msgs::msg::FootstepUpdate;
+using climb_msgs::action::FootstepCommand;
 
 /**
  * @brief ROS node that publishes controller setpoints to execute a step
  *
  * Subscribers: contact_forces, joint_states, robot_description
- * Publishers: end_effector_commands
- * Action services: step_command
+ * Publishers: controller_commands
+ * Action services: footstep_command
  */
 class GaitPlannerNode : public KinematicsNode
 {
@@ -48,27 +48,27 @@ private:
    * @brief Adjust current step progress and foothold location
    * @param[in] msg Message containing step override command
    */
-  void stepOverrideCommandCallback(const StepOverrideCommand::SharedPtr msg);
+  void FootstepUpdateCallback(const FootstepUpdate::SharedPtr msg);
 
   /**
    * @brief Callback for step command initial request
    */
   rclcpp_action::GoalResponse goalCallback(
     const rclcpp_action::GoalUUID & uuid,
-    std::shared_ptr<const StepCommand::Goal> goal);
+    std::shared_ptr<const FootstepCommand::Goal> goal);
 
   /**
    * @brief Callback for step command cancel request
    */
   rclcpp_action::CancelResponse cancelCallback(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<StepCommand>>
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<FootstepCommand>>
     goal_handle);
 
   /**
    * @brief Callback to begin step command
    */
   void acceptedCallback(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<StepCommand>>
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<FootstepCommand>>
     goal_handle);
 
   /**
@@ -85,16 +85,16 @@ private:
   // Subscriber for contact forces
   rclcpp::Subscription<ContactForce>::SharedPtr contact_force_sub_;
   // Subscriber for step override commands
-  rclcpp::Subscription<StepOverrideCommand>::SharedPtr step_override_cmd_sub_;
+  rclcpp::Subscription<FootstepUpdate>::SharedPtr step_override_cmd_sub_;
   // Publisher for end effector commands
-  rclcpp::Publisher<EndEffectorCommand>::SharedPtr end_effector_cmd_pub_;
+  rclcpp::Publisher<ControllerCommand>::SharedPtr end_effector_cmd_pub_;
   // Publisher for current footholds
   rclcpp::Publisher<PoseArray>::SharedPtr foothold_pub_;
   // Action server for step commands
-  rclcpp_action::Server<StepCommand>::SharedPtr step_cmd_srv_;
+  rclcpp_action::Server<FootstepCommand>::SharedPtr step_cmd_srv_;
   // Goal handles for step commands
   std::unordered_map<std::string,
-    std::shared_ptr<rclcpp_action::ServerGoalHandle<StepCommand>>>
+    std::shared_ptr<rclcpp_action::ServerGoalHandle<FootstepCommand>>>
   goal_handles_;
 };
 

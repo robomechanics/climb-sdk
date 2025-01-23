@@ -31,21 +31,21 @@ TeleopNode::TeleopNode()
   command_callback_group_ =
     create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   // Initialize service, clients, and publishers
-  key_input_service_ = create_service<KeyInput>(
-    "key_input", std::bind(&TeleopNode::keyCallback, this, _1, _2),
+  teleop_input_service_ = create_service<TeleopInput>(
+    "teleop_input", std::bind(&TeleopNode::keyCallback, this, _1, _2),
     rclcpp::ServicesQoS(), command_callback_group_);
-  key_output_pub_ = create_publisher<TeleopMessage>("key_output", 1);
+  teleop_output_pub_ = create_publisher<TeleopOutput>("teleop_output", 1);
   actuator_enable_client_ = create_client<ActuatorEnable>("actuator_enable");
   controller_enable_client_ = create_client<SetBool>("controller_enable");
   plan_client_ = create_client<Trigger>("plan");
   simulate_client_ = create_client<SetString>("simulate");
   joint_cmd_pub_ = create_publisher<JointCommand>("joint_commands", 1);
   ee_cmd_pub_ =
-    create_publisher<EndEffectorCommand>("end_effector_commands", 1);
+    create_publisher<ControllerCommand>("controller_commands", 1);
   step_override_cmd_pub_ =
-    create_publisher<StepOverrideCommand>("step_override_commands", 1);
+    create_publisher<FootstepUpdate>("footstep_updates", 1);
   step_cmd_client_ =
-    rclcpp_action::create_client<StepCommand>(this, "step_command");
+    rclcpp_action::create_client<FootstepCommand>(this, "footstep_command");
   RCLCPP_INFO(get_logger(), "Teleop node initialized");
 }
 
@@ -100,7 +100,7 @@ void TeleopNode::addCommands()
   // Take a step
   key_input_parser_.defineCommand(
     "step CONTACT",
-    std::bind(&TeleopNode::stepCommandCallback, this, _1));
+    std::bind(&TeleopNode::footstepCommandCallback, this, _1));
   // Plan footsteps
   key_input_parser_.defineCommand(
     "plan",
@@ -112,13 +112,13 @@ void TeleopNode::addCommands()
 }
 
 void TeleopNode::keyCallback(
-  const std::shared_ptr<KeyInput::Request> request,
-  std::shared_ptr<KeyInput::Response> response)
+  const std::shared_ptr<TeleopInput::Request> request,
+  std::shared_ptr<TeleopInput::Response> response)
 {
   auto result = key_input_parser_.processKeyInput(
-    request->input, request->realtime, request->autocomplete);
-  response->response = result.response;
-  response->realtime = result.realtime;
+    request->command, request->realtime, request->autocomplete);
+  response->response.message = result.message;
+  response->response.realtime = result.realtime;
 }
 
 KeyInputParser::Response TeleopNode::enableCommandCallback(
@@ -202,10 +202,10 @@ KeyInputParser::Response TeleopNode::moveCommandCallback(
 KeyInputParser::Response TeleopNode::twistCommandCallback(
   const std::vector<std::string> & tokens)
 {
-  StepOverrideCommand command;
+  FootstepUpdate command;
   command.header.stamp = now();
   command.header.frame_id = tokens.at(1);
-  command.command = StepOverrideCommand::COMMAND_PAUSE;
+  command.command = FootstepUpdate::COMMAND_PAUSE;
   step_override_cmd_pub_->publish(command);
   key_input_parser_.setInputCallback(
     [this, tokens](char key) {
@@ -213,10 +213,10 @@ KeyInputParser::Response TeleopNode::twistCommandCallback(
         if (controller_enable_) {
           controlEndEffector(tokens.at(1), Eigen::Vector<double, 6>::Zero());
         }
-        StepOverrideCommand command;
+        FootstepUpdate command;
         command.header.stamp = this->now();
         command.header.frame_id = tokens.at(1);
-        command.command = StepOverrideCommand::COMMAND_RESUME;
+        command.command = FootstepUpdate::COMMAND_RESUME;
         step_override_cmd_pub_->publish(command);
         return KeyInputParser::Response{"Stopped", false};
       }
@@ -236,56 +236,56 @@ KeyInputParser::Response TeleopNode::twistCommandCallback(
   return KeyInputParser::Response{response, true};
 }
 
-KeyInputParser::Response TeleopNode::stepCommandCallback(
+KeyInputParser::Response TeleopNode::footstepCommandCallback(
   const std::vector<std::string> & tokens)
 {
-  auto goal = StepCommand::Goal();
-  goal.frame = tokens.at(1);
-  goal.header.stamp = now();
-  goal.default_foothold = true;
+  std::string frame = tokens.at(1);
+  auto goal = FootstepCommand::Goal();
+  goal.footstep.frames.push_back(frame);
+  goal.footstep.header.stamp = now();
 
-  auto options = rclcpp_action::Client<StepCommand>::SendGoalOptions();
+  auto options = rclcpp_action::Client<FootstepCommand>::SendGoalOptions();
   options.feedback_callback =
-    [this, goal](
-    auto, const std::shared_ptr<const StepCommand::Feedback> feedback)
+    [this, frame](
+    auto, const std::shared_ptr<const FootstepCommand::Feedback> feedback)
     {
       std::string state = "Invalid state";
       switch (feedback->state) {
-        case StepCommand::Feedback::STATE_STANCE:
+        case FootstepCommand::Feedback::STATE_STANCE:
           state = "Stance";
           break;
-        case StepCommand::Feedback::STATE_DISENGAGE:
+        case FootstepCommand::Feedback::STATE_DISENGAGE:
           state = "Disengage";
           break;
-        case StepCommand::Feedback::STATE_LIFT:
+        case FootstepCommand::Feedback::STATE_LIFT:
           state = "Lift";
           break;
-        case StepCommand::Feedback::STATE_SWING:
+        case FootstepCommand::Feedback::STATE_SWING:
           state = "Swing";
           break;
-        case StepCommand::Feedback::STATE_PLACE:
+        case FootstepCommand::Feedback::STATE_PLACE:
           state = "Place";
           break;
-        case StepCommand::Feedback::STATE_ENGAGE:
+        case FootstepCommand::Feedback::STATE_ENGAGE:
           state = "Engage";
           break;
-        case StepCommand::Feedback::STATE_SNAG:
+        case FootstepCommand::Feedback::STATE_SNAG:
           state = "Snag";
           break;
-        case StepCommand::Feedback::STATE_SLIP:
+        case FootstepCommand::Feedback::STATE_SLIP:
           state = "Slip";
           break;
-        case StepCommand::Feedback::STATE_RETRY:
+        case FootstepCommand::Feedback::STATE_RETRY:
           state = "Retry";
           break;
-        case StepCommand::Feedback::STATE_STOP:
+        case FootstepCommand::Feedback::STATE_STOP:
           state = "Stop";
           break;
       }
-      TeleopMessage msg;
-      msg.response = fmt::format("{} state: {}", goal.frame, state);
+      TeleopOutput msg;
+      msg.message = fmt::format("{} state: {}", frame, state);
       msg.realtime = true;
-      key_output_pub_->publish(msg);
+      teleop_output_pub_->publish(msg);
     };
   auto goal_handle_future = step_cmd_client_->async_send_goal(goal, options);
   auto goal_handle_status =
@@ -301,29 +301,29 @@ KeyInputParser::Response TeleopNode::stepCommandCallback(
   }
   auto result_future = step_cmd_client_->async_get_result(
     goal_handle, [this](const auto & result) {
-      TeleopMessage msg;
+      TeleopOutput msg;
       if (result.result->success) {
-        msg.response = "Completed step";
+        msg.message = "Completed step";
       } else {
-        msg.response = "Aborted step";
+        msg.message = "Aborted step";
       }
       msg.realtime = false;
-      key_output_pub_->publish(msg);
+      teleop_output_pub_->publish(msg);
     });
   key_input_parser_.setInputCallback(
-    [this, goal, goal_handle, result_future](char key) {
-      StepOverrideCommand command;
+    [this, frame, goal_handle, result_future](char key) {
+      FootstepUpdate command;
       command.header.stamp = this->now();
-      command.header.frame_id = goal.frame;
+      command.header.frame_id = frame;
       if (key == ' ') {
         step_cmd_client_->async_cancel_goal(goal_handle);
         return KeyInputParser::Response{"", true};
       } else if (key == '.') {
-        command.command = StepOverrideCommand::COMMAND_ADVANCE;
+        command.command = FootstepUpdate::COMMAND_ADVANCE;
         step_override_cmd_pub_->publish(command);
         return KeyInputParser::Response{"Advancing Step", true};
       } else if (key == ',') {
-        command.command = StepOverrideCommand::COMMAND_RETRY;
+        command.command = FootstepUpdate::COMMAND_RETRY;
         step_override_cmd_pub_->publish(command);
         return KeyInputParser::Response{"Retrying Step", true};
       } else {
@@ -333,7 +333,7 @@ KeyInputParser::Response TeleopNode::stepCommandCallback(
       }
     });
   return KeyInputParser::Response{
-    fmt::format("Taking step {}", goal.frame), true};
+    fmt::format("Taking step {}", goal.footstep.frames[0]), true};
 }
 
 KeyInputParser::Response TeleopNode::planCommandCallback(
@@ -525,10 +525,10 @@ void TeleopNode::controlEndEffector(
   if (contact == robot_->getBodyFrame()) {
     return;
   }
-  EndEffectorCommand command;
+  ControllerCommand command;
   command.header.stamp = now();
   command.frame = {contact};
-  command.mode = {EndEffectorCommand::MODE_FREE};
+  command.mode = {ControllerCommand::MODE_FREE};
   command.twist = {RosUtils::eigenToTwist(twist)};
   ee_cmd_pub_->publish(command);
 }

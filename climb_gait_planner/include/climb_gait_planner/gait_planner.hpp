@@ -9,15 +9,15 @@
 #include <geometry_msgs/msg/transform_stamped.hpp>
 
 #include <climb_msgs/msg/contact_force.hpp>
-#include <climb_msgs/msg/end_effector_command.hpp>
-#include <climb_msgs/action/step_command.hpp>
+#include <climb_msgs/msg/controller_command.hpp>
+#include <climb_msgs/action/footstep_command.hpp>
 #include <climb_kinematics/interfaces/kinematics_interface.hpp>
 #include <climb_util/parameterized.hpp>
 
 using geometry_msgs::msg::TransformStamped;
 using climb_msgs::msg::ContactForce;
-using climb_msgs::msg::EndEffectorCommand;
-using climb_msgs::action::StepCommand;
+using climb_msgs::msg::ControllerCommand;
+using climb_msgs::action::FootstepCommand;
 
 /**
  * @brief State-machine for executing a planned step
@@ -28,17 +28,17 @@ public:
   enum class State : uint8_t
   {
     // Nominal sequence
-    STANCE = StepCommand::Feedback::STATE_STANCE,
-    DISENGAGE = StepCommand::Feedback::STATE_DISENGAGE,
-    LIFT = StepCommand::Feedback::STATE_LIFT,
-    SWING = StepCommand::Feedback::STATE_SWING,
-    PLACE = StepCommand::Feedback::STATE_PLACE,
-    ENGAGE = StepCommand::Feedback::STATE_ENGAGE,
+    STANCE = FootstepCommand::Feedback::STATE_STANCE,
+    DISENGAGE = FootstepCommand::Feedback::STATE_DISENGAGE,
+    LIFT = FootstepCommand::Feedback::STATE_LIFT,
+    SWING = FootstepCommand::Feedback::STATE_SWING,
+    PLACE = FootstepCommand::Feedback::STATE_PLACE,
+    ENGAGE = FootstepCommand::Feedback::STATE_ENGAGE,
     // Error states
-    SNAG = StepCommand::Feedback::STATE_SNAG,
-    RETRY = StepCommand::Feedback::STATE_RETRY,
-    SLIP = StepCommand::Feedback::STATE_SLIP,
-    STOP = StepCommand::Feedback::STATE_STOP
+    SNAG = FootstepCommand::Feedback::STATE_SNAG,
+    RETRY = FootstepCommand::Feedback::STATE_RETRY,
+    SLIP = FootstepCommand::Feedback::STATE_SLIP,
+    STOP = FootstepCommand::Feedback::STATE_STOP
   };
 
   struct Footstep
@@ -162,7 +162,7 @@ public:
    * @brief Get the current end effector command
    * @return End effector command ROS message
    */
-  EndEffectorCommand getCommand();
+  ControllerCommand getCommand();
 
   /**
    * @brief Get the nominal foothold for the specified contact

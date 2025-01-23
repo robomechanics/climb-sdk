@@ -123,11 +123,11 @@ TEST_F(ControllerTest, ForceController)
   controller.setParameter("joint_step", 0.01);
 
   // Set end effector commands
-  EndEffectorCommand command;
+  ControllerCommand command;
   command.frame = {"left_contact", "right_contact"};
   command.mode = {
-    EndEffectorCommand::MODE_STANCE, EndEffectorCommand::MODE_STANCE};
-  controller.setEndEffectorCommand(command);
+    ControllerCommand::MODE_STANCE, ControllerCommand::MODE_STANCE};
+  controller.setControllerCommand(command);
 
   // Update controller output (ignore link masses)
   Eigen::Vector<double, 6> forces{-10, 0, -10, 10, 0, -10};

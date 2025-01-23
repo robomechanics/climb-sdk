@@ -182,9 +182,9 @@ std::queue<GaitPlanner::StateChange> GaitPlanner::getStateChanges()
   return changes;
 }
 
-EndEffectorCommand GaitPlanner::getCommand()
+ControllerCommand GaitPlanner::getCommand()
 {
-  EndEffectorCommand cmd;
+  ControllerCommand cmd;
   Eigen::Vector<double, 6> vel;
   Eigen::MatrixXd basis;
   double theta;
@@ -194,16 +194,16 @@ EndEffectorCommand GaitPlanner::getCommand()
       case State::STANCE:
         cmd.frame.push_back(contact);
         if (robot_->getContactType(contact) == ContactType::TAIL) {
-          cmd.mode.push_back(EndEffectorCommand::MODE_CONTACT);
+          cmd.mode.push_back(ControllerCommand::MODE_CONTACT);
         } else {
-          cmd.mode.push_back(EndEffectorCommand::MODE_STANCE);
+          cmd.mode.push_back(ControllerCommand::MODE_STANCE);
         }
         cmd.twist.push_back(Twist());
         cmd.wrench.push_back(Wrench());
         break;
       case State::DISENGAGE:
         cmd.frame.push_back(contact);
-        cmd.mode.push_back(EndEffectorCommand::MODE_TRANSITION);
+        cmd.mode.push_back(ControllerCommand::MODE_TRANSITION);
         cmd.twist.push_back(Twist());
         vel = disengage_force_;
         theta = (t_ - footstep.t0).seconds() * 2 * M_PI * disengage_frequency_;
@@ -214,14 +214,14 @@ EndEffectorCommand GaitPlanner::getCommand()
         break;
       case State::LIFT:
         cmd.frame.push_back(contact);
-        cmd.mode.push_back(EndEffectorCommand::MODE_FREE);
+        cmd.mode.push_back(ControllerCommand::MODE_FREE);
         vel = {-swing_velocity_, 0, 0, 0, 0, 0};
         cmd.twist.push_back(RosUtils::eigenToTwist(vel));
         cmd.wrench.push_back(Wrench());
         break;
       case State::SWING:
         cmd.frame.push_back(contact);
-        cmd.mode.push_back(EndEffectorCommand::MODE_FREE);
+        cmd.mode.push_back(ControllerCommand::MODE_FREE);
         vel = basis * basis.transpose() * EigenUtils::getTwist(
           Eigen::Isometry3d::Identity(),
           robot_->getTransform(contact).inverse() *
@@ -233,14 +233,14 @@ EndEffectorCommand GaitPlanner::getCommand()
         break;
       case State::PLACE:
         cmd.frame.push_back(contact);
-        cmd.mode.push_back(EndEffectorCommand::MODE_FREE);
+        cmd.mode.push_back(ControllerCommand::MODE_FREE);
         vel = {swing_velocity_, 0, 0, 0, 0, 0};
         cmd.twist.push_back(RosUtils::eigenToTwist(vel));
         cmd.wrench.push_back(Wrench());
         break;
       case State::ENGAGE:
         cmd.frame.push_back(contact);
-        cmd.mode.push_back(EndEffectorCommand::MODE_TRANSITION);
+        cmd.mode.push_back(ControllerCommand::MODE_TRANSITION);
         cmd.twist.push_back(Twist());
         cmd.wrench.push_back(RosUtils::eigenToWrench(engage_force_));
         break;
@@ -254,7 +254,7 @@ EndEffectorCommand GaitPlanner::getCommand()
         if (t_ - t0_ > rclcpp::Duration::from_seconds(0.1)) {
           t0_ = t_;
           cmd.frame.push_back(contact);
-          cmd.mode.push_back(EndEffectorCommand::MODE_FREE);
+          cmd.mode.push_back(ControllerCommand::MODE_FREE);
           cmd.twist.push_back(Twist());
           cmd.wrench.push_back(Wrench());
         }

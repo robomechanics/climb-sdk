@@ -23,17 +23,17 @@ KeyInputNode::KeyInputNode()
 
   // Get service name as parameter
   auto service_param_desc = rcl_interfaces::msg::ParameterDescriptor{};
-  service_param_desc.description = "Name of KeyInput service";
+  service_param_desc.description = "Name of TeleopInput service";
   service_param_desc.read_only = true;
-  declare_parameter("service", "key_input", service_param_desc);
+  declare_parameter("service", "teleop_input", service_param_desc);
   std::string service = get_parameter("service").as_string();
 
   // Get topic name as parameter
   auto topic_param_desc = rcl_interfaces::msg::ParameterDescriptor{};
   topic_param_desc.description =
-    "Name of KeyInput topic for asynchronous responses";
+    "Name of TeleopOutput topic for asynchronous responses";
   topic_param_desc.read_only = true;
-  declare_parameter("topic", "key_output", topic_param_desc);
+  declare_parameter("topic", "teleop_output", topic_param_desc);
   std::string topic = get_parameter("topic").as_string();
 
   // Timeout for service requests
@@ -44,9 +44,9 @@ KeyInputNode::KeyInputNode()
   timeout_ = std::chrono::milliseconds(get_parameter("timeout").as_int());
 
   // Initialize service and subscriber
-  key_input_client_ = create_client<KeyInput>(service);
-  async_response_sub_ = create_subscription<TeleopMessage>(
-    topic, 1, std::bind(&KeyInputNode::keyOutputCallback, this, _1));
+  teleop_input_client_ = create_client<TeleopInput>(service);
+  async_response_sub_ = create_subscription<TeleopOutput>(
+    topic, 1, std::bind(&KeyInputNode::teleopOutputCallback, this, _1));
 }
 
 void KeyInputNode::keyCallback(KeyCode key_code, KeyModifiers key_modifiers)
@@ -57,14 +57,14 @@ void KeyInputNode::keyCallback(KeyCode key_code, KeyModifiers key_modifiers)
       std::transform(input.begin(), input.end(), input.begin(), ::toupper);
     }
     if (!input.empty()) {
-      sendKeyInput(input);
+      sendTeleopInput(input);
     }
     return;
   }
   switch (key_code) {
     case KeyCode::ENTER:          // Send input
       if (!input_.empty()) {
-        sendKeyInput(input_);
+        sendTeleopInput(input_);
       }
       if (history_index_ > 0) {
         history_.erase(history_.begin() + history_index_);
@@ -144,20 +144,20 @@ void KeyInputNode::keyCallback(KeyCode key_code, KeyModifiers key_modifiers)
   std::cout << "\33[2K\r" << input_ << "\33[" << index_ + 1 << "G" << std::flush;
 }
 
-void KeyInputNode::sendKeyInput(const std::string & input)
+void KeyInputNode::sendTeleopInput(const std::string & input)
 {
   std::cout << "\33[2K\r" << std::flush;
-  auto request = std::make_shared<KeyInput::Request>();
+  auto request = std::make_shared<TeleopInput::Request>();
   request->header.stamp = now();
-  request->input = input;
+  request->command = input;
   request->realtime = realtime_;
-  auto result = key_input_client_->async_send_request(request);
+  auto result = teleop_input_client_->async_send_request(request);
   auto status = result.wait_for(timeout_);
   if (status == std::future_status::ready) {
-    auto response = result.get();
-    realtime_ = response->realtime;
-    if (!response->response.empty()) {
-      std::cout << response->response << std::endl;
+    auto response = result.get()->response;
+    realtime_ = response.realtime;
+    if (!response.message.empty()) {
+      std::cout << response.message << std::endl;
     }
   } else {
     std::cout << "Server is not responding" << std::endl;
@@ -166,24 +166,24 @@ void KeyInputNode::sendKeyInput(const std::string & input)
 
 void KeyInputNode::autoComplete(const std::string & input)
 {
-  auto request = std::make_shared<KeyInput::Request>();
+  auto request = std::make_shared<TeleopInput::Request>();
   request->header.stamp = now();
-  request->input = input;
+  request->command = input;
   request->realtime = realtime_;
   request->autocomplete = true;
-  auto result = key_input_client_->async_send_request(request);
+  auto result = teleop_input_client_->async_send_request(request);
   auto status = result.wait_for(std::chrono::seconds(1));
   if (status == std::future_status::ready) {
-    input_ = result.get()->response;
+    input_ = result.get()->response.message;
     index_ = input_.size();
   }
 }
 
-void KeyInputNode::keyOutputCallback(const TeleopMessage::SharedPtr msg)
+void KeyInputNode::teleopOutputCallback(const TeleopOutput::SharedPtr msg)
 {
   realtime_ = msg->realtime;
-  if (!msg->response.empty()) {
-    std::cout << msg->response << std::endl;
+  if (!msg->message.empty()) {
+    std::cout << msg->message << std::endl;
   }
 }
 

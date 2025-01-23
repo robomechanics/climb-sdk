@@ -16,9 +16,9 @@ void ForceController::reset()
   end_effector_goals_.clear();
   for (auto frame : robot_->getContactFrames()) {
     if (robot_->getContactType(frame) == ContactType::TAIL) {
-      end_effector_goals_[frame] = {EndEffectorCommand::MODE_CONTACT, {}};
+      end_effector_goals_[frame] = {ControllerCommand::MODE_CONTACT, {}};
     } else {
-      end_effector_goals_[frame] = {EndEffectorCommand::MODE_STANCE, {}};
+      end_effector_goals_[frame] = {ControllerCommand::MODE_STANCE, {}};
     }
   }
   position_cmd_ = robot_->getJointPosition();
@@ -68,19 +68,19 @@ bool ForceController::update(
     auto m_i = robot_->getNumConstraints(frame);
     MatrixXd I_i = MatrixXd::Identity(m, m).block(row, 0, m_i, m);
     auto constraint = getAdhesionConstraint(frame);
-    if (mode == EndEffectorCommand::MODE_FREE) {
+    if (mode == ControllerCommand::MODE_FREE) {
       // Set force equal to zero
       problem.addEqualityConstraint(
         {"force"}, {I_i}, VectorXd::Zero(m_i));
-    } else if (mode == EndEffectorCommand::MODE_TRANSITION) {
+    } else if (mode == ControllerCommand::MODE_TRANSITION) {
       // Set force equal to wrench setpoint
       problem.addEqualityConstraint(
         {"force"}, {I_i}, end_effector_goals_.at(frame).setpoint);
-    } else if (mode == EndEffectorCommand::MODE_CONTACT) {
+    } else if (mode == ControllerCommand::MODE_CONTACT) {
       // Set force to be within adhesion constraints
       problem.addInequalityConstraint(
         {"force"}, {constraint.A * I_i}, constraint.b);
-    } else if (mode == EndEffectorCommand::MODE_STANCE) {
+    } else if (mode == ControllerCommand::MODE_STANCE) {
       // Set force + margin to be within adhesion constraints
       problem.addInequalityConstraint(
         {"force", "margin"},
@@ -136,7 +136,7 @@ bool ForceController::update(
   for (const auto & frame : robot_->getContactFrames()) {
     uint8_t mode = end_effector_goals_[frame].mode;
     auto m_i = robot_->getNumConstraints(frame);
-    if (mode == EndEffectorCommand::MODE_FREE) {
+    if (mode == ControllerCommand::MODE_FREE) {
       feedforward.segment(row, m_i) = end_effector_goals_[frame].setpoint;
     } else {
       feedback.segment(row, m_i) = force_kp_ * df.segment(row, m_i);
@@ -174,7 +174,7 @@ bool ForceController::update(
   for (const auto & frame : robot_->getContactFrames()) {
     auto mode = end_effector_goals_.at(frame).mode;
     auto m_i = robot_->getNumConstraints(frame);
-    if (mode != EndEffectorCommand::MODE_STANCE) {
+    if (mode != ControllerCommand::MODE_STANCE) {
       dx_actual.segment(row, m_i).setZero();
       Gs.block(0, row, 6, m_i).setZero();
     }
@@ -187,20 +187,20 @@ bool ForceController::update(
   return true;
 }
 
-void ForceController::setEndEffectorCommand(const EndEffectorCommand & command)
+void ForceController::setControllerCommand(const ControllerCommand & command)
 {
   Eigen::Vector<double, 6> setpoint;
   for (size_t i = 0; i < command.frame.size(); i++) {
     std::string frame = command.frame[i];
     EndEffectorGoal goal;
     goal.mode =
-      i < command.mode.size() ? command.mode[i] : EndEffectorCommand::MODE_FREE;
+      i < command.mode.size() ? command.mode[i] : ControllerCommand::MODE_FREE;
     setpoint.setZero();
-    if (goal.mode == EndEffectorCommand::MODE_FREE) {
+    if (goal.mode == ControllerCommand::MODE_FREE) {
       if (i < command.twist.size()) {
         setpoint = RosUtils::twistToEigen(command.twist[i]);
       }
-    } else if (goal.mode == EndEffectorCommand::MODE_TRANSITION) {
+    } else if (goal.mode == ControllerCommand::MODE_TRANSITION) {
       if (i < command.wrench.size()) {
         setpoint = RosUtils::wrenchToEigen(command.wrench[i]);
       }

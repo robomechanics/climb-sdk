@@ -1,4 +1,4 @@
-# Describes a set of desired joint setpoints
+# A set of desired joint setpoints
 
 # Each joint can be operated in one of 3 modes.
 #

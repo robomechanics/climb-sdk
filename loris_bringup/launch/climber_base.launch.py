@@ -130,8 +130,8 @@ def generate_launch_description():
         name="teleop",
         output="screen",
         parameters=[global_config_path, robot_config_path],
-        remappings=[(["/", namespace, "/key_input"], "/key_input"),
-                    (["/", namespace, "/key_output"], "/key_output")]
+        remappings=[(["/", namespace, "/teleop_input"], "/teleop_input"),
+                    (["/", namespace, "/teleop_output"], "/teleop_output")]
     )
     key_input = Node(
         package="climb_teleop",

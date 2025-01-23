@@ -7,12 +7,12 @@
 #include <unordered_map>
 #include <vector>
 
-#include <climb_msgs/msg/end_effector_command.hpp>
+#include <climb_msgs/msg/controller_command.hpp>
 #include <climb_kinematics/interfaces/kinematics_interface.hpp>
 #include <climb_optimization/qp_interfaces/qp_interface.hpp>
 #include <climb_util/parameterized.hpp>
 
-using climb_msgs::msg::EndEffectorCommand;
+using climb_msgs::msg::ControllerCommand;
 
 class ForceController : public Parameterized
 {
@@ -47,9 +47,9 @@ public:
 
   /**
    * @brief Set the desired behavior of each end-effector
-   * @param[in] command Commanded end-effector behavior
+   * @param[in] command Commanded controller setpoint
    */
-  void setEndEffectorCommand(const EndEffectorCommand & command);
+  void setControllerCommand(const ControllerCommand & command);
 
   /**
    * @brief Set the obstacle constraint to maintain clearance between the body

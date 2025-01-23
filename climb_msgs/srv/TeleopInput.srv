@@ -1,0 +1,8 @@
+# Send teleoperator input to the robot and receive a response
+
+std_msgs/Header header          # Header with timestamp (frame_id is not used)
+string command                  # Input command
+bool realtime                   # If real-time command input was enabled
+bool autocomplete               # Flag to request a valid command completion
+---
+climb_msgs/TeleopOutput response

@@ -11,16 +11,18 @@ find_package(geometry_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "action/StepCommand.action"
-  "msg/ContactForce.msg"
+  "action/FootstepCommand.action"
   "msg/ActuatorState.msg"
+  "msg/ContactForce.msg"
+  "msg/ControllerCommand.msg"
+  "msg/Footstep.msg"
+  "msg/FootstepPlan.msg"
+  "msg/FootstepUpdate.msg"
   "msg/JointCommand.msg"
-  "msg/EndEffectorCommand.msg"
-  "msg/StepOverrideCommand.msg"
-  "msg/TeleopMessage.msg"
+  "msg/TeleopOutput.msg"
   "srv/ActuatorEnable.srv"
-  "srv/KeyInput.srv"
   "srv/SetString.srv"
+  "srv/TeleopInput.srv"
   DEPENDENCIES std_msgs geometry_msgs
 )
 

@@ -7,16 +7,16 @@
 #include <rclcpp/rclcpp.hpp>
 #include <keyboard_handler/keyboard_handler.hpp>
 
-#include <climb_msgs/msg/teleop_message.hpp>
-#include <climb_msgs/srv/key_input.hpp>
+#include <climb_msgs/msg/teleop_output.hpp>
+#include <climb_msgs/srv/teleop_input.hpp>
 
-using climb_msgs::msg::TeleopMessage;
-using climb_msgs::srv::KeyInput;
+using climb_msgs::msg::TeleopOutput;
+using climb_msgs::srv::TeleopInput;
 
 /**
  * @brief ROS node that parses keyboard input and displays the response
  *
- * Clients: key_input
+ * Clients: teleop_input
  */
 class KeyInputNode : public rclcpp::Node
 {
@@ -40,7 +40,7 @@ private:
    * @brief Send input string to service
    * @param input The input string
    */
-  void sendKeyInput(const std::string & input);
+  void sendTeleopInput(const std::string & input);
 
   /**
    * @brief Auto-complete input string
@@ -52,7 +52,7 @@ private:
    * @brief Callback for asynchronous responses
    * @param msg The response message
    */
-  void keyOutputCallback(const TeleopMessage::SharedPtr msg);
+  void teleopOutputCallback(const TeleopOutput::SharedPtr msg);
 
   // Keyboard handler
   KeyboardHandler keyboard_handler_;
@@ -67,9 +67,9 @@ private:
   // Send every key press individually
   bool realtime_;
   // Key input service client
-  rclcpp::Client<KeyInput>::SharedPtr key_input_client_;
+  rclcpp::Client<TeleopInput>::SharedPtr teleop_input_client_;
   // Async response subscriber
-  rclcpp::Subscription<TeleopMessage>::SharedPtr async_response_sub_;
+  rclcpp::Subscription<TeleopOutput>::SharedPtr async_response_sub_;
   // Timeout for service requests
   std::chrono::milliseconds timeout_;
 };

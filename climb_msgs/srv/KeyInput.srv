@@ -1,9 +1,0 @@
-# Send keyboard input to the robot
-
-std_msgs/Header header          # Header with timestamp (frame_id is not used)
-string input                    # Keyboard input command
-bool realtime                   # If real-time key input was enabled
-bool autocomplete               # Flag to request a valid command completion
----
-string response                 # Response message (or command completion)
-bool realtime                   # If real-time key input should be enabled

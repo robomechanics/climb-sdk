@@ -1,4 +1,4 @@
-# Describes a desired behavior of each end-effector of the robot
+# A desired behavior for each end-effector of a robot
 
 # Each end effector can be operated in one of 3 modes.
 #
@@ -21,6 +21,7 @@ uint8 MODE_STANCE = 3           # Adhered to surface: maximize stability margin
 std_msgs/Header header          # Header with timestamp (frame_id is not used)
 string[] frame                  # Contact frame ID
 uint8[] mode                    # Contact mode
+JointCommand overrides          # Joint overrides
 
 # Velocity of free end-effector in contact frame (rad/s or m/s)
 geometry_msgs/Twist[] twist

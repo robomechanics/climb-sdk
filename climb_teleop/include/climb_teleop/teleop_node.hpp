@@ -11,36 +11,36 @@
 #include <std_srvs/srv/set_bool.hpp>
 #include <std_srvs/srv/trigger.hpp>
 
-#include <climb_msgs/action/step_command.hpp>
-#include <climb_msgs/msg/end_effector_command.hpp>
+#include <climb_msgs/action/footstep_command.hpp>
+#include <climb_msgs/msg/controller_command.hpp>
 #include <climb_msgs/msg/joint_command.hpp>
-#include <climb_msgs/msg/step_override_command.hpp>
-#include <climb_msgs/msg/teleop_message.hpp>
+#include <climb_msgs/msg/footstep_update.hpp>
+#include <climb_msgs/msg/teleop_output.hpp>
 #include <climb_msgs/srv/actuator_enable.hpp>
-#include <climb_msgs/srv/key_input.hpp>
+#include <climb_msgs/srv/teleop_input.hpp>
 #include <climb_msgs/srv/set_string.hpp>
 #include <climb_kinematics/kinematics_node.hpp>
 #include "climb_teleop/key_input_parser.hpp"
 
 using std_srvs::srv::Trigger;
 using std_srvs::srv::SetBool;
-using climb_msgs::action::StepCommand;
-using climb_msgs::srv::KeyInput;
+using climb_msgs::action::FootstepCommand;
+using climb_msgs::srv::TeleopInput;
 using climb_msgs::srv::ActuatorEnable;
 using climb_msgs::srv::SetString;
 using climb_msgs::msg::JointCommand;
-using climb_msgs::msg::EndEffectorCommand;
-using climb_msgs::msg::StepOverrideCommand;
-using climb_msgs::msg::TeleopMessage;
+using climb_msgs::msg::ControllerCommand;
+using climb_msgs::msg::FootstepUpdate;
+using climb_msgs::msg::TeleopOutput;
 
 /**
  * @brief ROS node that publishes teleop commands
  *
- * Services: key_input
+ * Services: teleop_input
  * Clients: actuator_enable, controller_enable
- * Action clients: step_command
+ * Action clients: footstep_command
  * Subscribers: joint_states, robot_description
- * Publishers: joint_commands, end_effector_commands
+ * Publishers: joint_commands, controller_commands
  */
 class TeleopNode : public KinematicsNode
 {
@@ -62,8 +62,8 @@ private:
    * @param response The key input response
    */
   void keyCallback(
-    const std::shared_ptr<KeyInput::Request> request,
-    std::shared_ptr<KeyInput::Response> response);
+    const std::shared_ptr<TeleopInput::Request> request,
+    std::shared_ptr<TeleopInput::Response> response);
 
   /**
    * @brief Enable or disable the actuator
@@ -118,7 +118,7 @@ private:
    * @param tokens The command tokens
    * @return The response message
    */
-  KeyInputParser::Response stepCommandCallback(
+  KeyInputParser::Response footstepCommandCallback(
     const std::vector<std::string> & tokens);
 
   /**
@@ -211,15 +211,15 @@ private:
   // Key input parser
   KeyInputParser key_input_parser_;
   // Key input service
-  rclcpp::Service<KeyInput>::SharedPtr key_input_service_;
+  rclcpp::Service<TeleopInput>::SharedPtr teleop_input_service_;
   // Asynchronous key response publisher
-  rclcpp::Publisher<TeleopMessage>::SharedPtr key_output_pub_;
+  rclcpp::Publisher<TeleopOutput>::SharedPtr teleop_output_pub_;
   // Joint command publisher
   rclcpp::Publisher<JointCommand>::SharedPtr joint_cmd_pub_;
   // End effector command publisher
-  rclcpp::Publisher<EndEffectorCommand>::SharedPtr ee_cmd_pub_;
+  rclcpp::Publisher<ControllerCommand>::SharedPtr ee_cmd_pub_;
   // Step override command publisher
-  rclcpp::Publisher<StepOverrideCommand>::SharedPtr step_override_cmd_pub_;
+  rclcpp::Publisher<FootstepUpdate>::SharedPtr step_override_cmd_pub_;
   // Actuator enable client
   rclcpp::Client<ActuatorEnable>::SharedPtr actuator_enable_client_;
   // Controller enable client
@@ -229,7 +229,7 @@ private:
   // Simulate point cloud service client
   rclcpp::Client<SetString>::SharedPtr simulate_client_;
   // Step command action client
-  rclcpp_action::Client<StepCommand>::SharedPtr step_cmd_client_;
+  rclcpp_action::Client<FootstepCommand>::SharedPtr step_cmd_client_;
   // Command callback group
   rclcpp::CallbackGroup::SharedPtr command_callback_group_;
   // Poses

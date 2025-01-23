@@ -119,7 +119,7 @@ public:
    */
   struct Response
   {
-    std::string response;
+    std::string message;
     bool realtime;
   };
 

@@ -49,9 +49,9 @@ ControllerNode::ControllerNode()
   // Define publishers and subscribers
   imu_sub_ = create_subscription<Imu>(
     "imu", 1, std::bind(&ControllerNode::imuCallback, this, _1));
-  ee_cmd_sub_ = create_subscription<EndEffectorCommand>(
-    "end_effector_commands", 1,
-    std::bind(&ControllerNode::endEffectorCmdCallback, this, _1));
+  ee_cmd_sub_ = create_subscription<ControllerCommand>(
+    "controller_commands", 1,
+    std::bind(&ControllerNode::controllerCmdCallback, this, _1));
   joint_cmd_pub_ = create_publisher<JointCommand>("joint_commands", 1);
   contact_force_pub_ = create_publisher<ContactForce>("contact_forces", 1);
   controller_enable_srv_ = create_service<SetBool>(
@@ -239,10 +239,10 @@ void ControllerNode::imuCallback(const Imu::SharedPtr msg)
   use_gravity_ = true;
 }
 
-void ControllerNode::endEffectorCmdCallback(
-  const EndEffectorCommand::SharedPtr msg)
+void ControllerNode::controllerCmdCallback(
+  const ControllerCommand::SharedPtr msg)
 {
-  force_controller_->setEndEffectorCommand(*msg);
+  force_controller_->setControllerCommand(*msg);
 }
 
 void ControllerNode::controllerEnableCallback(

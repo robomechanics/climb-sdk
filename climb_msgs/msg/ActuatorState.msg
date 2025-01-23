@@ -1,4 +1,4 @@
-# Describes the current status of a set of actuators
+# The current status of a set of actuators
 
 # Actuator error status types
 uint8 ERROR_NONE = 0            # Fully operational (default)

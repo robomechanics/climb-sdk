@@ -13,7 +13,7 @@
 
 #include <climb_msgs/msg/joint_command.hpp>
 #include <climb_msgs/msg/contact_force.hpp>
-#include <climb_msgs/msg/end_effector_command.hpp>
+#include <climb_msgs/msg/controller_command.hpp>
 #include <climb_kinematics/kinematics_node.hpp>
 #include "climb_control/contact_estimator.hpp"
 #include "climb_control/force_controller.hpp"
@@ -24,14 +24,14 @@ using sensor_msgs::msg::JointState;
 using sensor_msgs::msg::Imu;
 using climb_msgs::msg::JointCommand;
 using climb_msgs::msg::ContactForce;
-using climb_msgs::msg::EndEffectorCommand;
+using climb_msgs::msg::ControllerCommand;
 using std_srvs::srv::SetBool;
 
 /**
  * @brief ROS node that determines optimal joint commands to maximize adhesion
  *
  * Services: controller_enable
- * Subscribers: end_effector_commands, joint_states, robot_description
+ * Subscribers: controller_commands, joint_states, robot_description
  * Publishers: joint_commands, contact_forces, tf contact frames
  */
 class ControllerNode : public KinematicsNode
@@ -64,7 +64,7 @@ private:
    * @brief Update controller with the latest end effector command
    * @param[in] msg Message containing end effector command
    */
-  void endEffectorCmdCallback(const EndEffectorCommand::SharedPtr msg);
+  void controllerCmdCallback(const ControllerCommand::SharedPtr msg);
 
   /**
    * @brief Enable or disable the controller
@@ -98,7 +98,7 @@ private:
   // IMU subscriber
   rclcpp::Subscription<Imu>::SharedPtr imu_sub_;
   // Contact command subscriber
-  rclcpp::Subscription<EndEffectorCommand>::SharedPtr ee_cmd_sub_;
+  rclcpp::Subscription<ControllerCommand>::SharedPtr ee_cmd_sub_;
   // Controller enable service
   rclcpp::Service<SetBool>::SharedPtr controller_enable_srv_;
   // Parameter callback handle

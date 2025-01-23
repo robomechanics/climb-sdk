@@ -1,4 +1,4 @@
-# Command to adjust an in-progress step
+# A command to adjust an in-progress step
 
 uint8 COMMAND_NONE = 0          # Remain in the current state
 uint8 COMMAND_RETRY = 1         # Retry the step from the beginning

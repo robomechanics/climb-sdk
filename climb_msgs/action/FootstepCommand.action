@@ -1,11 +1,9 @@
-# A command to move an end effector to a desired pose
+# A command to take a step while providing real-time feedback until completion
 
-std_msgs/Header header              # Header with timestamp and base frame
-string frame                        # Contact frame ID
-geometry_msgs/Pose foothold         # Desired end effector pose
-bool default_foothold               # Request a default foothold pose
+climb_msgs/Footstep footstep        # Desired step
 ---
 bool success                        # If step completed successfully
+string message                      # Error message if step was not successful
 ---
 uint8 STATE_STANCE = 0              # Not actively stepping (step completed)
 uint8 STATE_DISENGAGE = 1           # Disengaging from surface
