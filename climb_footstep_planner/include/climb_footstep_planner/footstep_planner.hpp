@@ -25,6 +25,7 @@ public:
     Eigen::Isometry3d pose;
     Eigen::VectorXd joint_positions;
     std::unordered_map<std::string, Eigen::Isometry3d> footholds;
+    std::string swing_foot;   // Most recently moved end effector
   };
 
   FootstepPlanner();
@@ -40,10 +41,48 @@ public:
 
   void updateGravity(const Eigen::Vector3d & gravity) {gravity_ = gravity;}
 
-  std::vector<Stance> plan(Stance start, Eigen::Isometry3d goal);
+  /**
+   * @brief Precompute normals, curvatures, and cost function
+   */
+  void processCloud();
 
-  std::vector<Stance> replan(Stance start);
+  /**
+   * @brief Find a global path through the current terrain map
+   * @param start Initial stance
+   * @param goal Goal pose
+   * @return Sequence of stances
+   */
+  std::vector<Stance> plan(
+    const Stance & start, const Eigen::Isometry3d & goal);
 
+  /**
+   * @brief Find a path from a new starting stance to the previous goal
+   * @param start Initial stance
+   * @return Sequence of stances
+   */
+  std::vector<Stance> replan(const Stance & start);
+
+  /**
+   * @brief Find a local path from the given stance to an intermediate goal
+   * @param start Initial stance
+   * @param goal Goal pose
+   * @return Sequence of stances
+   */
+  std::vector<Stance> localPlan(
+    const Stance & start, const Eigen::Isometry3d & goal);
+
+  /**
+   * @brief Find a single step toward the goal
+   * @param start Initial stance
+   * @param goal Goal pose
+   * @return Next stance
+   */
+  Stance step(const Stance & start, const Eigen::Isometry3d & goal);
+
+  /**
+   * @brief Get the current cost map for visualization
+   * @return Cost map
+   */
   CostCloud::Ptr getCostCloud() {return cost_;}
 
   void declareParameters() override;
@@ -71,6 +110,9 @@ private:
   Eigen::MatrixXf k_;   // Curvature
   Eigen::MatrixXf c_;   // Cost
   pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree_;
+  Eigen::Vector3d workspace_min_limits_;
+  Eigen::Vector3d workspace_max_limits_;
+  double min_step_length_;
 };
 
 #endif  // CLIMB_FOOTSTEP_PLANNER__FOOTSTEP_PLANNER_HPP_

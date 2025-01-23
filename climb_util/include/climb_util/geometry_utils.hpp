@@ -23,7 +23,7 @@ struct Polytope
    * @brief Construct a polytope from a set of linear inequalities Ax <= b
    */
   Polytope(
-    const Eigen::Matrix<double, Eigen::Dynamic, 3> & A,
+    const Eigen::MatrixX3d & A,
     const Eigen::VectorXd & b);
 
   /**
@@ -52,7 +52,7 @@ struct Polytope
    * @brief Check if a set of points lie within the polytope
    */
   Eigen::Vector<bool, Eigen::Dynamic> containsAll(
-    const Eigen::Matrix<double, 3, Eigen::Dynamic> & points) const;
+    const Eigen::Matrix3Xd & points) const;
 
   /**
    * @brief Compute the distance from a point to the edge of the polytope
@@ -66,14 +66,29 @@ struct Polytope
    * polytope (negative if point lies outside the polytope)
    */
   Eigen::VectorXd distanceAll(
-    const Eigen::Matrix<double, 3, Eigen::Dynamic> & points) const;
+    const Eigen::Matrix3Xd & points) const;
 
   /**
    * @brief Compute the distance to the edge of the polytope along a given
    * direction vector (negative if point lies outside the polytope)
    */
   double distance(
-    const Eigen::Vector3d & point, const Eigen::Vector3d & direction);
+    const Eigen::Vector3d & point, const Eigen::Vector3d & direction) const;
+
+  /**
+   * @brief Compute the distance from a set of points to the edge of the
+   * polytope along a given direction vector (negative if point lies outside
+   * the polytope)
+   */
+  Eigen::VectorXd distanceAll(
+    const Eigen::Matrix3Xd & points,
+    const Eigen::Vector3d & direction) const;
+
+  /**
+   * @brief Return the nearest point to the given point along the negative of
+   * the direction vector that lies within the polytope.
+   */
+  Eigen::Vector3d clip(const Eigen::Vector3d & point, const Eigen::Vector3d & direction);
 
   /**
    * @brief Compute the intersection with another polytope
@@ -108,7 +123,7 @@ struct Polytope
   Polytope operator-() const;
 
   /// @brief Constraint matrix
-  Eigen::Matrix<double, Eigen::Dynamic, 3> A;
+  Eigen::MatrixX3d A;
   /// @brief Constraint vector
   Eigen::VectorXd b;
   /// @brief Flag for axis-aligned box (easier computation)

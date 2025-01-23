@@ -131,7 +131,7 @@ TEST_F(ControllerTest, ForceController)
 
   // Update controller output (ignore link masses)
   Eigen::Vector<double, 6> forces{-10, 0, -10, 10, 0, -10};
-  EXPECT_TRUE(
+  ASSERT_TRUE(
     controller.update(forces, Eigen::Isometry3d::Identity())) <<
     "Failed to update controller";
 

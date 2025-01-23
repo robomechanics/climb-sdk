@@ -21,13 +21,18 @@ FootstepPlannerNode::FootstepPlannerNode()
     }
   }
   declare_parameter("seed", 0);
+  goal_ = Eigen::Isometry3d::Identity();
   point_cloud_sub_ = create_subscription<PointCloud2>(
     "map_cloud", 1,
     std::bind(&FootstepPlannerNode::pointCloudCallback, this, _1));
   imu_sub_ = create_subscription<Imu>(
     "/imu/data", 1, std::bind(&FootstepPlannerNode::imuCallback, this, _1));
+  goal_sub_ = create_subscription<PoseStamped>(
+    "goal", 1, [this](const PoseStamped::SharedPtr msg) {
+      goal_ = RosUtils::poseToEigen(msg->pose);
+    });
   cost_pub_ = create_publisher<PointCloud2>("cost_cloud", 1);
-  footholds_pub_ = create_publisher<PoseArray>("planned_footholds", 1);
+  goal_pub_ = create_publisher<PoseStamped>("goal", 1);
   path_pubs_.push_back(create_publisher<Path>("body_path", 1));
   plan_service_ = create_service<Trigger>(
     "plan", std::bind(&FootstepPlannerNode::planCallback, this, _1, _2));
@@ -85,8 +90,7 @@ void FootstepPlannerNode::planCallback(
     start.footholds[contact] = RosUtils::transformToEigen(
       lookupTransform(map_frame, contact).transform);
   }
-  auto goal = start.pose;  // TODO: set goal pose
-  auto plan = footstep_planner_->plan(start, goal);
+  auto plan = footstep_planner_->plan(start, goal_);
 
   PointCloud2 cost_msg;
   pcl::toROSMsg(*footstep_planner_->getCostCloud(), cost_msg);
@@ -94,13 +98,12 @@ void FootstepPlannerNode::planCallback(
   cost_msg.header.stamp = now();
   cost_pub_->publish(cost_msg);
 
-  PoseArray footholds_msg;
-  footholds_msg.header.frame_id = map_frame;
-  footholds_msg.header.stamp = now();
   std::unordered_map<std::string, Path> path_msgs;
   Path body_path_msg;
   body_path_msg.header.frame_id = map_frame;
   body_path_msg.header.stamp = now();
+  Eigen::AngleAxisd flip(M_PI, Eigen::Vector3d::UnitZ());
+  Eigen::Isometry3d flipped;
   for (const auto & stance : plan) {
     PoseStamped body_ps;
     body_ps.header.frame_id = map_frame;
@@ -114,8 +117,9 @@ void FootstepPlannerNode::planCallback(
       }
       PoseStamped ps;
       ps.header.frame_id = map_frame;
-      ps.pose = RosUtils::eigenToPose(foothold);
-      footholds_msg.poses.push_back(ps.pose);
+      flipped = foothold;
+      flipped.rotate(flip);
+      ps.pose = RosUtils::eigenToPose(flipped);
       path_msgs[contact].poses.push_back(ps);
     }
   }
@@ -128,7 +132,6 @@ void FootstepPlannerNode::planCallback(
     path_pubs_.at(i)->publish(path_msgs[contact_frames[i - 1]]);
   }
   path_pubs_.at(0)->publish(body_path_msg);
-  footholds_pub_->publish(footholds_msg);
   response->success = true;
 }
 
@@ -140,6 +143,8 @@ void FootstepPlannerNode::simulateCallback(
   PointCloud::Ptr point_cloud = std::make_unique<PointCloud>();
   Eigen::Isometry3d transform = Eigen::Isometry3d::Identity();
   Eigen::Isometry3d viewpoint = Eigen::Isometry3d::Identity();
+  Eigen::AngleAxisd Ry = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitY());
+  goal_ = Eigen::Isometry3d::Identity();
   if (seed_) {
     std::srand(seed_);
   } else {
@@ -149,35 +154,54 @@ void FootstepPlannerNode::simulateCallback(
     RCLCPP_INFO(get_logger(), "Terrain generation seed: %d", seed);
   }
   if (request->data == "floor") {
-    *point_cloud += terrain::planeXY({0, 0, 0}, 2, 2, res);
+    *point_cloud += terrain::planeXY({0.5, 0, 0}, 2, 2, res);
     viewpoint.translate(Eigen::Vector3d{0, 0, 1000});
+    goal_.translate(Eigen::Vector3d{1, 0, 0});
+  } else if (request->data == "sideways") {
+    *point_cloud += terrain::planeXY({0, 0.5, 0}, 2, 2, res);
+    viewpoint.translate(Eigen::Vector3d{0, 0, 1000});
+    goal_.translate(Eigen::Vector3d{0, 1, 0});
+  } else if (request->data == "diagonal") {
+    *point_cloud += terrain::planeXY({0.5, 0.5, 0}, 2, 2, res);
+    viewpoint.translate(Eigen::Vector3d{0, 0, 1000});
+    goal_.translate(Eigen::Vector3d{1, 1, 0});
   } else if (request->data == "corner") {
     *point_cloud += terrain::planeXY({0, 0, 0}, 1, 1, res);
     *point_cloud += terrain::planeYZ({0.5, 0, 0.5}, 1, 1, res);
     viewpoint.translate(Eigen::Vector3d{-1000, 0, 1000});
+    goal_.translate(Eigen::Vector3d{0.5, 0, 0.5});
+    goal_.rotate(Ry.inverse());
   } else if (request->data == "wall") {
-    *point_cloud += terrain::planeYZ({0, 0, 0}, 2, 2, res);
-    transform.rotate(Eigen::AngleAxisd(-M_PI / 2, Eigen::Vector3d::UnitY()));
+    *point_cloud += terrain::planeYZ({0, 0, 0.5}, 2, 2, res);
+    transform.rotate(Ry.inverse());
     viewpoint.translate(Eigen::Vector3d{-1000, 0, 0});
+    goal_.translate(Eigen::Vector3d{0, 0, 1});
+    goal_.rotate(Ry.inverse());
   } else if (request->data == "corner2") {
     *point_cloud += terrain::planeYZ({0, 0, 0}, 1, 1, res);
     *point_cloud += terrain::planeXY({0.5, 0, 0.5}, 1, 1, res);
-    transform.rotate(Eigen::AngleAxisd(-M_PI / 2, Eigen::Vector3d::UnitY()));
+    transform.rotate(Ry.inverse());
     viewpoint.translate(Eigen::Vector3d{-1000, 0, 1000});
+    goal_.translate(Eigen::Vector3d{0.5, 0, 0.5});
   } else if (request->data == "gap") {
     *point_cloud += terrain::planeXY({0, 0, 0}, 1, 1, res);
     *point_cloud += terrain::planeXY({1.1, 0, 0}, 1, 1, res);
     viewpoint.translate(Eigen::Vector3d{0, 0, 1000});
+    goal_.translate(Eigen::Vector3d{1.1, 0, 0});
   } else if (request->data == "uneven") {
-    *point_cloud += terrain::unevenXY({0, 0, 0}, 2, 2, 0.3, res);
+    *point_cloud += terrain::unevenXY({0.5, 0, 0}, 2, 2, 0.3, res);
     viewpoint.translate(Eigen::Vector3d{0, 0, 1000});
+    goal_.translate(Eigen::Vector3d{1, 0, 0});
   } else if (request->data == "rocky") {
-    *point_cloud += terrain::unevenXY({0, 0, 0}, 2, 2, 0.6, res);
+    *point_cloud += terrain::unevenXY({0.5, 0, 0}, 2, 2, 0.6, res);
     viewpoint.translate(Eigen::Vector3d{0, 0, 1000});
+    goal_.translate(Eigen::Vector3d{1, 0, 0});
   } else if (request->data == "cliff") {
-    *point_cloud += terrain::unevenYZ({0, 0, 0}, 2, 2, 0.3, res);
+    *point_cloud += terrain::unevenYZ({0, 0, 0.5}, 2, 2, 0.3, res);
+    transform.rotate(Ry.inverse());
     viewpoint.translate(Eigen::Vector3d{-1000, 0, 0});
-    transform.rotate(Eigen::AngleAxisd(-M_PI / 2, Eigen::Vector3d::UnitY()));
+    goal_.translate(Eigen::Vector3d{0, 0, 1});
+    goal_.rotate(Ry.inverse());
   } else {
     response->success = false;
     response->message = "Environment not found";
@@ -194,6 +218,12 @@ void FootstepPlannerNode::simulateCallback(
   }
   offset /= count;
   transform = transform * Eigen::Translation3d(0, 0, -offset);
+
+  PoseStamped goal_msg;
+  goal_msg.header.frame_id = "/map";
+  goal_msg.pose = RosUtils::eigenToPose(goal_);
+  goal_msg.header.stamp = now();
+  goal_pub_->publish(goal_msg);
 
   PointCloud2 cloud_msg;
   pcl::toROSMsg(*point_cloud, cloud_msg);

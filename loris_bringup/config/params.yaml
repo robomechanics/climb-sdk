@@ -7,7 +7,7 @@
     ros__parameters:
       joint_update_freq: 20.0
       actuator_update_freq: 1.0
-      initial_position: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.5, -0.5, -0.5, -0.5, 0.0, 0.35]
+      initial_position: [0.0, 0.0, 0.0, 0.0, -0.5, -0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2]
   controller:
     ros__parameters:
       joint_effort_filter_window: 3
@@ -44,3 +44,5 @@
   footstep_planner:
     ros__parameters:
       seed: 0
+      workspace_min_limits: [0.039, 0.176, -0.090]
+      workspace_max_limits: [0.244, 0.255, 0.008]

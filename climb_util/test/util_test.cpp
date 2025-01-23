@@ -115,6 +115,11 @@ TEST(GeometryUtilsTest, Polytope)
     "Bulk distance error";
   EXPECT_NEAR(p.distance(x1, x2), 1.5 * sqrt(2), TOL) <<
     "Distance along direction error";
+  Eigen::Vector3d dd_expected{1.5 * sqrt(2), 0.5 * sqrt(2), -0.5 * sqrt(2)};
+  EXPECT_NEAR_EIGEN(p.distanceAll(X, x2), dd_expected, TOL) <<
+    "Bulk distance along direction error";
+  Eigen::Vector3d clip_expected{2.5, 2.5, 0};
+  EXPECT_NEAR_EIGEN(p.clip(x3, x2), clip_expected, TOL) << "Clipping error";
 
   EXPECT_NEAR_EIGEN((p * -2).distanceAll(X * -2), d_expected * 2, TOL) <<
     "Uniform scaling error (right multiplication)";

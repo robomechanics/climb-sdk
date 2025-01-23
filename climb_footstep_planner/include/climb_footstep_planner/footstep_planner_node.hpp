@@ -1,6 +1,7 @@
 #ifndef CLIMB_FOOTSTEP_PLANNER__FOOTSTEP_PLANNER_NODE_HPP_
 #define CLIMB_FOOTSTEP_PLANNER__FOOTSTEP_PLANNER_NODE_HPP_
 
+#include <Eigen/Geometry>
 #include <memory>
 #include <vector>
 #include <rclcpp/rclcpp.hpp>
@@ -20,7 +21,6 @@ using climb_msgs::srv::SetString;
 using std_msgs::msg::String;
 using sensor_msgs::msg::PointCloud2;
 using sensor_msgs::msg::Imu;
-using geometry_msgs::msg::PoseArray;
 using geometry_msgs::msg::PoseStamped;
 using nav_msgs::msg::Path;
 using std_srvs::srv::Trigger;
@@ -47,12 +47,14 @@ private:
   std::unique_ptr<FootstepPlanner> footstep_planner_;
   rclcpp::Subscription<PointCloud2>::SharedPtr point_cloud_sub_;
   rclcpp::Subscription<Imu>::SharedPtr imu_sub_;
+  rclcpp::Subscription<PoseStamped>::SharedPtr goal_sub_;
   rclcpp::Publisher<PointCloud2>::SharedPtr cost_pub_;
-  rclcpp::Publisher<PoseArray>::SharedPtr footholds_pub_;
+  rclcpp::Publisher<PoseStamped>::SharedPtr goal_pub_;
   std::vector<rclcpp::Publisher<Path>::SharedPtr> path_pubs_;
   rclcpp::Service<Trigger>::SharedPtr plan_service_;
   rclcpp::Service<SetString>::SharedPtr simulate_service_;
   int seed_;
+  Eigen::Isometry3d goal_;
 };
 
 #endif  // CLIMB_FOOTSTEP_PLANNER__FOOTSTEP_PLANNER_NODE_HPP_

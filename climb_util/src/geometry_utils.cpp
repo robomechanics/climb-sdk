@@ -9,7 +9,7 @@ Polytope::Polytope()
 }
 
 Polytope::Polytope(
-  const Eigen::Matrix<double, Eigen::Dynamic, 3> & A,
+  const Eigen::MatrixX3d & A,
   const Eigen::VectorXd & b)
 : A(A), b(b)
 {
@@ -46,7 +46,7 @@ bool Polytope::contains(const Eigen::Vector3d & point) const
 }
 
 Eigen::Vector<bool, Eigen::Dynamic> Polytope::containsAll(
-  const Eigen::Matrix<double, 3, Eigen::Dynamic> & points) const
+  const Eigen::Matrix3Xd & points) const
 {
   return ((-A * points).colwise() + b).colwise().minCoeff().array() >= 0;
 }
@@ -54,11 +54,11 @@ Eigen::Vector<bool, Eigen::Dynamic> Polytope::containsAll(
 double Polytope::distance(const Eigen::Vector3d & point) const
 {
   Eigen::ArrayXd norm = A.rowwise().norm();
-  return ((b - A * point).array().colwise() / norm).minCoeff();
+  return ((b - A * point).array() / norm).minCoeff();
 }
 
 Eigen::VectorXd Polytope::distanceAll(
-  const Eigen::Matrix<double, 3, Eigen::Dynamic> & points) const
+  const Eigen::Matrix3Xd & points) const
 {
   Eigen::ArrayXd norm = A.rowwise().norm();
   return (((-A * points).colwise() + b).array().colwise() / norm)
@@ -66,11 +66,29 @@ Eigen::VectorXd Polytope::distanceAll(
 }
 
 double Polytope::distance(
+  const Eigen::Vector3d & point, const Eigen::Vector3d & direction) const
+{
+  Eigen::ArrayXd scale = (A * direction.normalized());
+  return (scale > 0).select(
+    ((b - A * point).array() / scale), INFINITY).minCoeff();
+}
+
+Eigen::VectorXd Polytope::distanceAll(
+  const Eigen::Matrix3Xd & points,
+  const Eigen::Vector3d & direction) const
+{
+  Eigen::ArrayXd scale = A * direction.normalized();
+  Eigen::ArrayXXd dist =
+    ((-A * points).colwise() + b).array().colwise() / scale;
+  return (scale > 0).replicate(1, points.cols())
+         .select(dist, INFINITY).colwise().minCoeff();
+}
+
+Eigen::Vector3d Polytope::clip(
   const Eigen::Vector3d & point, const Eigen::Vector3d & direction)
 {
-  Eigen::ArrayXd scale = (A * direction.normalized()).array();
-  scale = (scale > 0).select(1.0 / scale, INFINITY);
-  return ((b - A * point).array() * scale).minCoeff();
+  double d = distance(point, direction);
+  return d >= 0 ? point : point + d * direction.normalized();
 }
 
 void Polytope::intersect(const Polytope & other)
@@ -146,7 +164,7 @@ Polytope & Polytope::operator*=(double scale)
   b *= abs(scale);
   if (scale < 0) {
     if (box) {
-      A.topRows(3).swap(A.bottomRows(3));
+      b.topRows(3).swap(b.bottomRows(3));
     } else {
       A *= -1;
     }
