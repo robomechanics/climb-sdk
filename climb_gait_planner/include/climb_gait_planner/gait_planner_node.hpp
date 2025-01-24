@@ -48,7 +48,7 @@ private:
    * @brief Adjust current step progress and foothold location
    * @param[in] msg Message containing step override command
    */
-  void FootstepUpdateCallback(const FootstepUpdate::SharedPtr msg);
+  void footstepUpdateCallback(const FootstepUpdate::SharedPtr msg);
 
   /**
    * @brief Callback for step command initial request
@@ -93,9 +93,8 @@ private:
   // Action server for step commands
   rclcpp_action::Server<FootstepCommand>::SharedPtr step_cmd_srv_;
   // Goal handles for step commands
-  std::unordered_map<std::string,
-    std::shared_ptr<rclcpp_action::ServerGoalHandle<FootstepCommand>>>
-  goal_handles_;
+  std::shared_ptr<rclcpp_action::ServerGoalHandle<FootstepCommand>>
+  goal_handle_;
 };
 
 #endif  // CLIMB_GAIT_PLANNER__GAIT_PLANNER_NODE_HPP_

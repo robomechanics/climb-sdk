@@ -13,6 +13,8 @@
 
 #include <climb_msgs/action/footstep_command.hpp>
 #include <climb_msgs/msg/controller_command.hpp>
+#include <climb_msgs/msg/footstep.hpp>
+#include <climb_msgs/msg/footstep_plan.hpp>
 #include <climb_msgs/msg/joint_command.hpp>
 #include <climb_msgs/msg/footstep_update.hpp>
 #include <climb_msgs/msg/teleop_output.hpp>
@@ -28,6 +30,8 @@ using climb_msgs::action::FootstepCommand;
 using climb_msgs::srv::TeleopInput;
 using climb_msgs::srv::ActuatorEnable;
 using climb_msgs::srv::SetString;
+using climb_msgs::msg::Footstep;
+using climb_msgs::msg::FootstepPlan;
 using climb_msgs::msg::JointCommand;
 using climb_msgs::msg::ControllerCommand;
 using climb_msgs::msg::FootstepUpdate;
@@ -64,6 +68,12 @@ private:
   void keyCallback(
     const std::shared_ptr<TeleopInput::Request> request,
     std::shared_ptr<TeleopInput::Response> response);
+
+  /**
+   * @brief Callback for footstep plan message
+   * @param msg The footstep plan message
+   */
+  void planCallback(const FootstepPlan::SharedPtr msg);
 
   /**
    * @brief Enable or disable the actuator
@@ -118,7 +128,7 @@ private:
    * @param tokens The command tokens
    * @return The response message
    */
-  KeyInputParser::Response footstepCommandCallback(
+  KeyInputParser::Response stepCommandCallback(
     const std::vector<std::string> & tokens);
 
   /**
@@ -127,6 +137,14 @@ private:
    * @return The response message
    */
   KeyInputParser::Response planCommandCallback(
+    const std::vector<std::string> & tokens);
+
+  /**
+   * @brief Execute the most recent foothold plan
+   * @param tokens The command tokens
+   * @return The response message
+   */
+  KeyInputParser::Response executeCommandCallback(
     const std::vector<std::string> & tokens);
 
   /**
@@ -151,6 +169,13 @@ private:
    * @return The twist vector (linear, angular)
    */
   Eigen::Vector<double, 6> getTwist(char key, const std::string & frame) const;
+
+  /**
+   * @brief Convert FootstepCommand feedback state to display name
+   * @param state The feedback state
+   * @return The display name
+   */
+  std::string getStateName(int state) const;
 
   /**
    * @brief Set a joint property
@@ -205,6 +230,16 @@ private:
   void controlEndEffector(
     const std::string & contact, const Eigen::Vector<double, 6> & twist);
 
+  /**
+   * @brief Execute a footstep command
+   * @param footstep The footstep command
+   * @param result_callback The callback function after completion/termination
+   * @return The response message
+   */
+  KeyInputParser::Response takeStep(
+    const Footstep & footstep,
+    rclcpp_action::Client<FootstepCommand>::ResultCallback result_callback);
+
   rcl_interfaces::msg::SetParametersResult parameterCallback(
     const std::vector<rclcpp::Parameter> & parameters) override;
 
@@ -220,6 +255,8 @@ private:
   rclcpp::Publisher<ControllerCommand>::SharedPtr ee_cmd_pub_;
   // Step override command publisher
   rclcpp::Publisher<FootstepUpdate>::SharedPtr step_override_cmd_pub_;
+  // Plan subscriber
+  rclcpp::Subscription<FootstepPlan>::SharedPtr plan_sub_;
   // Actuator enable client
   rclcpp::Client<ActuatorEnable>::SharedPtr actuator_enable_client_;
   // Controller enable client
@@ -232,6 +269,10 @@ private:
   rclcpp_action::Client<FootstepCommand>::SharedPtr step_cmd_client_;
   // Command callback group
   rclcpp::CallbackGroup::SharedPtr command_callback_group_;
+  // Most recent plan
+  FootstepPlan::SharedPtr plan_;
+  // Current step index of plan
+  size_t step_index_;
   // Poses
   std::unordered_map<std::string, std::vector<double>> configurations_;
   // Joint setpoints

@@ -26,7 +26,7 @@ GaitPlannerNode::GaitPlannerNode()
     std::bind(&GaitPlannerNode::contactForceCallback, this, std::placeholders::_1));
   step_override_cmd_sub_ = create_subscription<FootstepUpdate>(
     "footstep_updates", 1,
-    std::bind(&GaitPlannerNode::FootstepUpdateCallback, this, std::placeholders::_1));
+    std::bind(&GaitPlannerNode::footstepUpdateCallback, this, std::placeholders::_1));
   end_effector_cmd_pub_ =
     create_publisher<ControllerCommand>("controller_commands", 1);
   foothold_pub_ = create_publisher<PoseArray>("footholds", 1);
@@ -64,7 +64,7 @@ void GaitPlannerNode::contactForceCallback(const ContactForce::SharedPtr msg)
   foothold_pub_->publish(footholds);
 }
 
-void GaitPlannerNode::FootstepUpdateCallback(
+void GaitPlannerNode::footstepUpdateCallback(
   const FootstepUpdate::SharedPtr msg)
 {
   Eigen::Vector<double, 6> twist = RosUtils::twistToEigen(msg->offset);
@@ -105,7 +105,7 @@ rclcpp_action::CancelResponse GaitPlannerNode::cancelCallback(
   [[maybe_unused]] const std::shared_ptr<GoalHandle> goal_handle)
 {
   auto goal = goal_handle->get_goal();
-  goal_handles_.erase(goal->footstep.frames[0]);
+  goal_handle_ = nullptr;
   for (const auto & frame : goal->footstep.frames) {
     gait_planner_->cancel(frame);
   }
@@ -117,9 +117,9 @@ void GaitPlannerNode::acceptedCallback(
   const std::shared_ptr<GoalHandle> goal_handle)
 {
   auto footstep = goal_handle->get_goal()->footstep;
+  goal_handle_ = goal_handle;
   for (size_t i = 0; i < footstep.frames.size(); i++) {
     auto frame = footstep.frames[i];
-    goal_handles_[frame] = goal_handle;
     if (footstep.footholds.size() <= i) {
       gait_planner_->step(frame);
     } else {
@@ -131,28 +131,25 @@ void GaitPlannerNode::acceptedCallback(
 void GaitPlannerNode::processStateChanges()
 {
   auto changes = gait_planner_->getStateChanges();
+  if (!goal_handle_ || changes.empty()) {
+    return;
+  }
   while (!changes.empty()) {
     auto change = changes.front();
     changes.pop();
-    auto handle = goal_handles_.find(change.contact);
-    if (handle != goal_handles_.end()) {
-      auto feedback = std::make_shared<FootstepCommand::Feedback>();
-      feedback->state = static_cast<uint8_t>(change.state);
-      handle->second->publish_feedback(feedback);
-      if (change.state == GaitPlanner::State::STANCE) {
-        for (const auto & [contact2, handle2] : goal_handles_) {
-          if (handle->first != contact2 && handle->second == handle2) {
-            goal_handles_.erase(handle);
-            return;
-          }
-        }
-        auto result = std::make_shared<FootstepCommand::Result>();
-        result->success = true;
-        handle->second->succeed(result);
-        goal_handles_.erase(handle);
-      }
+    auto feedback = std::make_shared<FootstepCommand::Feedback>();
+    feedback->state = static_cast<uint8_t>(change.state);
+    goal_handle_->publish_feedback(feedback);
+  }
+  for (const auto & contact : goal_handle_->get_goal()->footstep.frames) {
+    if (gait_planner_->getState(contact) != GaitPlanner::State::STANCE) {
+      return;
     }
   }
+  auto result = std::make_shared<FootstepCommand::Result>();
+  result->success = true;
+  goal_handle_->succeed(result);
+  goal_handle_ = nullptr;
 }
 
 rcl_interfaces::msg::SetParametersResult GaitPlannerNode::parameterCallback(

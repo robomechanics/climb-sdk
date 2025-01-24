@@ -7,6 +7,8 @@
 
 using std::placeholders::_1;
 using std::placeholders::_2;
+using namespace std::chrono_literals;
+using Response = KeyInputParser::Response;
 
 TeleopNode::TeleopNode()
 : KinematicsNode("TeleopNode")
@@ -35,6 +37,8 @@ TeleopNode::TeleopNode()
     "teleop_input", std::bind(&TeleopNode::keyCallback, this, _1, _2),
     rclcpp::ServicesQoS(), command_callback_group_);
   teleop_output_pub_ = create_publisher<TeleopOutput>("teleop_output", 1);
+  plan_sub_ = create_subscription<FootstepPlan>(
+    "footstep_plan", 1, std::bind(&TeleopNode::planCallback, this, _1));
   actuator_enable_client_ = create_client<ActuatorEnable>("actuator_enable");
   controller_enable_client_ = create_client<SetBool>("controller_enable");
   plan_client_ = create_client<Trigger>("plan");
@@ -100,11 +104,14 @@ void TeleopNode::addCommands()
   // Take a step
   key_input_parser_.defineCommand(
     "step CONTACT",
-    std::bind(&TeleopNode::footstepCommandCallback, this, _1));
+    std::bind(&TeleopNode::stepCommandCallback, this, _1));
   // Plan footsteps
   key_input_parser_.defineCommand(
     "plan",
     std::bind(&TeleopNode::planCommandCallback, this, _1));
+  key_input_parser_.defineCommand(
+    "execute",
+    std::bind(&TeleopNode::executeCommandCallback, this, _1));
   // Load simulated point cloud
   key_input_parser_.defineCommand(
     "simulate STRING",
@@ -121,69 +128,73 @@ void TeleopNode::keyCallback(
   response->response.realtime = result.realtime;
 }
 
-KeyInputParser::Response TeleopNode::enableCommandCallback(
+void TeleopNode::planCallback(const FootstepPlan::SharedPtr msg)
+{
+  plan_ = msg;
+  step_index_ = 0;
+}
+
+Response TeleopNode::enableCommandCallback(
   const std::vector<std::string> & tokens)
 {
   auto request = std::make_shared<ActuatorEnable::Request>();
   request->enable = tokens.at(0) == "enable";
   auto result = actuator_enable_client_->async_send_request(request);
-  auto status = result.wait_for(std::chrono::milliseconds(100));
+  auto status = result.wait_for(100ms);
   if (status == std::future_status::ready) {
     auto response = result.get();
     if (response->success) {
-      return KeyInputParser::Response{
-        request->enable ? "Enabled" : "Disabled", false};
+      return Response{request->enable ? "Enabled" : "Disabled", false};
     } else {
-      return KeyInputParser::Response{response->message, false};
+      return Response{response->message, false};
     }
   }
-  return KeyInputParser::Response{"Robot driver node is not responding", false};
+  return Response{"Robot driver node is not responding", false};
 }
 
-KeyInputParser::Response TeleopNode::controlCommandCallback(
+Response TeleopNode::controlCommandCallback(
   const std::vector<std::string> & tokens)
 {
   auto request = std::make_shared<SetBool::Request>();
   request->data = tokens.at(1) == "on";
   auto result = controller_enable_client_->async_send_request(request);
-  auto status = result.wait_for(std::chrono::milliseconds(100));
+  auto status = result.wait_for(100ms);
   if (status == std::future_status::ready) {
     auto response = result.get();
     if (response->success) {
-      return KeyInputParser::Response{
-        request->data ? "Control on" : "Control off", false};
+      return Response{request->data ? "Control on" : "Control off", false};
     } else {
-      return KeyInputParser::Response{response->message, false};
+      return Response{response->message, false};
     }
   }
-  return KeyInputParser::Response{"Controller node is not responding", false};
+  return Response{"Controller node is not responding", false};
 }
 
-KeyInputParser::Response TeleopNode::setCommandCallback(
+Response TeleopNode::setCommandCallback(
   const std::vector<std::string> & tokens)
 {
   setJoint(tokens.at(1), tokens.at(2), std::stod(tokens.at(3)));
   auto response = fmt::format(
     "{}: {} = {}", tokens.at(1), tokens.at(2), tokens.at(3));
-  return KeyInputParser::Response{response, false};
+  return Response{response, false};
 }
 
-KeyInputParser::Response TeleopNode::gotoCommandCallback(
+Response TeleopNode::gotoCommandCallback(
   const std::vector<std::string> & tokens)
 {
   setConfiguration(
     robot_->getJointNames(), configurations_.at(tokens.at(1)));
-  return KeyInputParser::Response{"Configuration: " + tokens.at(1), false};
+  return Response{"Configuration: " + tokens.at(1), false};
 }
 
-KeyInputParser::Response TeleopNode::moveCommandCallback(
+Response TeleopNode::moveCommandCallback(
   const std::vector<std::string> & tokens)
 {
   key_input_parser_.setInputCallback(
     [this, tokens](char key) {
       switch (key) {
         case ' ':
-          return KeyInputParser::Response{"Stopped", false};
+          return Response{"Stopped", false};
         case 'w':
           moveJoint(tokens.at(1), joint_step_);
           break;
@@ -191,15 +202,15 @@ KeyInputParser::Response TeleopNode::moveCommandCallback(
           moveJoint(tokens.at(1), -joint_step_);
           break;
       }
-      return KeyInputParser::Response{"", true};
+      return Response{"", true};
     });
   joint_setpoints_ = robot_->getJointPosition();
   auto response = fmt::format(
     "{}: Move with w/s keys, press space to stop", tokens.at(1));
-  return KeyInputParser::Response{response, true};
+  return Response{response, true};
 }
 
-KeyInputParser::Response TeleopNode::twistCommandCallback(
+Response TeleopNode::twistCommandCallback(
   const std::vector<std::string> & tokens)
 {
   FootstepUpdate command;
@@ -218,7 +229,7 @@ KeyInputParser::Response TeleopNode::twistCommandCallback(
         command.header.frame_id = tokens.at(1);
         command.command = FootstepUpdate::COMMAND_RESUME;
         step_override_cmd_pub_->publish(command);
-        return KeyInputParser::Response{"Stopped", false};
+        return Response{"Stopped", false};
       }
       if (controller_enable_) {
         controlEndEffector(tokens.at(1), getTwist(key, tokens.at(1)));
@@ -227,80 +238,24 @@ KeyInputParser::Response TeleopNode::twistCommandCallback(
       } else {
         moveEndEffector(tokens.at(1), getTwist(key, tokens.at(1)));
       }
-      return KeyInputParser::Response{"", true};
+      return Response{"", true};
     });
   joint_setpoints_ = robot_->getJointPosition();
   auto response = fmt::format(
     "{}: Linear with w/a/s/d/q/e keys, angular with W/A/S/D/Q/E keys, "
     "press space to stop", tokens.at(1));
-  return KeyInputParser::Response{response, true};
+  return Response{response, true};
 }
 
-KeyInputParser::Response TeleopNode::footstepCommandCallback(
+Response TeleopNode::stepCommandCallback(
   const std::vector<std::string> & tokens)
 {
   std::string frame = tokens.at(1);
-  auto goal = FootstepCommand::Goal();
-  goal.footstep.frames.push_back(frame);
-  goal.footstep.header.stamp = now();
-
-  auto options = rclcpp_action::Client<FootstepCommand>::SendGoalOptions();
-  options.feedback_callback =
-    [this, frame](
-    auto, const std::shared_ptr<const FootstepCommand::Feedback> feedback)
-    {
-      std::string state = "Invalid state";
-      switch (feedback->state) {
-        case FootstepCommand::Feedback::STATE_STANCE:
-          state = "Stance";
-          break;
-        case FootstepCommand::Feedback::STATE_DISENGAGE:
-          state = "Disengage";
-          break;
-        case FootstepCommand::Feedback::STATE_LIFT:
-          state = "Lift";
-          break;
-        case FootstepCommand::Feedback::STATE_SWING:
-          state = "Swing";
-          break;
-        case FootstepCommand::Feedback::STATE_PLACE:
-          state = "Place";
-          break;
-        case FootstepCommand::Feedback::STATE_ENGAGE:
-          state = "Engage";
-          break;
-        case FootstepCommand::Feedback::STATE_SNAG:
-          state = "Snag";
-          break;
-        case FootstepCommand::Feedback::STATE_SLIP:
-          state = "Slip";
-          break;
-        case FootstepCommand::Feedback::STATE_RETRY:
-          state = "Retry";
-          break;
-        case FootstepCommand::Feedback::STATE_STOP:
-          state = "Stop";
-          break;
-      }
-      TeleopOutput msg;
-      msg.message = fmt::format("{} state: {}", frame, state);
-      msg.realtime = true;
-      teleop_output_pub_->publish(msg);
-    };
-  auto goal_handle_future = step_cmd_client_->async_send_goal(goal, options);
-  auto goal_handle_status =
-    goal_handle_future.wait_for(std::chrono::milliseconds(100));
-  if (goal_handle_status != std::future_status::ready) {
-    return KeyInputParser::Response{
-      "Step planner node is not responding", false};
-  }
-  auto goal_handle = goal_handle_future.get();
-  if (!goal_handle) {
-    return KeyInputParser::Response{
-      "Step planner node rejected the requested step", false};
-  }
-  auto result_future = step_cmd_client_->async_get_result(
-    goal_handle, [this](const auto & result) {
+  Footstep footstep;
+  footstep.header.stamp = now();
+  footstep.frames.push_back(frame);
+  return takeStep(
+    footstep, [this](const auto & result) {
       TeleopOutput msg;
       if (result.result->success) {
         msg.message = "Completed step";
@@ -310,66 +265,74 @@ KeyInputParser::Response TeleopNode::footstepCommandCallback(
       msg.realtime = false;
       teleop_output_pub_->publish(msg);
     });
-  key_input_parser_.setInputCallback(
-    [this, frame, goal_handle, result_future](char key) {
-      FootstepUpdate command;
-      command.header.stamp = this->now();
-      command.header.frame_id = frame;
-      if (key == ' ') {
-        step_cmd_client_->async_cancel_goal(goal_handle);
-        return KeyInputParser::Response{"", true};
-      } else if (key == '.') {
-        command.command = FootstepUpdate::COMMAND_ADVANCE;
-        step_override_cmd_pub_->publish(command);
-        return KeyInputParser::Response{"Advancing Step", true};
-      } else if (key == ',') {
-        command.command = FootstepUpdate::COMMAND_RETRY;
-        step_override_cmd_pub_->publish(command);
-        return KeyInputParser::Response{"Retrying Step", true};
-      } else {
-        command.offset = RosUtils::eigenToTwist(getTwist(key));
-        step_override_cmd_pub_->publish(command);
-        return KeyInputParser::Response{"", true};
-      }
-    });
-  return KeyInputParser::Response{
-    fmt::format("Taking step {}", goal.footstep.frames[0]), true};
 }
 
-KeyInputParser::Response TeleopNode::planCommandCallback(
+Response TeleopNode::planCommandCallback(
   const std::vector<std::string> & tokens [[maybe_unused]])
 {
   auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
   auto result = plan_client_->async_send_request(request);
-  auto status = result.wait_for(std::chrono::milliseconds(100));
+  auto status = result.wait_for(10s);
   if (status == std::future_status::ready) {
     auto response = result.get();
     if (response->success) {
-      return KeyInputParser::Response{"Planned footsteps", false};
+      return Response{"Planned footsteps", false};
     } else {
-      return KeyInputParser::Response{response->message, false};
+      return Response{response->message, false};
     }
   }
-  return KeyInputParser::Response{
-    "Footstep planner node is not responding", false};
+  return Response{"Footstep planner node is not responding", false};
 }
 
-KeyInputParser::Response TeleopNode::simulateCommandCallback(
+Response TeleopNode::executeCommandCallback(
+  const std::vector<std::string> & tokens [[maybe_unused]])
+{
+  if (!plan_ || step_index_ >= plan_->steps.size()) {
+    return Response{"No plan available", false};
+  }
+  return takeStep(
+    plan_->steps.at(step_index_), [this](const auto & result) {
+      // Start a new thread to avoid action client blocking, because
+      // using a reentrant command group is not sufficient
+      std::thread(
+        [this, result]() {
+          TeleopOutput msg;
+          msg.realtime = false;
+          if (result.result->success) {
+            msg.message = "Completed step";
+            if (result.result->success) {
+              if (++step_index_ < plan_->steps.size()) {
+                auto response = executeCommandCallback({});
+                msg.message = response.message;
+                msg.realtime = response.realtime;
+              } else {
+                msg.message = "Completed plan";
+              }
+            }
+          } else {
+            msg.message = "Aborted step";
+          }
+          teleop_output_pub_->publish(msg);
+        }).detach();
+    });
+}
+
+Response TeleopNode::simulateCommandCallback(
   const std::vector<std::string> & tokens)
 {
   auto request = std::make_shared<SetString::Request>();
   request->data = tokens.at(1);
   auto result = simulate_client_->async_send_request(request);
-  auto status = result.wait_for(std::chrono::milliseconds(100));
+  auto status = result.wait_for(1s);
   if (status == std::future_status::ready) {
     auto response = result.get();
     if (response->success) {
-      return KeyInputParser::Response{"Loaded point cloud", false};
+      return Response{"Loaded point cloud", false};
     } else {
-      return KeyInputParser::Response{response->message, false};
+      return Response{response->message, false};
     }
   }
-  return KeyInputParser::Response{
+  return Response{
     "Footstep planner node is not responding", false};
 }
 
@@ -377,42 +340,18 @@ Eigen::Vector<double, 6> TeleopNode::getTwist(char key) const
 {
   Eigen::Vector<double, 6> twist = Eigen::Vector<double, 6>::Zero();
   switch (key) {
-    case 'w':
-      twist[0] = linear_step_;
-      break;
-    case 's':
-      twist[0] = -linear_step_;
-      break;
-    case 'a':
-      twist[1] = linear_step_;
-      break;
-    case 'd':
-      twist[1] = -linear_step_;
-      break;
-    case 'q':
-      twist[2] = linear_step_;
-      break;
-    case 'e':
-      twist[2] = -linear_step_;
-      break;
-    case 'W':
-      twist[4] = angular_step_;
-      break;
-    case 'S':
-      twist[4] = -angular_step_;
-      break;
-    case 'A':
-      twist[3] = -angular_step_;
-      break;
-    case 'D':
-      twist[3] = angular_step_;
-      break;
-    case 'Q':
-      twist[5] = angular_step_;
-      break;
-    case 'E':
-      twist[5] = -angular_step_;
-      break;
+    case 'w': twist[0] = linear_step_; break;
+    case 's': twist[0] = -linear_step_; break;
+    case 'a': twist[1] = linear_step_; break;
+    case 'd': twist[1] = -linear_step_; break;
+    case 'q': twist[2] = linear_step_; break;
+    case 'e': twist[2] = -linear_step_; break;
+    case 'W': twist[4] = angular_step_; break;
+    case 'S': twist[4] = -angular_step_; break;
+    case 'A': twist[3] = -angular_step_; break;
+    case 'D': twist[3] = angular_step_; break;
+    case 'Q': twist[5] = angular_step_; break;
+    case 'E': twist[5] = -angular_step_; break;
   }
   return twist;
 }
@@ -425,6 +364,23 @@ Eigen::Vector<double, 6> TeleopNode::getTwist(
   transform.linear() = robot_->getTransform(frame).rotation().transpose();
   Eigen::MatrixXd Ad = robot_->getAdjoint(transform);
   return Ad * twist;
+}
+
+std::string TeleopNode::getStateName(int state) const
+{
+  switch (state) {
+    case FootstepCommand::Feedback::STATE_STANCE: return "Stance";
+    case FootstepCommand::Feedback::STATE_DISENGAGE: return "Disengage";
+    case FootstepCommand::Feedback::STATE_LIFT: return "Lift";
+    case FootstepCommand::Feedback::STATE_SWING: return "Swing";
+    case FootstepCommand::Feedback::STATE_PLACE: return "Place";
+    case FootstepCommand::Feedback::STATE_ENGAGE: return "Engage";
+    case FootstepCommand::Feedback::STATE_SNAG: return "Snag";
+    case FootstepCommand::Feedback::STATE_SLIP: return "Slip";
+    case FootstepCommand::Feedback::STATE_RETRY: return "Retry";
+    case FootstepCommand::Feedback::STATE_STOP: return "Stop";
+  }
+  return "Invalid";
 }
 
 void TeleopNode::setJoint(
@@ -531,6 +487,61 @@ void TeleopNode::controlEndEffector(
   command.mode = {ControllerCommand::MODE_FREE};
   command.twist = {RosUtils::eigenToTwist(twist)};
   ee_cmd_pub_->publish(command);
+}
+
+Response TeleopNode::takeStep(
+  const Footstep & footstep,
+  rclcpp_action::Client<FootstepCommand>::ResultCallback result_callback)
+{
+  if (footstep.frames.empty()) {
+    return Response{"No contact frame specified", false};
+  }
+  FootstepCommand::Goal goal;
+  goal.footstep = footstep;
+  auto options = rclcpp_action::Client<FootstepCommand>::SendGoalOptions();
+  options.feedback_callback =
+    [this, footstep](
+    auto, const std::shared_ptr<const FootstepCommand::Feedback> feedback)
+    {
+      TeleopOutput msg;
+      msg.message = fmt::format(
+        "{} state: {}", footstep.frames[0], getStateName(feedback->state));
+      msg.realtime = true;
+      teleop_output_pub_->publish(msg);
+    };
+  options.result_callback = result_callback;
+  auto goal_handle_future = step_cmd_client_->async_send_goal(goal, options);
+  auto goal_handle_status = goal_handle_future.wait_for(100ms);
+  if (goal_handle_status != std::future_status::ready) {
+    return Response{"Step planner node is not responding", false};
+  }
+  auto goal_handle = goal_handle_future.get();
+  if (!goal_handle) {
+    return Response{"Step planner node rejected the requested step", false};
+  }
+  key_input_parser_.setInputCallback(
+    [this, footstep, goal_handle](char key) {
+      FootstepUpdate command;
+      command.header.stamp = this->now();
+      command.header.frame_id = footstep.frames[0];
+      if (key == ' ') {
+        step_cmd_client_->async_cancel_goal(goal_handle);
+        return Response{"", true};
+      } else if (key == '.') {
+        command.command = FootstepUpdate::COMMAND_ADVANCE;
+        step_override_cmd_pub_->publish(command);
+        return Response{"Advancing Step", true};
+      } else if (key == ',') {
+        command.command = FootstepUpdate::COMMAND_RETRY;
+        step_override_cmd_pub_->publish(command);
+        return Response{"Retrying Step", true};
+      } else {
+        command.offset = RosUtils::eigenToTwist(getTwist(key));
+        step_override_cmd_pub_->publish(command);
+        return Response{"", true};
+      }
+    });
+  return Response{fmt::format("Taking step {}", footstep.frames[0]), true};
 }
 
 rcl_interfaces::msg::SetParametersResult TeleopNode::parameterCallback(

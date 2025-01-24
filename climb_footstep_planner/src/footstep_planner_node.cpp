@@ -3,11 +3,13 @@
 #include <pcl/common/common.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <climb_msgs/msg/footstep.hpp>
 #include <climb_util/ros_utils.hpp>
 #include "climb_footstep_planner/terrain_generator.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
+using climb_msgs::msg::Footstep;
 
 FootstepPlannerNode::FootstepPlannerNode()
 : KinematicsNode("FootstepPlannerNode")
@@ -33,6 +35,7 @@ FootstepPlannerNode::FootstepPlannerNode()
     });
   cost_pub_ = create_publisher<PointCloud2>("cost_cloud", 1);
   goal_pub_ = create_publisher<PoseStamped>("goal", 1);
+  plan_pub_ = create_publisher<FootstepPlan>("footstep_plan", 1);
   path_pubs_.push_back(create_publisher<Path>("body_path", 1));
   plan_service_ = create_service<Trigger>(
     "plan", std::bind(&FootstepPlannerNode::planCallback, this, _1, _2));
@@ -98,6 +101,9 @@ void FootstepPlannerNode::planCallback(
   cost_msg.header.stamp = now();
   cost_pub_->publish(cost_msg);
 
+  FootstepPlan plan_msg;
+  plan_msg.header.frame_id = map_frame;
+
   std::unordered_map<std::string, Path> path_msgs;
   Path body_path_msg;
   body_path_msg.header.frame_id = map_frame;
@@ -105,6 +111,16 @@ void FootstepPlannerNode::planCallback(
   Eigen::AngleAxisd flip(M_PI, Eigen::Vector3d::UnitZ());
   Eigen::Isometry3d flipped;
   for (const auto & stance : plan) {
+    if (!stance.swing_foot.empty()) {
+      Footstep footstep;
+      footstep.header.frame_id = map_frame;
+      footstep.header.stamp = now();
+      footstep.body = RosUtils::eigenToPose(stance.pose);
+      footstep.frames.push_back(stance.swing_foot);
+      footstep.footholds.push_back(
+        RosUtils::eigenToPose(stance.footholds.at(stance.swing_foot)));
+      plan_msg.steps.push_back(footstep);
+    }
     PoseStamped body_ps;
     body_ps.header.frame_id = map_frame;
     body_ps.pose = RosUtils::eigenToPose(stance.pose);
@@ -123,6 +139,8 @@ void FootstepPlannerNode::planCallback(
       path_msgs[contact].poses.push_back(ps);
     }
   }
+  plan_msg.header.stamp = now();
+  plan_pub_->publish(plan_msg);
   auto contact_frames = robot_->getContactFrames();
   for (size_t i = 1; i < path_msgs.size() + 1; i++) {
     if (path_pubs_.size() == i) {

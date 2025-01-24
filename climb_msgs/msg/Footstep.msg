@@ -1,6 +1,7 @@
 # A transition to a new stance by repositioning one or more end effectors
 
-# Leave the foothold field empty to request a default foothold
+# Leave the footholds field empty to request a default foothold, body pose, and
+# joint overrides
 
 std_msgs/Header header              # Header with timestamp and base frame
 
