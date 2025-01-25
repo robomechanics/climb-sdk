@@ -35,6 +35,10 @@ public:
 
   Eigen::Isometry3d getTransform(
     const std::string & parent, const std::string & child) override;
+  Eigen::VectorXd getIK(
+    const std::string & parent, const std::string & child,
+    const Eigen::Vector3d & position,
+    const std::vector<std::string> & fixed_joints = {}) override;
   Eigen::MatrixXd getHandJacobian(const std::string & contact_frame) override;
   Eigen::MatrixXd getHandJacobian() override;
   Eigen::MatrixXd getJacobian(

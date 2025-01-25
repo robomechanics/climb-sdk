@@ -74,7 +74,7 @@ protected:
   std::shared_ptr<KinematicsInterface> robot_;
 };
 
-TEST_F(KinematicsTest, Transform)
+TEST_F(KinematicsTest, ForwardKinematics)
 {
   Eigen::Isometry3d transform = robot_->getTransform("left_foot");
   Eigen::Vector3d p_expected{1, 1, -1};
@@ -86,6 +86,28 @@ TEST_F(KinematicsTest, Transform)
     1, 0, 0;
   EXPECT_NEAR_EIGEN(transform.rotation(), R_expected, TOL) <<
     "Incorrect left foot rotation";
+}
+
+TEST_F(KinematicsTest, InverseKinematics)
+{
+  JointState joint_state;
+  joint_state.name = {"left_hip", "right_hip", "left_knee", "right_knee"};
+  joint_state.position = {PI / 4, PI / 4, 1.5, 1.5};
+  robot_->updateJointState(joint_state);
+  Eigen::Vector3d goal =
+    robot_->getTransform("left_foot", "right_foot").translation();
+  Eigen::VectorXd joint_pos_expected = robot_->getJointPosition();
+  joint_state.position = {1.5, PI / 4, PI / 4, 1.5};
+  robot_->updateJointState(joint_state);
+  Eigen::VectorXd joint_pos =
+    robot_->getIK("left_foot", "right_foot", goal, {"right_hip", "right_knee"});
+  ASSERT_NE(joint_pos.size(), 0) << "Failed to find IK solution";
+  EXPECT_NEAR_EIGEN(joint_pos, joint_pos_expected, TOL) <<
+    "Incorrect inverse kinematics joint angles";
+
+  goal << 0, -3, 0;
+  joint_pos = robot_->getIK("left_foot", "right_foot", goal);
+  EXPECT_EQ(joint_pos.size(), 0) << "Incorrect handling of infeasible IK";
 }
 
 TEST_F(KinematicsTest, ContactFrames)

@@ -2,6 +2,8 @@
 
 #include <kdl/chaindynparam.hpp>
 #include <kdl/chainfksolverpos_recursive.hpp>
+#include <kdl/chainiksolvervel_pinv.hpp>
+#include <kdl/chainiksolverpos_nr_jl.hpp>
 #include <kdl/chainjnttojacsolver.hpp>
 #include <kdl_parser/kdl_parser.hpp>
 
@@ -78,6 +80,40 @@ Eigen::Isometry3d KdlInterface::getTransform(
   transform_eigen.linear() = rotation;
   transform_eigen.translation() = position;
   return transform_eigen;
+}
+
+Eigen::VectorXd KdlInterface::getIK(
+  const std::string & parent, const std::string & child,
+  const Eigen::Vector3d & position,
+  const std::vector<std::string> & fixed_joints)
+{
+  auto chain = getChain(parent, child);
+  auto guess = getJointArray(joint_pos_, chain);
+  auto lb = getJointArray(joint_pos_min_, chain);
+  auto ub = getJointArray(joint_pos_max_, chain);
+  for (const auto & joint : fixed_joints) {
+    for (size_t i = 0; i < chain.joints; i++) {
+      if (chain.joint_names.at(i) == joint) {
+        lb(i) = guess(i);
+        ub(i) = guess(i);
+      }
+    }
+  }
+  KDL::ChainFkSolverPos_recursive fk_pos_solver(chain.kdl_chain);
+  KDL::ChainIkSolverVel_pinv ik_vel_solver(chain.kdl_chain);
+  KDL::ChainIkSolverPos_NR_JL solver(
+    chain.kdl_chain, lb, ub, fk_pos_solver, ik_vel_solver);
+  auto goal = KDL::Frame({position.x(), position.y(), position.z()});
+  KDL::JntArray joint_out(chain.joints);
+  auto result = solver.CartToJnt(guess, goal, joint_out);
+  if (result != 0) {
+    return Eigen::VectorXd();
+  }
+  Eigen::VectorXd output = joint_pos_;
+  for (size_t i = 0; i < chain.joints; i++) {
+    output(chain.joint_indices.at(i)) = joint_out(i);
+  }
+  return output;
 }
 
 Eigen::MatrixXd KdlInterface::getHandJacobian(const std::string & contact_frame)
@@ -213,7 +249,7 @@ Eigen::VectorXd KdlInterface::getCoriolisVector()
       getJointArray(joint_pos_, chain),
       getJointArray(joint_vel_, chain), coriolis_vec);
     // Accumulate full coriolis vector
-    for (size_t i = 0; i < chain.joint_names.size(); i++) {
+    for (size_t i = 0; i < chain.joints; i++) {
       full_coriolis(chain.joint_indices[i]) += coriolis_vec(i);
     }
   }
@@ -245,7 +281,7 @@ Eigen::VectorXd KdlInterface::getGravitationalVector(
     KDL::JntArray gravity_vec(chain.joints);
     solver.JntToGravity(getJointArray(joint_pos_, chain), gravity_vec);
     // Accumulate full gravity vector
-    for (size_t i = 0; i < chain.joint_names.size(); i++) {
+    for (size_t i = 0; i < chain.joints; i++) {
       full_gravity(chain.joint_indices[i]) += gravity_vec(i);
     }
   }

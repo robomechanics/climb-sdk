@@ -83,6 +83,33 @@ public:
     const std::string & child) {return getTransform(body_frame_, child);}
 
   /**
+   * @brief Compute joint angles to achieve desired transform in parent frame
+   * @param[in] parent Name of parent frame
+   * @param[in] child Name of child frame
+   * @param[in] position Desired child frame position relative to parent frame
+   * @param[in] fixed_joints Names of constrained joint angles
+   * @return Joint position vector or empty vector if solution not found
+   */
+  virtual Eigen::VectorXd getIK(
+    const std::string & parent, const std::string & child,
+    const Eigen::Vector3d & position,
+    const std::vector<std::string> & fixed_joints = {}) = 0;
+
+  /**
+   * @brief Compute joint angles to achieve desired transform in body frame
+   * @param[in] child Name of child frame
+   * @param[in] position Desired child frame position relative to body frame
+   * @param[in] fixed_joints Names of constrained joint angles
+   * @return Joint position vector or empty vector if solution not found
+   */
+  virtual Eigen::VectorXd getIK(
+    const std::string & child, const Eigen::Vector3d & position,
+    const std::vector<std::string> & fixed_joints = {})
+  {
+    return getIK(body_frame_, child, position, fixed_joints);
+  }
+
+  /**
    * @brief Compute Jacobian mapping joint velocities to end effector
    * velocity with respect to the body in the contact wrench basis
    * @param[in] contact_frame Name of contact frame
