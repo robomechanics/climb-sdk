@@ -10,7 +10,7 @@ namespace geometry_utils
 {
 
 /**
- * @brief A 3D polytope defined by a set of linear inequalities Ax <= b
+ * @brief A polytope defined by a set of linear inequalities Ax <= b
  */
 struct Polytope
 {
@@ -23,7 +23,7 @@ struct Polytope
    * @brief Construct a polytope from a set of linear inequalities Ax <= b
    */
   Polytope(
-    const Eigen::MatrixX3d & A,
+    const Eigen::MatrixXd & A,
     const Eigen::VectorXd & b);
 
   /**
@@ -41,39 +41,39 @@ struct Polytope
   /**
    * @brief Add a new half-plane constraint to the polytope
    */
-  void addFacet(const Eigen::Vector3d & Ai, double bi);
+  void addFacet(const Eigen::VectorXd & Ai, double bi);
 
   /**
    * @brief Check if a point lies within the polytope
    */
-  bool contains(const Eigen::Vector3d & point) const;
+  bool contains(const Eigen::VectorXd & point) const;
 
   /**
    * @brief Check if a set of points lie within the polytope
    */
   Eigen::Vector<bool, Eigen::Dynamic> containsAll(
-    const Eigen::Matrix3Xd & points) const;
+    const Eigen::MatrixXd & points) const;
 
   /**
    * @brief Compute the distance from a point to the edge of the polytope
    * (negative if point lies outside the polytope)
    */
   double distance(
-    const Eigen::Vector3d & point) const;
+    const Eigen::VectorXd & point) const;
 
   /**
    * @brief Compute the distances from a set of points to the edge of the
    * polytope (negative if point lies outside the polytope)
    */
   Eigen::VectorXd distanceAll(
-    const Eigen::Matrix3Xd & points) const;
+    const Eigen::MatrixXd & points) const;
 
   /**
    * @brief Compute the distance to the edge of the polytope along a given
    * direction vector (negative if point lies outside the polytope)
    */
   double distance(
-    const Eigen::Vector3d & point, const Eigen::Vector3d & direction) const;
+    const Eigen::VectorXd & point, const Eigen::VectorXd & direction) const;
 
   /**
    * @brief Compute the distance from a set of points to the edge of the
@@ -81,14 +81,14 @@ struct Polytope
    * the polytope)
    */
   Eigen::VectorXd distanceAll(
-    const Eigen::Matrix3Xd & points,
-    const Eigen::Vector3d & direction) const;
+    const Eigen::MatrixXd & points,
+    const Eigen::VectorXd & direction) const;
 
   /**
    * @brief Return the nearest point to the given point along the negative of
    * the direction vector that lies within the polytope.
    */
-  Eigen::Vector3d clip(const Eigen::Vector3d & point, const Eigen::Vector3d & direction);
+  Eigen::VectorXd clip(const Eigen::VectorXd & point, const Eigen::VectorXd & direction);
 
   /**
    * @brief Compute the intersection with another polytope
@@ -105,25 +105,35 @@ struct Polytope
   /**
    * @brief Scale the polytope along each axis
    */
-  Polytope scaled(const Eigen::Vector3d & scale) const;
+  Polytope scaled(const Eigen::VectorXd & scale) const;
 
   /**
    * @brief Scale the polytope along each axis in place
    */
-  void scale(const Eigen::Vector3d & scale);
+  void scale(const Eigen::VectorXd & scale);
+
+  /**
+   * @brief Remove a variable from the polytope using Fourier-Motzkin
+   */
+  Polytope eliminated(int index) const;
+
+  /**
+   * @brief Remove a variable from the polytope in place using Fourier-Motzkin
+   */
+  void eliminate(int index);
 
   /**
    * @brief Compute the Minkowski sum with another polytope in place
    */
   Polytope & operator+=(const Polytope & other);
-  Polytope & operator+=(const Eigen::Ref<const Eigen::Vector3d> & translation);
-  Polytope & operator-=(const Eigen::Ref<const Eigen::Vector3d> & translation);
+  Polytope & operator+=(const Eigen::Ref<const Eigen::VectorXd> & translation);
+  Polytope & operator-=(const Eigen::Ref<const Eigen::VectorXd> & translation);
   Polytope & operator*=(double scale);
   Polytope & operator/=(double scale);
   Polytope operator-() const;
 
   /// @brief Constraint matrix
-  Eigen::MatrixX3d A;
+  Eigen::MatrixXd A;
   /// @brief Constraint vector
   Eigen::VectorXd b;
   /// @brief Flag for axis-aligned box (easier computation)
@@ -132,13 +142,13 @@ struct Polytope
 
 Polytope operator+(const Polytope & p, const Polytope & other);
 Polytope operator+(
-  const Polytope & p, const Eigen::Ref<const Eigen::Vector3d> & translation);
+  const Polytope & p, const Eigen::Ref<const Eigen::VectorXd> & translation);
 Polytope operator+(
-  const Eigen::Ref<const Eigen::Vector3d> & translation, const Polytope & p);
+  const Eigen::Ref<const Eigen::VectorXd> & translation, const Polytope & p);
 Polytope operator-(
-  const Polytope & p, const Eigen::Ref<const Eigen::Vector3d> & translation);
+  const Polytope & p, const Eigen::Ref<const Eigen::VectorXd> & translation);
 Polytope operator-(
-  const Eigen::Ref<const Eigen::Vector3d> & translation, const Polytope & p);
+  const Eigen::Ref<const Eigen::VectorXd> & translation, const Polytope & p);
 Polytope operator*(
   const Eigen::Ref<const Eigen::Matrix3d> & rotation, const Polytope & p);
 Polytope operator*(const Eigen::Isometry3d & transform, const Polytope & p);

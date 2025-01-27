@@ -1,21 +1,20 @@
 #include "climb_util/geometry_utils.hpp"
+#include <vector>
 
 namespace geometry_utils
 {
 Polytope::Polytope()
 {
-  A = Eigen::MatrixXd(0, 3);
-  b = Eigen::VectorXd(0);
+  A = Eigen::MatrixXd();
+  b = Eigen::VectorXd();
 }
 
 Polytope::Polytope(
-  const Eigen::MatrixX3d & A,
+  const Eigen::MatrixXd & A,
   const Eigen::VectorXd & b)
 : A(A), b(b)
 {
-  if (A.rows() != b.size()) {
-    throw std::invalid_argument("Polytope: A and b must have same row count");
-  }
+  assert(A.rows() == b.size());
 }
 
 Polytope Polytope::createBox(
@@ -31,52 +30,59 @@ Polytope Polytope::createBox(
   return p;
 }
 
-void Polytope::addFacet(const Eigen::Vector3d & Ai, double bi)
+void Polytope::addFacet(const Eigen::VectorXd & Ai, double bi)
 {
-  A.conservativeResize(A.rows() + 1, Eigen::NoChange);
+  assert(!A.rows() || Ai.size() == A.cols());
+  A.conservativeResize(A.rows() + 1, Ai.size());
   A.row(A.rows() - 1) = Ai;
   b.conservativeResize(b.size() + 1);
   b(b.size() - 1) = bi;
   box = false;
 }
 
-bool Polytope::contains(const Eigen::Vector3d & point) const
+bool Polytope::contains(const Eigen::VectorXd & point) const
 {
+  assert(A.cols() == point.size());
   return (b - A * point).minCoeff() >= 0;
 }
 
 Eigen::Vector<bool, Eigen::Dynamic> Polytope::containsAll(
-  const Eigen::Matrix3Xd & points) const
+  const Eigen::MatrixXd & points) const
 {
+  assert(A.cols() == points.rows());
   return ((-A * points).colwise() + b).colwise().minCoeff().array() >= 0;
 }
 
-double Polytope::distance(const Eigen::Vector3d & point) const
+double Polytope::distance(const Eigen::VectorXd & point) const
 {
+  assert(A.cols() == point.size());
   Eigen::ArrayXd norm = A.rowwise().norm();
   return ((b - A * point).array() / norm).minCoeff();
 }
 
 Eigen::VectorXd Polytope::distanceAll(
-  const Eigen::Matrix3Xd & points) const
+  const Eigen::MatrixXd & points) const
 {
+  assert(A.cols() == points.rows());
   Eigen::ArrayXd norm = A.rowwise().norm();
   return (((-A * points).colwise() + b).array().colwise() / norm)
          .colwise().minCoeff();
 }
 
 double Polytope::distance(
-  const Eigen::Vector3d & point, const Eigen::Vector3d & direction) const
+  const Eigen::VectorXd & point, const Eigen::VectorXd & direction) const
 {
+  assert(A.cols() == point.size() && A.cols() == direction.size());
   Eigen::ArrayXd scale = (A * direction.normalized());
   return (scale > 0).select(
     ((b - A * point).array() / scale), INFINITY).minCoeff();
 }
 
 Eigen::VectorXd Polytope::distanceAll(
-  const Eigen::Matrix3Xd & points,
-  const Eigen::Vector3d & direction) const
+  const Eigen::MatrixXd & points,
+  const Eigen::VectorXd & direction) const
 {
+  assert(A.cols() == points.rows() && A.cols() == direction.size());
   Eigen::ArrayXd scale = A * direction.normalized();
   Eigen::ArrayXXd dist =
     ((-A * points).colwise() + b).array().colwise() / scale;
@@ -84,18 +90,24 @@ Eigen::VectorXd Polytope::distanceAll(
          .select(dist, INFINITY).colwise().minCoeff();
 }
 
-Eigen::Vector3d Polytope::clip(
-  const Eigen::Vector3d & point, const Eigen::Vector3d & direction)
+Eigen::VectorXd Polytope::clip(
+  const Eigen::VectorXd & point, const Eigen::VectorXd & direction)
 {
+  assert(A.cols() == point.size() && A.cols() == direction.size());
   double d = distance(point, direction);
   return d >= 0 ? point : point + d * direction.normalized();
 }
 
 void Polytope::intersect(const Polytope & other)
 {
+  assert(!A.rows() || !other.A.rows() || A.cols() == other.A.cols());
   if (box && other.box) {
     b = b.cwiseMin(other.b);
-  } else {
+  } else if (!A.rows() && other.A.rows()) {
+    A = other.A;
+    b = other.b;
+    box = other.box;
+  } else if (other.A.rows()) {
     A.conservativeResize(A.rows() + other.A.rows(), Eigen::NoChange);
     A.bottomRows(other.A.rows()) = other.A;
     b.conservativeResize(b.size() + other.b.size());
@@ -111,8 +123,9 @@ Polytope Polytope::intersection(const Polytope & other) const
   return result;
 }
 
-void Polytope::scale(const Eigen::Vector3d & scale)
+void Polytope::scale(const Eigen::VectorXd & scale)
 {
+  assert(A.cols() == scale.size());
   if (box) {
     b.head(3).array() *= scale.cwiseAbs().array();
     b.tail(3).array() *= scale.cwiseAbs().array();
@@ -122,19 +135,81 @@ void Polytope::scale(const Eigen::Vector3d & scale)
       }
     }
   } else {
-    Eigen::Vector3d s = scale;
+    Eigen::VectorXd s = scale;
     for (int i = 0; i < s.size(); ++i) {
       if (!s(i)) {
         s(i) = 1.0;
-        addFacet(Eigen::Vector3d::Unit(i), 0);
-        addFacet(-Eigen::Vector3d::Unit(i), 0);
+        addFacet(Eigen::VectorXd::Unit(s.size(), i), 0);
+        addFacet(-Eigen::VectorXd::Unit(s.size(), i), 0);
       }
     }
     A = A * s.cwiseInverse().asDiagonal();
   }
 }
 
-Polytope Polytope::scaled(const Eigen::Vector3d & scale) const
+void Polytope::eliminate(int index)
+{
+  assert(index >= 0 && index < A.cols());
+  if (box) {
+    Eigen::MatrixXd A_new = Eigen::MatrixXd::Zero(4, 2);
+    Eigen::VectorXd b_new = Eigen::VectorXd::Zero(4);
+    int j = 0;
+    for (int i = 0; i < 3; ++i) {
+      if (i != index) {
+        A_new.row(j) <<
+          A.row(i).head(index), A.row(i).tail(A.cols() - index - 1);
+        A_new.row(j + 2) <<
+          A.row(i + 3).head(index), A.row(i + 3).tail(A.cols() - index - 1);
+        b_new(j) = b(i);
+        b_new(j + 2) = b(i + 3);
+        ++j;
+      }
+    }
+    A = A_new;
+    b = b_new;
+    return;
+  }
+  // Sort rows by sign of eliminated variable's coefficient
+  std::vector<int> i_p, i_m, i_z;
+  for (int i = 0; i < A.rows(); ++i) {
+    if (A(i, index) > 0) {
+      i_p.push_back(i);
+    } else if (A(i, index) < 0) {
+      i_m.push_back(i);
+    } else {
+      i_z.push_back(i);
+    }
+  }
+  // Eliminate variable using Fourier-Motzkin
+  Eigen::VectorXd newB(i_p.size() * i_m.size() + i_z.size());
+  Eigen::MatrixXd newA(newB.size(), A.cols());
+  int j = 0;
+  for (int p : i_p) {
+    for (int n : i_m) {
+      newA.row(j) = (A.row(p) / A(p, index) - A.row(n) / A(n, index));
+      newB(j) = b(p) / A(p, index) - b(n) / A(n, index);
+      ++j;
+    }
+  }
+  for (int z : i_z) {
+    newA.row(j) = A.row(z);
+    newB(j) = b(z);
+    ++j;
+  }
+  // Remove the eliminated variable's column
+  A = Eigen::MatrixXd(newA.rows(), newA.cols() - 1);
+  A << newA.leftCols(index), newA.rightCols(newA.cols() - index - 1);
+  b = newB;
+}
+
+Polytope Polytope::eliminated(int index) const
+{
+  Polytope result(*this);
+  result.eliminate(index);
+  return result;
+}
+
+Polytope Polytope::scaled(const Eigen::VectorXd & scale) const
 {
   Polytope result(*this);
   result.scale(scale);
@@ -143,6 +218,7 @@ Polytope Polytope::scaled(const Eigen::Vector3d & scale) const
 
 Polytope & Polytope::operator+=(const Polytope & other)
 {
+  assert(A.cols() == other.A.cols());
   if (box && other.box) {
     b += other.b;
     return *this;
@@ -153,8 +229,9 @@ Polytope & Polytope::operator+=(const Polytope & other)
 }
 
 Polytope & Polytope::operator+=(
-  const Eigen::Ref<const Eigen::Vector3d> & translation)
+  const Eigen::Ref<const Eigen::VectorXd> & translation)
 {
+  assert(A.cols() == translation.size());
   b += A * translation;
   return *this;
 }
@@ -173,7 +250,7 @@ Polytope & Polytope::operator*=(double scale)
 }
 
 Polytope & Polytope::operator-=(
-  const Eigen::Ref<const Eigen::Vector3d> & translation)
+  const Eigen::Ref<const Eigen::VectorXd> & translation)
 {
   return *this += -translation;
 }
@@ -194,25 +271,25 @@ Polytope operator+(const Polytope & p, const Polytope & other)
 }
 
 Polytope operator+(
-  const Polytope & p, const Eigen::Ref<const Eigen::Vector3d> & translation)
+  const Polytope & p, const Eigen::Ref<const Eigen::VectorXd> & translation)
 {
   return Polytope(p) += translation;
 }
 
 Polytope operator+(
-  const Eigen::Ref<const Eigen::Vector3d> & translation, const Polytope & p)
+  const Eigen::Ref<const Eigen::VectorXd> & translation, const Polytope & p)
 {
   return p + translation;
 }
 
 Polytope operator-(
-  const Polytope & p, const Eigen::Ref<const Eigen::Vector3d> & translation)
+  const Polytope & p, const Eigen::Ref<const Eigen::VectorXd> & translation)
 {
   return Polytope(p) -= translation;
 }
 
 Polytope operator-(
-  const Eigen::Ref<const Eigen::Vector3d> & translation, const Polytope & p)
+  const Eigen::Ref<const Eigen::VectorXd> & translation, const Polytope & p)
 {
   return -p + translation;
 }
@@ -220,11 +297,13 @@ Polytope operator-(
 Polytope operator*(
   const Eigen::Ref<const Eigen::Matrix3d> & rotation, const Polytope & p)
 {
+  assert(p.A.cols() == 3);
   return Polytope(p.A * rotation.transpose(), p.b);
 }
 
 Polytope operator*(const Eigen::Isometry3d & transform, const Polytope & p)
 {
+  assert(p.A.cols() == 3);
   return transform.linear() * p + transform.translation();
 }
 

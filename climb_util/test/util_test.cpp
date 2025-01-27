@@ -90,11 +90,11 @@ TEST(EigenUtilsTest, Skew)
 TEST(GeometryUtilsTest, Polytope)
 {
   geometry_utils::Polytope p;  // x + y < 5, x > 0, y > 0, -1 < z < 1
-  p.addFacet({1, 1, 0}, 5);
-  p.addFacet({-1, 0, 0}, 0);
-  p.addFacet({0, -1, 0}, 0);
-  p.addFacet({0, 0, -1}, 1);
-  p.addFacet({0, 0, 1}, 1);
+  p.addFacet(Eigen::Vector3d{1, 1, 0}, 5);
+  p.addFacet(Eigen::Vector3d{-1, 0, 0}, 0);
+  p.addFacet(Eigen::Vector3d{0, -1, 0}, 0);
+  p.addFacet(Eigen::Vector3d{0, 0, -1}, 1);
+  p.addFacet(Eigen::Vector3d{0, 0, 1}, 1);
   Eigen::MatrixXd A_expected(5, 3);
   A_expected << 1, 1, 0, -1, 0, 0, 0, -1, 0, 0, 0, -1, 0, 0, 1;
   EXPECT_NEAR_EIGEN(p.A, A_expected, TOL) << "Constraint matrix incorrect";
@@ -167,11 +167,12 @@ TEST(GeometryUtilsTest, Polytope)
   Eigen::ArrayXd x1_scaled = x1.array() * s;
   auto p_scaled = p.scaled(s);
   Eigen::Vector3d d_s_expected = {
-    p.distance(x1, {1, 0, 0}) * s(0),
-    p.distance(x1, {0, 1, 0}) * s(1),
-    p.distance(x1, {0, 0, 1}) * s(2)};
-  EXPECT_NEAR(p_scaled.distance(x1_scaled, {1, 0, 0}), d_s_expected(0), TOL) <<
-    "Non-uniform scaling error";
+    p.distance(x1, Eigen::Vector3d{1, 0, 0}) * s(0),
+    p.distance(x1, Eigen::Vector3d{0, 1, 0}) * s(1),
+    p.distance(x1, Eigen::Vector3d{0, 0, 1}) * s(2)};
+  EXPECT_NEAR(
+    p_scaled.distance(x1_scaled, Eigen::Vector3d{1, 0, 0}),
+    d_s_expected(0), TOL) << "Non-uniform scaling error";
 
   auto p_top = geometry_utils::Polytope(p.A.topRows(3), p.b.head(3));
   auto p_bot = geometry_utils::Polytope(p.A.bottomRows(2), p.b.bottomRows(2));
@@ -189,7 +190,7 @@ TEST(GeometryUtilsTest, Polytope)
     (b1 * -2).distanceAll(X / 2), (p1 * -2).distanceAll(X / 2), TOL) <<
     "Box uniform scaling error";
 
-  auto b2_scaled = b2.scaled({-1, 2, 0});
+  auto b2_scaled = b2.scaled(Eigen::Vector3d{-1, 2, 0});
   Eigen::Vector<double, 6> b2_scaled_expected{2, 2, 0, 1, 4, 0};
   EXPECT_NEAR_EIGEN(b2_scaled.b, b2_scaled_expected, TOL) <<
     "Box non-uniform scaling error";
@@ -200,6 +201,19 @@ TEST(GeometryUtilsTest, Polytope)
 
   Eigen::Vector<double, 6> sum_expected{2, 3, 4, 3, 4, 5};
   EXPECT_NEAR_EIGEN((b1 + b2).b, sum_expected, TOL) << "Box addition error";
+
+  auto b1_elim = b1.eliminated(1);
+  Eigen::Vector<double, 4> b_eliminate_expected{1, 3, 1, 3};
+  Eigen::Matrix<double, 4, 2> A_eliminate_expected;
+  A_eliminate_expected << -1, 0, 0, -1, 1, 0, 0, 1;
+  EXPECT_NEAR_EIGEN(b1_elim.b, b_eliminate_expected, TOL) <<
+    "Box elimination error (b)";
+  EXPECT_NEAR_EIGEN(b1_elim.A, A_eliminate_expected, TOL) <<
+    "Box elimination error (A)";
+
+  auto p_elim = p.eliminated(2);
+  Eigen::MatrixXd X_elim = X.block(0, 0, 2, 3);
+  EXPECT_EQ(p_elim.containsAll(X_elim), c_expected) << "Elimination error";
 }
 
 int main(int argc, char ** argv)
