@@ -118,6 +118,10 @@ TEST(GeometryUtilsTest, Polytope)
   Eigen::Vector3d dd_expected{1.5 * sqrt(2), 0.5 * sqrt(2), -0.5 * sqrt(2)};
   EXPECT_NEAR_EIGEN(p.distanceAll(X, x2), dd_expected, TOL) <<
     "Bulk distance along direction error";
+  Eigen::Vector3d dd_expected_tol{sqrt(2), 0.5 * sqrt(2), -0.5 * sqrt(2)};
+  Eigen::Vector3d x_hat{1, 0, 0};
+  EXPECT_NEAR_EIGEN(p.distanceAll(X, x_hat, PI / 4), dd_expected_tol, TOL) <<
+    "Bulk distance along direction with angular tolerance error";
   Eigen::Vector3d clip_expected{2.5, 2.5, 0};
   EXPECT_NEAR_EIGEN(p.clip(x3, x2), clip_expected, TOL) << "Clipping error";
 

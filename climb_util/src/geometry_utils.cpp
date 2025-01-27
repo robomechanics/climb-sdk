@@ -70,20 +70,35 @@ Eigen::VectorXd Polytope::distanceAll(
 }
 
 double Polytope::distance(
-  const Eigen::VectorXd & point, const Eigen::VectorXd & direction) const
+  const Eigen::VectorXd & point,
+  const Eigen::VectorXd & direction,
+  double delta) const
 {
   assert(A.cols() == point.size() && A.cols() == direction.size());
   Eigen::ArrayXd scale = (A * direction.normalized());
+  if (delta) {
+    Eigen::ArrayXd norm = A.rowwise().norm();
+    Eigen::ArrayXd theta = (scale / norm).acos();
+    theta = (theta - delta).cwiseMax(0).cwiseMin(M_PI);
+    scale = norm * theta.cos();
+  }
   return (scale > 0).select(
     ((b - A * point).array() / scale), INFINITY).minCoeff();
 }
 
 Eigen::VectorXd Polytope::distanceAll(
   const Eigen::MatrixXd & points,
-  const Eigen::VectorXd & direction) const
+  const Eigen::VectorXd & direction,
+  double delta) const
 {
   assert(A.cols() == points.rows() && A.cols() == direction.size());
   Eigen::ArrayXd scale = A * direction.normalized();
+  if (delta) {
+    Eigen::ArrayXd norm = A.rowwise().norm();
+    Eigen::ArrayXd theta = (scale / norm).acos();
+    theta = (theta - delta).cwiseMax(0).cwiseMin(M_PI);
+    scale = norm * theta.cos();
+  }
   Eigen::ArrayXXd dist =
     ((-A * points).colwise() + b).array().colwise() / scale;
   return (scale > 0).replicate(1, points.cols())

@@ -140,9 +140,9 @@ FootstepPlanner::Stance FootstepPlanner::step(
     workspace_min_limits_, workspace_max_limits_);
   std::unordered_map<std::string, Polytope> workspaces = {
     {"gripper_1", W1},
-    {"gripper_2", W1.scaled({1.0, -1.0, 1.0})},
-    {"gripper_3", W1.scaled({-1.0, 1.0, 1.0})},
-    {"gripper_4", W1.scaled({-1.0, -1.0, 1.0})}};
+    {"gripper_2", W1.scaled(Eigen::Vector3d{1.0, -1.0, 1.0})},
+    {"gripper_3", W1.scaled(Eigen::Vector3d{-1.0, 1.0, 1.0})},
+    {"gripper_4", W1.scaled(Eigen::Vector3d{-1.0, -1.0, 1.0})}};
 
   // Select swing foot closest to rear edge of workspace (in body frame)
   Eigen::Isometry3d map_to_body = start.pose.inverse();
@@ -217,7 +217,8 @@ FootstepPlanner::Stance FootstepPlanner::step(
   }
 
   // Select optimal foothold from workspace
-  Eigen::VectorXd distance = W_swing.distanceAll(p_workspace, -direction);
+  Eigen::VectorXd distance =
+    W_swing.distanceAll(p_workspace, -direction, workspace_angular_tol_);
   distance.array() -= W_swing.distance(p0_swing, -direction);
   Eigen::Index index;
   if (distance.maxCoeff(&index) < min_step_length_) {return stance;}
@@ -242,6 +243,9 @@ void FootstepPlanner::declareParameters()
     "min_step_length", 0.02,
     "Minimum body displacment in direction of goal per step", 0.0);
   declareParameter(
+    "workspace_angular_tol", 0.0,
+    "Angular tolerance for distance from workspace edge in radians");
+  declareParameter(
     "workspace_min_limits", std::vector<double>{0.0, 0.0, 0.0},
     "Lower bounds of front left end effector workspace in body frame");
   declareParameter(
@@ -254,6 +258,8 @@ void FootstepPlanner::setParameter(
 {
   if (param.get_name() == "min_step_length") {
     min_step_length_ = param.as_double();
+  } else if (param.get_name() == "workspace_angular_tol") {
+    workspace_angular_tol_ = param.as_double();
   } else if (param.get_name() == "workspace_min_limits") {
     if (param.as_double_array().size() == 3) {
       workspace_min_limits_ = RosUtils::vectorToEigen(param.as_double_array());

@@ -46,3 +46,4 @@
       seed: 0
       workspace_min_limits: [0.039, 0.176, -0.090]
       workspace_max_limits: [0.244, 0.255, 0.008]
+      workspace_angular_tol: 0.05

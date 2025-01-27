@@ -70,23 +70,29 @@ struct Polytope
 
   /**
    * @brief Compute the distance to the edge of the polytope along a given
-   * direction vector (negative if point lies outside the polytope)
+   * direction vector (negative if point lies outside the polytope), with
+   * an optional angular tolerance in radians for the direction (e.g. a
+   * tolerance of pi will ignore the direction entirely)
    */
   double distance(
-    const Eigen::VectorXd & point, const Eigen::VectorXd & direction) const;
+    const Eigen::VectorXd & point,
+    const Eigen::VectorXd & direction,
+    double delta = 0) const;
 
   /**
    * @brief Compute the distance from a set of points to the edge of the
    * polytope along a given direction vector (negative if point lies outside
-   * the polytope)
+   * the polytope), with an optional angular tolerance in radians for the
+   * direction (e.g. a tolerance of pi will ignore the direction entirely)
    */
   Eigen::VectorXd distanceAll(
     const Eigen::MatrixXd & points,
-    const Eigen::VectorXd & direction) const;
+    const Eigen::VectorXd & direction,
+    double delta = 0) const;
 
   /**
    * @brief Return the nearest point to the given point along the negative of
-   * the direction vector that lies within the polytope.
+   * the direction vector that lies within the polytope
    */
   Eigen::VectorXd clip(const Eigen::VectorXd & point, const Eigen::VectorXd & direction);
 

@@ -112,6 +112,7 @@ private:
   pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree_;
   Eigen::Vector3d workspace_min_limits_;
   Eigen::Vector3d workspace_max_limits_;
+  double workspace_angular_tol_;
   double min_step_length_;
 };
 
