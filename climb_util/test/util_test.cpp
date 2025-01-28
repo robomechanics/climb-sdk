@@ -184,8 +184,10 @@ TEST(GeometryUtilsTest, Polytope)
   EXPECT_NEAR_EIGEN(p_top.A, p.A, TOL) << "Intersection error";
   EXPECT_NEAR_EIGEN(p_top.b, p.b, TOL) << "Intersection error";
 
-  auto b1 = geometry_utils::Polytope::createBox({-1, -2, -3}, {1, 2, 3});
-  auto b2 = geometry_utils::Polytope::createBox({-1, -1, -1}, {2, 2, 2});
+  auto b1 = geometry_utils::Polytope::createBox(
+    Eigen::Vector3d{-1, -2, -3}, Eigen::Vector3d{1, 2, 3});
+  auto b2 = geometry_utils::Polytope::createBox(
+    Eigen::Vector3d{-1, -1, -1}, Eigen::Vector3d{2, 2, 2});
   geometry_utils::Polytope p1(b1.A, b1.b);
   EXPECT_NEAR_EIGEN(
     (b1 + v).distanceAll(X / 2), (p1 + v).distanceAll(X / 2), TOL) <<

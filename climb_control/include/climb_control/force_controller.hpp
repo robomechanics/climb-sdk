@@ -11,6 +11,7 @@
 #include <climb_kinematics/interfaces/kinematics_interface.hpp>
 #include <climb_optimization/qp_interfaces/qp_interface.hpp>
 #include <climb_util/parameterized.hpp>
+#include <climb_util/geometry_utils.hpp>
 
 using climb_msgs::msg::ControllerCommand;
 
@@ -206,10 +207,12 @@ private:
   double microspine_max_force_;
   // Maximum joint effort in Nm
   double max_effort_;
+  // Workspaces for each end effector
+  std::unordered_map<std::string, geometry_utils::Polytope> workspaces_;
   // Minimum body displacement in body frame in rad or m
-  Eigen::Vector3d body_min_limits_;
+  Eigen::Vector3d workspace_min_limits_;
   // Maximum body displacement in body frame in rad or m
-  Eigen::Vector3d body_max_limits_;
+  Eigen::Vector3d workspace_max_limits_;
 };
 
 #endif  // CLIMB_CONTROL__FORCE_CONTROLLER_HPP_

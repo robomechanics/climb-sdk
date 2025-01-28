@@ -27,11 +27,16 @@ struct Polytope
     const Eigen::VectorXd & b);
 
   /**
+   * @brief Construct a d-dimensional unbounded axis-aligned box polytope
+   */
+  static Polytope createBox(int d = 3);
+
+  /**
    * @brief Construct an axis-aligned box polytope from lower and upper bounds
    */
   static Polytope createBox(
-    const Eigen::Vector3d lb,
-    const Eigen::Vector3d ub);
+    const Eigen::VectorXd lb,
+    const Eigen::VectorXd ub);
 
   Polytope(const Polytope & other) = default;
   Polytope(Polytope && other) = default;

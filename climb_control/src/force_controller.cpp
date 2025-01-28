@@ -5,6 +5,8 @@
 #include <climb_util/eigen_utils.hpp>
 #include <climb_util/ros_utils.hpp>
 
+using geometry_utils::Polytope;
+
 ForceController::ForceController(std::shared_ptr<KinematicsInterface> robot)
 : robot_(robot)
 {
@@ -30,6 +32,15 @@ bool ForceController::update(
   using Eigen::MatrixXd, Eigen::VectorXd;
   if (end_effector_goals_.empty()) {
     reset();
+  }
+  if (workspaces_.empty()) {
+    // TODO: Temporarily hardcoded workspaces for each end effector
+    auto W1 = Polytope::createBox(workspace_min_limits_, workspace_max_limits_);
+    workspaces_ = {
+      {"gripper_1", W1},
+      {"gripper_2", W1.scaled(Eigen::Vector3d{1.0, -1.0, 1.0})},
+      {"gripper_3", W1.scaled(Eigen::Vector3d{-1.0, 1.0, 1.0})},
+      {"gripper_4", W1.scaled(Eigen::Vector3d{-1.0, -1.0, 1.0})}};
   }
   int n = robot_->getNumJoints();               // Number of joints
   int m = robot_->getNumConstraints();          // Number of contact constraints
@@ -98,21 +109,25 @@ bool ForceController::update(
   }
 
   // Body position bounds
-  Eigen::Vector3d ee;
-  Eigen::Vector3d lower = Eigen::Vector3d::Zero();
-  Eigen::Vector3d upper = Eigen::Vector3d::Zero();
-  for (const auto & frame : robot_->getContactFrames()) {
-    if (robot_->getContactType(frame) == ContactType::TAIL) {
+  auto W_body = Polytope::createBox(3);
+  for (const auto & contact : robot_->getContactFrames()) {
+    if (robot_->getContactType(contact) == ContactType::TAIL) {
       continue;
     }
-    ee = robot_->getTransform(frame).translation();
-    lower = lower.cwiseMin(ee);
-    upper = upper.cwiseMax(ee);
+    W_body.intersect(
+      robot_->getTransform(contact).translation() - workspaces_.at(contact));
   }
-  Eigen::Vector3d lb = body_min_limits_ + upper;
-  Eigen::Vector3d ub = body_max_limits_ + lower;
-  problem.addBounds(
-    "com", lb.cwiseMin((lb + ub) / 2), ub.cwiseMax((lb + ub) / 2));
+  if (W_body.box) {
+    // Ensure body workspace is non-empty
+    for (int i = 0; i < 3; i++) {
+      if (W_body.b(i) + W_body.b(i + 3) < 0) {
+        double avg = (-W_body.b(i) + W_body.b(i + 3)) / 2;
+        W_body.b(i) = avg;
+        W_body.b(i + 3) = avg;
+      }
+    }
+  }
+  problem.addInequalityConstraint({"com"}, {W_body.A}, W_body.b);
 
   // Solve the optimization problem
   bool success;
@@ -320,11 +335,11 @@ void ForceController::declareParameters()
     "effort_limit", 0.0,
     "Maximum joint effort in Nm (0 for no limit)", 0.0);
   declareParameter(
-    "body_min_limits", std::vector<double>{0, 0, 0},
-    "Minimum body displacement in body frame in m");
+    "workspace_min_limits", std::vector<double>{0, 0, 0},
+    "Lower bounds of front left end effector workspace in body frame in m");
   declareParameter(
-    "body_max_limits", std::vector<double>{0, 0, 0},
-    "Maximum body displacement in body frame in m");
+    "workspace_max_limits", std::vector<double>{0, 0, 0},
+    "Upper bounds of front left end effector workspace in body frame in m");
   for (const auto & param : solver_->getParameters()) {
     parameters_.push_back(param);
   }
@@ -360,18 +375,20 @@ void ForceController::setParameter(const Parameter & param, SetParametersResult 
     microspine_max_force_ = param.as_double();
   } else if (param.get_name() == "effort_limit") {
     max_effort_ = param.as_double() ? param.as_double() : INFINITY;
-  } else if (param.get_name() == "body_min_limits") {
+  } else if (param.get_name() == "workspace_min_limits") {
     std::vector<double> limits = param.as_double_array();
     if (limits.size() == 3) {
-      body_min_limits_ = RosUtils::vectorToEigen(limits);
+      workspace_min_limits_ = RosUtils::vectorToEigen(limits);
+      workspaces_.clear();
     } else {
       result.successful = false;
       result.reason = "Invalid vector size (expected 3)";
     }
-  } else if (param.get_name() == "body_max_limits") {
+  } else if (param.get_name() == "workspace_max_limits") {
     std::vector<double> limits = param.as_double_array();
     if (limits.size() == 3) {
-      body_max_limits_ = RosUtils::vectorToEigen(limits);
+      workspace_max_limits_ = RosUtils::vectorToEigen(limits);
+      workspaces_.clear();
     } else {
       result.successful = false;
       result.reason = "Invalid vector size (expected 3)";

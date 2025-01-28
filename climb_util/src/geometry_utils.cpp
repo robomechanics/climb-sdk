@@ -17,13 +17,26 @@ Polytope::Polytope(
   assert(A.rows() == b.size());
 }
 
-Polytope Polytope::createBox(
-  const Eigen::Vector3d lb,
-  const Eigen::Vector3d ub)
+Polytope Polytope::createBox(int d)
 {
-  Eigen::MatrixXd A(6, 3);
-  A << -Eigen::Matrix3d::Identity(), Eigen::Matrix3d::Identity();
-  Eigen::VectorXd b(6);
+  Eigen::MatrixXd A(d * 2, d);
+  A << -Eigen::MatrixXd::Identity(d, d), Eigen::MatrixXd::Identity(d, d);
+  Eigen::VectorXd b(d * 2);
+  b.setConstant(INFINITY);
+  Polytope p(A, b);
+  p.box = true;
+  return p;
+}
+
+Polytope Polytope::createBox(
+  const Eigen::VectorXd lb,
+  const Eigen::VectorXd ub)
+{
+  assert(lb.size() == ub.size());
+  int d = lb.size();
+  Eigen::MatrixXd A(d * 2, d);
+  A << -Eigen::MatrixXd::Identity(d, d), Eigen::MatrixXd::Identity(d, d);
+  Eigen::VectorXd b(d * 2);
   b << -lb, ub;
   Polytope p(A, b);
   p.box = true;
@@ -142,11 +155,11 @@ void Polytope::scale(const Eigen::VectorXd & scale)
 {
   assert(A.cols() == scale.size());
   if (box) {
-    b.head(3).array() *= scale.cwiseAbs().array();
-    b.tail(3).array() *= scale.cwiseAbs().array();
-    for (int i = 0; i < 3; ++i) {
+    b.head(A.cols()).array() *= scale.cwiseAbs().array();
+    b.tail(A.cols()).array() *= scale.cwiseAbs().array();
+    for (int i = 0; i < A.cols(); ++i) {
       if (scale(i) < 0) {
-        b.row(i).swap(b.row(i + 3));
+        b.row(i).swap(b.row(i + A.cols()));
       }
     }
   } else {
@@ -169,14 +182,15 @@ void Polytope::eliminate(int index)
     Eigen::MatrixXd A_new = Eigen::MatrixXd::Zero(4, 2);
     Eigen::VectorXd b_new = Eigen::VectorXd::Zero(4);
     int j = 0;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < A.cols(); ++i) {
       if (i != index) {
         A_new.row(j) <<
           A.row(i).head(index), A.row(i).tail(A.cols() - index - 1);
-        A_new.row(j + 2) <<
-          A.row(i + 3).head(index), A.row(i + 3).tail(A.cols() - index - 1);
+        A_new.row(j + A.cols() - 1) <<
+          A.row(i + A.cols()).head(index),
+          A.row(i + A.cols()).tail(A.cols() - index - 1);
         b_new(j) = b(i);
-        b_new(j + 2) = b(i + 3);
+        b_new(j + A.cols() - 1) = b(i + A.cols());
         ++j;
       }
     }
@@ -256,7 +270,7 @@ Polytope & Polytope::operator*=(double scale)
   b *= abs(scale);
   if (scale < 0) {
     if (box) {
-      b.topRows(3).swap(b.bottomRows(3));
+      b.topRows(A.cols()).swap(b.bottomRows(A.cols()));
     } else {
       A *= -1;
     }
