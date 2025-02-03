@@ -93,6 +93,7 @@ void FootstepPlannerNode::planCallback(
     start.footholds[contact] = RosUtils::transformToEigen(
       lookupTransform(map_frame, contact).transform);
   }
+  map_frame = getPrefixedFrameId(map_frame);
   auto plan = footstep_planner_->plan(start, goal_);
 
   PointCloud2 cost_msg;
@@ -119,6 +120,8 @@ void FootstepPlannerNode::planCallback(
       footstep.frames.push_back(stance.swing_foot);
       footstep.footholds.push_back(
         RosUtils::eigenToPose(stance.footholds.at(stance.swing_foot)));
+      footstep.overrides.name.push_back("spine_joint");
+      footstep.overrides.position.push_back(0.0);
       plan_msg.steps.push_back(footstep);
     }
     PoseStamped body_ps;

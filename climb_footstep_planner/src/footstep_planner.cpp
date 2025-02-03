@@ -75,12 +75,12 @@ void FootstepPlanner::processCloud()
   pc.setRadiusSearch(0.1);
   pc.compute(*curvatures_);
   t_ = curvatures_->getMatrixXfMap().block(
-    0, 0, 3, curvatures_->getMatrixXfMap().cols()).cast<double>();;
+    0, 0, 3, curvatures_->getMatrixXfMap().cols()).cast<double>();
   k_ = curvatures_->getMatrixXfMap().block(
-    3, 0, 2, curvatures_->getMatrixXfMap().cols()).cast<double>();;
+    3, 0, 2, curvatures_->getMatrixXfMap().cols()).cast<double>();
 
   // Compute cost
-  p_ = map_->getMatrixXfMap(3, 4, 0).cast<double>();;
+  p_ = map_->getMatrixXfMap(3, 4, 0).cast<double>();
   c_ = gravity_.transpose() * n_;       // Incline-based cost
   // c_ = k_.colwise().sum();                        // Curvature-based cost
   cost_->resize(map_->size());
@@ -118,7 +118,7 @@ std::vector<FootstepPlanner::Stance> FootstepPlanner::localPlan(
     stance = step(stance, goal);
     if (stance.swing_foot.empty()) {break;}
     if (!local_plan.empty() &&
-        stance.swing_foot == local_plan.back().swing_foot)
+      stance.swing_foot == local_plan.back().swing_foot)
     {
       local_plan.back() = stance;
     } else {

@@ -252,7 +252,7 @@ private:
   // Joint command publisher
   rclcpp::Publisher<JointCommand>::SharedPtr joint_cmd_pub_;
   // End effector command publisher
-  rclcpp::Publisher<ControllerCommand>::SharedPtr ee_cmd_pub_;
+  rclcpp::Publisher<ControllerCommand>::SharedPtr controller_cmd_pub_;
   // Step override command publisher
   rclcpp::Publisher<FootstepUpdate>::SharedPtr step_override_cmd_pub_;
   // Plan subscriber

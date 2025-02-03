@@ -87,7 +87,7 @@ private:
   // Subscriber for step override commands
   rclcpp::Subscription<FootstepUpdate>::SharedPtr step_override_cmd_sub_;
   // Publisher for end effector commands
-  rclcpp::Publisher<ControllerCommand>::SharedPtr end_effector_cmd_pub_;
+  rclcpp::Publisher<ControllerCommand>::SharedPtr controller_cmd_pub_;
   // Publisher for current footholds
   rclcpp::Publisher<PoseArray>::SharedPtr foothold_pub_;
   // Action server for step commands

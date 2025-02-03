@@ -23,11 +23,11 @@ GaitPlannerNode::GaitPlannerNode()
   // Initialize subscribers and publishers
   contact_force_sub_ = create_subscription<ContactForce>(
     "contact_forces", 1,
-    std::bind(&GaitPlannerNode::contactForceCallback, this, std::placeholders::_1));
+    std::bind(&GaitPlannerNode::contactForceCallback, this, _1));
   step_override_cmd_sub_ = create_subscription<FootstepUpdate>(
     "footstep_updates", 1,
-    std::bind(&GaitPlannerNode::footstepUpdateCallback, this, std::placeholders::_1));
-  end_effector_cmd_pub_ =
+    std::bind(&GaitPlannerNode::footstepUpdateCallback, this, _1));
+  controller_cmd_pub_ =
     create_publisher<ControllerCommand>("controller_commands", 1);
   foothold_pub_ = create_publisher<PoseArray>("footholds", 1);
   step_cmd_srv_ = rclcpp_action::create_server<FootstepCommand>(
@@ -51,7 +51,15 @@ void GaitPlannerNode::contactForceCallback(const ContactForce::SharedPtr msg)
   // Publish end effector command
   auto cmd = gait_planner_->getCommand();
   cmd.header.stamp = now();
-  end_effector_cmd_pub_->publish(cmd);
+  if (goal_handle_) {
+    cmd.header.frame_id = goal_handle_->get_goal()->footstep.header.frame_id;
+    cmd.body = goal_handle_->get_goal()->footstep.body;
+    cmd.overrides = goal_handle_->get_goal()->footstep.overrides;
+  } else {
+    cmd.overrides.name.push_back("spine_joint");
+    cmd.overrides.position.push_back(0.0);
+  }
+  controller_cmd_pub_->publish(cmd);
 
   // Publish footholds
   PoseArray footholds;

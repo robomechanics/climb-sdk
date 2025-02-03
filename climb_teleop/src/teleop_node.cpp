@@ -44,7 +44,7 @@ TeleopNode::TeleopNode()
   plan_client_ = create_client<Trigger>("plan");
   simulate_client_ = create_client<SetString>("simulate");
   joint_cmd_pub_ = create_publisher<JointCommand>("joint_commands", 1);
-  ee_cmd_pub_ =
+  controller_cmd_pub_ =
     create_publisher<ControllerCommand>("controller_commands", 1);
   step_override_cmd_pub_ =
     create_publisher<FootstepUpdate>("footstep_updates", 1);
@@ -486,7 +486,9 @@ void TeleopNode::controlEndEffector(
   command.frame = {contact};
   command.mode = {ControllerCommand::MODE_FREE};
   command.twist = {RosUtils::eigenToTwist(twist)};
-  ee_cmd_pub_->publish(command);
+  command.overrides.name.push_back("spine_joint");
+  command.overrides.position.push_back(0.0);
+  controller_cmd_pub_->publish(command);
 }
 
 Response TeleopNode::takeStep(

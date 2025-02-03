@@ -18,9 +18,10 @@ uint8 MODE_TRANSITION = 1       # Changing contact mode: apply commanded wrench
 uint8 MODE_CONTACT = 2          # Contacting surface: obey guard constraints
 uint8 MODE_STANCE = 3           # Adhered to surface: maximize stability margin
 
-std_msgs/Header header          # Header with timestamp (frame_id is not used)
+std_msgs/Header header          # Header with timestamp and body frame ID
 string[] frame                  # Contact frame ID
 uint8[] mode                    # Contact mode
+geometry_msgs/Pose body         # Desired body pose
 JointCommand overrides          # Joint overrides
 
 # Velocity of free end-effector in contact frame (rad/s or m/s)

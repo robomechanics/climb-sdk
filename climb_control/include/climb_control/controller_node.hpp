@@ -98,7 +98,7 @@ private:
   // IMU subscriber
   rclcpp::Subscription<Imu>::SharedPtr imu_sub_;
   // Contact command subscriber
-  rclcpp::Subscription<ControllerCommand>::SharedPtr ee_cmd_sub_;
+  rclcpp::Subscription<ControllerCommand>::SharedPtr controller_cmd_sub_;
   // Controller enable service
   rclcpp::Service<SetBool>::SharedPtr controller_enable_srv_;
   // Parameter callback handle
@@ -108,6 +108,10 @@ private:
   Eigen::Vector3d gravity_;
   // Most recent gravity covariance matrix estimate in map frame
   Eigen::Matrix3d gravity_covariance_;
+  // Most recent nominal pose setpoint in map frame
+  Eigen::Isometry3d nominal_pose_;
+  // Override nominal pose setpoint with default (centered above feet)
+  bool default_pose_ = true;
   // Flag to enable the controller
   bool enabled_;
   // Flag to use a dummy robot driver (publish joint efforts directly)

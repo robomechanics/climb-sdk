@@ -122,7 +122,7 @@ bool ForceController::update(
     for (int i = 0; i < 3; i++) {
       if (W_body.b(i) + W_body.b(i + 3) < 0) {
         double avg = (-W_body.b(i) + W_body.b(i + 3)) / 2;
-        W_body.b(i) = avg;
+        W_body.b(i) = -avg;
         W_body.b(i + 3) = avg;
       }
     }
@@ -163,12 +163,16 @@ bool ForceController::update(
   feedforward += Gs.transpose() * twist * body_kp_;
   Eigen::VectorXd dx = feedback + feedforward;
 
-  // Constraint body joint angle (TODO: generalize shape constraints)
-  MatrixXd Jh_augmented(m + 1, n);
-  Jh_augmented << Jh, MatrixXd::Zero(1, n);
-  Jh_augmented(m, 12) = 1;
-  VectorXd dx_augmented(m + 1);
-  dx_augmented << dx, -0.1 * robot_->getJointPosition()(12);
+  // Constraint body joint angle
+  MatrixXd Jh_augmented(m + joint_overrides_.size(), n);
+  Jh_augmented << Jh, MatrixXd::Zero(joint_overrides_.size(), n);
+  VectorXd dx_augmented(m + joint_overrides_.size());
+  dx_augmented << dx, VectorXd::Zero(joint_overrides_.size());
+  int i = m;
+  for (const auto & [index, value] : joint_overrides_) {
+    Jh_augmented(i, index) = 1;
+    dx_augmented(i++) = 0.1 * (value - robot_->getJointPosition()(index));
+  }
 
   // Compute joint displacements
   if (!displacement_cmd_.size()) {
@@ -222,6 +226,13 @@ void ForceController::setControllerCommand(const ControllerCommand & command)
     }
     goal.setpoint = robot_->getWrenchBasis(frame).transpose() * setpoint;
     end_effector_goals_[frame] = goal;
+  }
+  joint_overrides_.clear();
+  for (size_t i = 0; i < command.overrides.name.size(); ++i) {
+    int index = robot_->getJointIndex(command.overrides.name[i]);
+    if (i < command.overrides.position.size()) {
+      joint_overrides_[index] = command.overrides.position[i];
+    }
   }
 }
 

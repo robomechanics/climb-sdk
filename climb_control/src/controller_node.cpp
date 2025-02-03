@@ -49,7 +49,7 @@ ControllerNode::ControllerNode()
   // Define publishers and subscribers
   imu_sub_ = create_subscription<Imu>(
     "imu", 1, std::bind(&ControllerNode::imuCallback, this, _1));
-  ee_cmd_sub_ = create_subscription<ControllerCommand>(
+  controller_cmd_sub_ = create_subscription<ControllerCommand>(
     "controller_commands", 1,
     std::bind(&ControllerNode::controllerCmdCallback, this, _1));
   joint_cmd_pub_ = create_publisher<JointCommand>("joint_commands", 1);
@@ -63,10 +63,9 @@ ControllerNode::ControllerNode()
 void ControllerNode::update()
 {
   // Update contact frames
-  TransformStamped body_to_map =
-    lookupTransform(robot_->getBodyFrame(), "/map");
-  Eigen::Matrix3d rotation = RosUtils::quaternionToEigen(
-    body_to_map.transform.rotation).toRotationMatrix();
+  Eigen::Isometry3d map_to_body = RosUtils::transformToEigen(
+    lookupTransform(robot_->getBodyFrame(), "/map").transform);
+  Eigen::Matrix3d rotation = map_to_body.rotation();
   auto frames = contact_estimator_->update(rotation * gravity_);
   robot_->updateContactFrames(frames);
 
@@ -90,13 +89,23 @@ void ControllerNode::update()
   Eigen::Vector<double, 6> body_twist = Eigen::Vector<double, 6>::Zero();
   if (enabled_) {
     // Update controller
-    auto ground = contact_estimator_->getGroundPlane();
-    force_controller_->setGroundConstraint(ground.normal, ground.distance);
-
-    Eigen::Isometry3d nominal_pose = Eigen::Isometry3d::Identity();
-    nominal_pose.translation() = ground.origin;
-    // nominal_pose.linear() = Eigen::Quaterniond::FromTwoVectors(
-    //   -Eigen::Vector3d::UnitZ(), ground.normal).toRotationMatrix();
+    Eigen::Isometry3d nominal_pose;
+    if (default_pose_) {
+      auto ground = contact_estimator_->getGroundPlane();
+      force_controller_->setGroundConstraint(ground.normal, ground.distance);
+      nominal_pose = Eigen::Isometry3d::Identity();
+      nominal_pose.translation() = ground.origin;
+      // nominal_pose.linear() = Eigen::Quaterniond::FromTwoVectors(
+      //   -Eigen::Vector3d::UnitZ(), ground.normal).toRotationMatrix();
+    } else {
+      nominal_pose = map_to_body * nominal_pose_;
+      Eigen::Vector3d normal = -nominal_pose.rotation().col(2);
+      double distance = normal.dot(nominal_pose.translation());
+      force_controller_->setGroundConstraint(normal, distance);
+      std::cout << "Normal: " << normal.transpose() << std::endl;
+      std::cout << "Distance: " << distance << std::endl;
+      std::cout << "Nominal pose: " << nominal_pose.translation().transpose() << std::endl;
+    }
     TransformStamped goal_pose;
     goal_pose.header.frame_id = robot_->getBodyFrame();
     goal_pose.header.stamp = now();
@@ -243,6 +252,12 @@ void ControllerNode::controllerCmdCallback(
   const ControllerCommand::SharedPtr msg)
 {
   force_controller_->setControllerCommand(*msg);
+  if (msg->header.frame_id.empty()) {
+    default_pose_ = true;
+  } else {
+    default_pose_ = false;
+  }
+  nominal_pose_ = RosUtils::poseToEigen(msg->body);
 }
 
 void ControllerNode::controllerEnableCallback(

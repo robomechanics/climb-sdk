@@ -213,6 +213,8 @@ private:
   Eigen::Vector3d workspace_min_limits_;
   // Maximum body displacement in body frame in rad or m
   Eigen::Vector3d workspace_max_limits_;
+  // Overridden joint angles
+  std::unordered_map<int, double> joint_overrides_;
 };
 
 #endif  // CLIMB_CONTROL__FORCE_CONTROLLER_HPP_
