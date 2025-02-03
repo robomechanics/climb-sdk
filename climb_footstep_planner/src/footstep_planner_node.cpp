@@ -226,6 +226,15 @@ void FootstepPlannerNode::simulateCallback(
     return;
   }
 
+  // Project goal onto surface
+  auto kdtree = std::make_shared<pcl::search::KdTree<pcl::PointXYZ>>(false);
+  kdtree->setInputCloud(point_cloud);
+  Eigen::Vector3f goal = goal_.translation().cast<float>();
+  std::vector<int> indices = {0};
+  std::vector<float> distances = {0};
+  kdtree->nearestKSearch({goal(0), goal(1), goal(2)}, 1, indices, distances);
+  goal_.translation() = point_cloud->points[indices[0]].getVector3fMap().cast<double>();
+
   double offset = 0;
   int count = 0;
   for (const auto & contact : robot_->getContactFrames()) {

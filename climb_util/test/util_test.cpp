@@ -19,6 +19,7 @@ using geometry_msgs::msg::Twist;
 using geometry_msgs::msg::Wrench;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Transform;
+using geometry_utils::Polytope;
 const double TOL = 1e-6;
 
 TEST(RosUtilsTest, Arrays)
@@ -89,7 +90,7 @@ TEST(EigenUtilsTest, Skew)
 
 TEST(GeometryUtilsTest, Polytope)
 {
-  geometry_utils::Polytope p;  // x + y < 5, x > 0, y > 0, -1 < z < 1
+  Polytope p;  // x + y < 5, x > 0, y > 0, -1 < z < 1
   p.addFacet(Eigen::Vector3d{1, 1, 0}, 5);
   p.addFacet(Eigen::Vector3d{-1, 0, 0}, 0);
   p.addFacet(Eigen::Vector3d{0, -1, 0}, 0);
@@ -105,7 +106,7 @@ TEST(GeometryUtilsTest, Polytope)
   Eigen::Vector3d x2{2, 2, 0};
   Eigen::Vector3d x3{3, 3, 0};
   Eigen::Vector3d d_expected{1, sqrt(2) / 2, -sqrt(2) / 2};
-  Eigen::Vector<bool, 3> c_expected{true, true, false};
+  Eigen::Vector3i c_expected{1, 1, 0};
   Eigen::Matrix3d X;
   X << x1, x2, x3;
   EXPECT_TRUE(p.contains(x1)) << "Point in polytope error";
@@ -178,17 +179,17 @@ TEST(GeometryUtilsTest, Polytope)
     p_scaled.distance(x1_scaled, Eigen::Vector3d{1, 0, 0}),
     d_s_expected(0), TOL) << "Non-uniform scaling error";
 
-  auto p_top = geometry_utils::Polytope(p.A.topRows(3), p.b.head(3));
-  auto p_bot = geometry_utils::Polytope(p.A.bottomRows(2), p.b.bottomRows(2));
+  auto p_top = Polytope(p.A.topRows(3), p.b.head(3));
+  auto p_bot = Polytope(p.A.bottomRows(2), p.b.tail(2));
   p_top.intersect(p_bot);
   EXPECT_NEAR_EIGEN(p_top.A, p.A, TOL) << "Intersection error";
   EXPECT_NEAR_EIGEN(p_top.b, p.b, TOL) << "Intersection error";
 
-  auto b1 = geometry_utils::Polytope::createBox(
+  auto b1 = Polytope::createBox(
     Eigen::Vector3d{-1, -2, -3}, Eigen::Vector3d{1, 2, 3});
-  auto b2 = geometry_utils::Polytope::createBox(
+  auto b2 = Polytope::createBox(
     Eigen::Vector3d{-1, -1, -1}, Eigen::Vector3d{2, 2, 2});
-  geometry_utils::Polytope p1(b1.A, b1.b);
+  Polytope p1(b1.A, b1.b);
   EXPECT_NEAR_EIGEN(
     (b1 + v).distanceAll(X / 2), (p1 + v).distanceAll(X / 2), TOL) <<
     "Box translation error";
@@ -220,6 +221,41 @@ TEST(GeometryUtilsTest, Polytope)
   auto p_elim = p.eliminated(2);
   Eigen::MatrixXd X_elim = X.block(0, 0, 2, 3);
   EXPECT_EQ(p_elim.containsAll(X_elim), c_expected) << "Elimination error";
+}
+
+bool compareVertices(Eigen::MatrixXd V1, Eigen::MatrixXd V2, double tol)
+{
+  if (V1.rows() != V2.rows() || V1.cols() != V2.cols()) {
+    return false;
+  }
+  for (int i = 0; i < V1.cols(); ++i) {
+    bool found = false;
+    for (int j = 0; j < V2.cols(); ++j) {
+      if (V1.col(i).isApprox(V2.col(j), tol)) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return false;
+    }
+  }
+  return true;
+}
+
+#define EXPECT_NEAR_VERTICES(A, B, tol) \
+  EXPECT_TRUE(compareVertices(A, B, tol)) << \
+    #A << " =" << std::endl << A << std::endl << \
+    #B << " =" << std::endl << B << std::endl
+
+TEST(GeometryUtilsTest, PolytopeVertices)
+{
+  auto p = Polytope::createBox(
+    Eigen::Vector3d{-1, -2, -3}, Eigen::Vector3d{4, 5, 6});
+  Eigen::Matrix3Xd V = p.vertices();
+  Eigen::Matrix3Xd V_expected(3, 8);
+  V_expected << -1, -1, -1, -1, 4, 4, 4, 4, -2, -2, 5, 5, -2, -2, 5, 5, -3, 6, -3, 6, -3, 6, -3, 6;
+  EXPECT_NEAR_VERTICES(V, V_expected, TOL) << "Incorrect box vertices";
 }
 
 int main(int argc, char ** argv)

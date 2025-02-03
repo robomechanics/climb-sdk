@@ -395,9 +395,9 @@ Visualization Manager:
           Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
-          Max Intensity: 3000
+          Max Intensity: 500
           Min Color: 0; 0; 0
-          Min Intensity: 0
+          Min Intensity: -500
           Name: Cost Map
           Position Transformer: XYZ
           Selectable: true
@@ -523,7 +523,7 @@ Visualization Manager:
           Enabled: true
           Head Diameter: 0.30000001192092896
           Head Length: 0.20000000298023224
-          Length: 0.30000001192092896
+          Length: 0.10000000149011612
           Line Style: Billboards
           Line Width: 0.009999999776482582
           Name: Body Path
@@ -532,8 +532,8 @@ Visualization Manager:
             Y: 0
             Z: 0
           Pose Color: 255; 85; 255
-          Pose Style: None
-          Radius: 0.029999999329447746
+          Pose Style: Axes
+          Radius: 0.009999999776482582
           Shaft Diameter: 0.10000000149011612
           Shaft Length: 0.10000000149011612
           Topic:
@@ -739,18 +739,18 @@ Visualization Manager:
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.2020478248596191
-        Y: -0.5114346146583557
+        X: 1.1749215126037598
+        Y: -0.5315380692481995
         Z: -0.6881441473960876
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6947947144508362
+      Pitch: 0.6147947311401367
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.2585787773132324
+      Yaw: 2.2085793018341064
     Saved: ~
 Window Geometry:
   Displays:
@@ -768,5 +768,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1450
-  X: -4
-  Y: 328
+  X: 474
+  Y: 321

@@ -87,6 +87,13 @@ Eigen::Vector<double, 6> getTwist(
  * @return Skew-symmetric matrix
  */
 Eigen::Matrix3d getSkew(const Eigen::Vector3d & vector);
+
+/**
+ * @brief Compute a list of indices from a binary mask
+ * @param[in] mask Binary mask of 1s and 0s
+ * @return Vector of indices where mask is non-zero
+ */
+Eigen::VectorXi maskToIndex(const Eigen::VectorXi & mask);
 }  // namespace EigenUtils
 
 #endif  // CLIMB_UTIL__EIGEN_UTILS_HPP_

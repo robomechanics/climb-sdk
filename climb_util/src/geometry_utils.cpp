@@ -17,6 +17,12 @@ Polytope::Polytope(
   assert(A.rows() == b.size());
 }
 
+Polytope::Polytope([[maybe_unused]] const Eigen::MatrixXd & vertices)
+{
+  // TODO: Use double description method to construct polytope from vertices
+  throw std::runtime_error("Polytope vertex construction not yet implemented");
+}
+
 Polytope Polytope::createBox(int d)
 {
   Eigen::MatrixXd A(d * 2, d);
@@ -59,11 +65,12 @@ bool Polytope::contains(const Eigen::VectorXd & point) const
   return (b - A * point).minCoeff() >= 0;
 }
 
-Eigen::Vector<bool, Eigen::Dynamic> Polytope::containsAll(
+Eigen::VectorXi Polytope::containsAll(
   const Eigen::MatrixXd & points) const
 {
   assert(A.cols() == points.rows());
-  return ((-A * points).colwise() + b).colwise().minCoeff().array() >= 0;
+  return (((-A * points).colwise() + b)
+         .colwise().minCoeff().array() >= 0).cast<int>();
 }
 
 double Polytope::distance(const Eigen::VectorXd & point) const
@@ -124,6 +131,21 @@ Eigen::VectorXd Polytope::clip(
   assert(A.cols() == point.size() && A.cols() == direction.size());
   double d = distance(point, direction);
   return d >= 0 ? point : point + d * direction.normalized();
+}
+
+Eigen::MatrixXd Polytope::vertices() const
+{
+  if (box) {
+    Eigen::MatrixXd V(A.cols(), 2 << (A.cols() - 1));
+    for (int i = 0; i < V.rows(); ++i) {
+      for (int j = 0; j < V.cols(); ++j) {
+        V(i, j) = (j >> i) & 1 ? -b(i) : b(i + A.cols());
+      }
+    }
+    return V;
+  }
+  // TODO: Implement vertex computation for general polytopes
+  throw std::runtime_error("Polytope vertex computation not yet implemented");
 }
 
 void Polytope::intersect(const Polytope & other)
@@ -270,7 +292,7 @@ Polytope & Polytope::operator*=(double scale)
   b *= abs(scale);
   if (scale < 0) {
     if (box) {
-      b.topRows(A.cols()).swap(b.bottomRows(A.cols()));
+      b.head(A.cols()).swap(b.tail(A.cols()));
     } else {
       A *= -1;
     }

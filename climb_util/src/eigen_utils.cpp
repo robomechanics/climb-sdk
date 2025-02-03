@@ -68,4 +68,16 @@ Eigen::Matrix3d getSkew(const Eigen::Vector3d & vector)
     -vector(1), vector(0), 0;
   return skew;
 }
+
+Eigen::VectorXi maskToIndex(const Eigen::VectorXi & mask)
+{
+  Eigen::VectorXi index(mask.count());
+  int j = 0;
+  for (int i = 0; i < mask.size(); ++i) {
+    if (mask(i)) {
+      index(j++) = i;
+    }
+  }
+  return index;
+}
 }  // namespace EigenUtils

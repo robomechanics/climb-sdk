@@ -27,6 +27,13 @@ struct Polytope
     const Eigen::VectorXd & b);
 
   /**
+   * @brief Construct a polytope from a set of vertices using the double
+   * description method
+   * @param vertices Matrix of vertices (each column is a vertex)
+   */
+  explicit Polytope(const Eigen::MatrixXd & vertices);
+
+  /**
    * @brief Construct a d-dimensional unbounded axis-aligned box polytope
    */
   static Polytope createBox(int d = 3);
@@ -55,8 +62,9 @@ struct Polytope
 
   /**
    * @brief Check if a set of points lie within the polytope
+   * @return A vector of 1s for points inside the polytope and 0s otherwise
    */
-  Eigen::Vector<bool, Eigen::Dynamic> containsAll(
+  Eigen::VectorXi containsAll(
     const Eigen::MatrixXd & points) const;
 
   /**
@@ -75,9 +83,8 @@ struct Polytope
 
   /**
    * @brief Compute the distance to the edge of the polytope along a given
-   * direction vector (negative if point lies outside the polytope), with
-   * an optional angular tolerance in radians for the direction (e.g. a
-   * tolerance of pi will ignore the direction entirely)
+   * direction vector (negative if point lies outside the polytope)
+   * @param delta an optional angular tolerance in radians for the direction
    */
   double distance(
     const Eigen::VectorXd & point,
@@ -87,8 +94,8 @@ struct Polytope
   /**
    * @brief Compute the distance from a set of points to the edge of the
    * polytope along a given direction vector (negative if point lies outside
-   * the polytope), with an optional angular tolerance in radians for the
-   * direction (e.g. a tolerance of pi will ignore the direction entirely)
+   * the polytope)
+   * @param delta an optional angular tolerance in radians for the direction
    */
   Eigen::VectorXd distanceAll(
     const Eigen::MatrixXd & points,
@@ -99,7 +106,13 @@ struct Polytope
    * @brief Return the nearest point to the given point along the negative of
    * the direction vector that lies within the polytope
    */
-  Eigen::VectorXd clip(const Eigen::VectorXd & point, const Eigen::VectorXd & direction);
+  Eigen::VectorXd clip(
+    const Eigen::VectorXd & point, const Eigen::VectorXd & direction);
+
+  /**
+   * @brief Compute vertices of the polytope using the double description method
+   */
+  Eigen::MatrixXd vertices() const;
 
   /**
    * @brief Compute the intersection with another polytope

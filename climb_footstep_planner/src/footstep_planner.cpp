@@ -4,8 +4,9 @@
 #include <pcl/features/principal_curvatures.h>
 
 #include <climb_kinematics/interfaces/kdl_interface.hpp>
-#include <climb_util/geometry_utils.hpp>
+#include <climb_util/eigen_utils.hpp>
 #include <climb_util/ros_utils.hpp>
+#include "climb_footstep_planner/terrain_generator.hpp"
 
 using geometry_utils::Polytope;
 
@@ -63,7 +64,7 @@ void FootstepPlanner::processCloud()
   Eigen::Vector3d viewpoint = viewpoint_.translation();
   ne.setViewPoint(viewpoint(0), viewpoint(1), viewpoint(2));
   ne.compute(*normals_);
-  n_ = normals_->getMatrixXfMap(3, 8, 0);
+  n_ = normals_->getMatrixXfMap(3, 8, 0).cast<double>();
 
   // Compute curvature
   pcl::PrincipalCurvaturesEstimation<
@@ -74,17 +75,17 @@ void FootstepPlanner::processCloud()
   pc.setRadiusSearch(0.1);
   pc.compute(*curvatures_);
   t_ = curvatures_->getMatrixXfMap().block(
-    0, 0, 3, curvatures_->getMatrixXfMap().cols());
+    0, 0, 3, curvatures_->getMatrixXfMap().cols()).cast<double>();;
   k_ = curvatures_->getMatrixXfMap().block(
-    3, 0, 2, curvatures_->getMatrixXfMap().cols());
+    3, 0, 2, curvatures_->getMatrixXfMap().cols()).cast<double>();;
 
   // Compute cost
-  p_ = map_->getMatrixXfMap(3, 4, 0);
-  c_ = gravity_.cast<float>().transpose() * n_;   // Incline-based cost
+  p_ = map_->getMatrixXfMap(3, 4, 0).cast<double>();;
+  c_ = gravity_.transpose() * n_;       // Incline-based cost
   // c_ = k_.colwise().sum();                        // Curvature-based cost
   cost_->resize(map_->size());
   cost_->getMatrixXfMap(4, 8, 0) = map_->getMatrixXfMap(4, 4, 0);
-  cost_->getMatrixXfMap(1, 8, 4) = c_;
+  cost_->getMatrixXfMap(1, 8, 4).row(0) = c_.cast<float>();
 }
 
 std::vector<FootstepPlanner::Stance> FootstepPlanner::plan(
@@ -116,7 +117,13 @@ std::vector<FootstepPlanner::Stance> FootstepPlanner::localPlan(
   while (dist < goal_dist) {
     stance = step(stance, goal);
     if (stance.swing_foot.empty()) {break;}
-    local_plan.push_back(stance);
+    if (!local_plan.empty() &&
+        stance.swing_foot == local_plan.back().swing_foot)
+    {
+      local_plan.back() = stance;
+    } else {
+      local_plan.push_back(stance);
+    }
     dist = direction.dot(stance.pose.translation() - start.pose.translation());
   }
   if (stance.swing_foot.empty()) {
@@ -130,108 +137,150 @@ std::vector<FootstepPlanner::Stance> FootstepPlanner::localPlan(
 FootstepPlanner::Stance FootstepPlanner::step(
   const Stance & start, const Eigen::Isometry3d & goal)
 {
-  Stance stance = start;
-  stance.swing_foot = "";
+  Stance result = start;
+  result.swing_foot = "";
   Eigen::Vector3d p0_body = start.pose.translation();
   Eigen::Vector3d direction = goal.translation() - p0_body;
   direction.normalize();
   // TODO: Temporarily hardcoded workspaces for each end effector
-  auto W1 = Polytope::createBox(
+  auto W_1 = Polytope::createBox(
     workspace_min_limits_, workspace_max_limits_);
-  std::unordered_map<std::string, Polytope> workspaces = {
-    {"gripper_1", W1},
-    {"gripper_2", W1.scaled(Eigen::Vector3d{1.0, -1.0, 1.0})},
-    {"gripper_3", W1.scaled(Eigen::Vector3d{-1.0, 1.0, 1.0})},
-    {"gripper_4", W1.scaled(Eigen::Vector3d{-1.0, -1.0, 1.0})}};
+  std::unordered_map<std::string, Polytope> W_i = {
+    {"gripper_1", W_1},
+    {"gripper_2", W_1.scaled(Eigen::Vector3d{1.0, -1.0, 1.0})},
+    {"gripper_3", W_1.scaled(Eigen::Vector3d{-1.0, 1.0, 1.0})},
+    {"gripper_4", W_1.scaled(Eigen::Vector3d{-1.0, -1.0, 1.0})}};
 
-  // Select swing foot closest to rear edge of workspace (in body frame)
+  // Select swing foot closest to rear edge of workspace
   Eigen::Isometry3d map_to_body = start.pose.inverse();
   std::string swing;
+  std::vector<std::string> stance;
   double min_margin = INFINITY;
-  int n = 0;
   for (const auto & [foot, pose] : start.footholds) {
     if (robot_->getContactType(foot) == ContactType::TAIL) {continue;}
-    ++n;
-    double margin = workspaces.at(foot).distance(
-      map_to_body * pose.translation(), map_to_body * -direction);
+    stance.push_back(foot);
+    double margin = W_i.at(foot).distance(
+      map_to_body * pose.translation(), map_to_body.rotation() * -direction);
     if (margin < min_margin) {
       swing = foot;
       min_margin = margin;
     }
   }
+  stance.erase(std::remove(stance.begin(), stance.end(), swing), stance.end());
+  size_t n = stance.size() + 1;
+  std::cout << "Foot: " << swing << std::endl;
 
-  // Compute swing foot workspace (in body frame)
-  Eigen::Vector3d p_mean = Eigen::Vector3d::Zero();
-  auto W_swing = workspaces.at(swing);
-  auto W_body = Polytope::createBox(
-    Eigen::Vector3d::Constant(-INFINITY),
-    Eigen::Vector3d::Constant(INFINITY));
-  for (const auto & [foot, W_stance] : workspaces) {
-    if (robot_->getContactType(foot) == ContactType::TAIL) {continue;}
-    if (foot != swing) {
-      Eigen::VectorXd p_stance =
-        map_to_body * start.footholds.at(foot).translation();
-      p_mean += p_stance / (n - 1);
-      W_body.intersect(p_stance - W_stance);
-    }
+  // Compute workspace
+  auto W_swing = Polytope::createBox(3);
+  Eigen::Vector3d p0_swing = start.footholds.at(swing).translation();
+  Eigen::Matrix3Xd p_stance = Eigen::Matrix3Xd::Zero(3, n);
+  for (std::size_t i = 0; i < n - 1; ++i) {
+    auto foot = stance.at(i);
+    p_stance.col(i) = start.footholds.at(foot).translation();
+    W_swing.intersect(
+      W_i.at(swing) + -W_i.at(foot) + map_to_body * p_stance.col(i));
   }
-  auto W_lim = W_body + W_swing;
-  auto W = W_swing * n / (n - 1) + p_mean;
-  W.intersect(W_lim);
-
-  // Convert workspace from body to map frame
+  Eigen::Vector3d p_mid = (W_swing.b.tail(3) - W_swing.b.head(3)) / 2;
   W_swing = start.pose * W_swing;
-  W_body = start.pose * W_body;
-  W_lim = start.pose * W_lim;
-  W = start.pose * W;
-  p_mean = start.pose * p_mean;
+  auto W_select = W_swing;
+  W_select.addFacet(-direction, -direction.dot(p0_swing) - min_step_length_);
+  auto W_centered =
+    (start.pose.rotation() * W_i.at(swing) * n + p_stance.rowwise().sum()) / (n - 1);
 
-  // Sample footholds in workspace
-  double radius = (workspace_max_limits_ - workspace_min_limits_).norm();
-  Eigen::VectorXd p0_swing = start.footholds.at(swing).translation();
-  Eigen::Vector3f p_search = (p0_swing + direction * radius).cast<float>();
+  // Sample footholds in area ahead of current swing foothold
+  Eigen::Vector3f p_search = (start.pose * p_mid).cast<float>();
+  double radius = (W_swing.b.tail(3) + W_swing.b.head(3)).norm() / 2;
   pcl::PointXYZ p_search_pcl{p_search.x(), p_search.y(), p_search.z()};
   std::vector<int> indices;
   std::vector<float> distances;
   kdtree_->radiusSearch(p_search_pcl, radius, indices, distances);
-  Eigen::MatrixXd p_workspace(3, indices.size());
-  Eigen::Vector3d p_i;
-  int j = 0;
-  c_.setConstant(0);
-  for (auto i : indices) {
-    p_i = p_.col(i).cast<double>();
-    if (W_lim.contains(p_i)) {c_(i) = 3000;}
-    if (W.contains(p_i)) {
-      p_workspace.col(j++) = p_i;
-      c_(i) = 2000;
+  Eigen::VectorXi samples =
+    Eigen::Map<Eigen::VectorXi>(indices.data(), indices.size());
+  Eigen::Matrix3Xd p = p_(Eigen::all, samples);
+
+  // Filter reachable footholds
+  Eigen::VectorXi reachable = W_select.containsAll(p);
+  reachable = samples(EigenUtils::maskToIndex(reachable));
+  if (reachable.size() == 0) {
+    drawBox(W_swing, 0);
+    for (const auto & foot : stance) {
+      drawBox(start.pose * W_i.at(foot), 250);
     }
-    if (W_swing.contains(p_i)) {c_(i) = 1000;}
+    drawBox(start.pose * W_i.at(swing), 250);
+    drawBox(W_centered, -500);
+    cost_->getMatrixXfMap(1, 8, 4)(0, samples).setConstant(-500);
+    cost_->getMatrixXfMap(1, 8, 4)(0, reachable).setConstant(1000);
+    return result;
   }
-  p_workspace.conservativeResize(3, j);
-  cost_->getMatrixXfMap(1, 8, 4) = c_;
-  if (!j) {
-    std::cout << "Initial: " << W_swing.b.transpose() << std::endl;
-    std::cout << "Kinematic: " << W_lim.b.transpose() << std::endl;
-    std::cout << "Centered: " << W.b.transpose() << std::endl;
-    return stance;
+  p = p_(Eigen::all, reachable);
+  // Filter footholds with centered body if possible
+  Eigen::VectorXi centered = W_centered.containsAll(p);
+  if (centered.sum() > 0) {
+    reachable = reachable(EigenUtils::maskToIndex(centered)).eval();
+    p = p_(Eigen::all, reachable);
+  } else {
+    std::cout << "Warning: no centered footholds" << std::endl;
   }
 
-  // Select optimal foothold from workspace
-  Eigen::VectorXd distance =
-    W_swing.distanceAll(p_workspace, -direction, workspace_angular_tol_);
-  distance.array() -= W_swing.distance(p0_swing, -direction);
+  // Select foothold with lowest cost
+  Eigen::VectorXd distance = (start.pose * W_i[swing]).distanceAll(
+    p, -direction, workspace_angular_tol_);
+  distance.array() -= min_margin;
   Eigen::Index index;
-  if (distance.maxCoeff(&index) < min_step_length_) {return stance;}
-  Eigen::Vector3d p_swing = p_workspace.col(index);
+  (distance + c_(reachable) * 0.01).maxCoeff(&index);
+  Eigen::Vector3d p_swing = p.col(index);
 
-  // Compute body pose
-  Eigen::Vector3d p_body = p_mean * (n - 1) / n + p_swing / n;
-  p_body = W_body.clip(p_body, p_body - p0_body);
+  // Update body pose
+  Eigen::Vector3d p_body = p_stance.rowwise().sum() / n + p_swing / n;
+  Polytope W_body = map_to_body * p_swing - W_i.at(swing);  // For debugging
+  for (size_t i = 0; i < n - 1; ++i) {
+    W_body.intersect(map_to_body * p_stance.col(i) - W_i.at(stance.at(i)));
+  }
+  W_body = start.pose * W_body;
 
-  stance.pose.translation() = p_body;
-  stance.footholds.at(swing).translation() = p_swing;
-  stance.swing_foot = swing;
-  return stance;
+  // Update body rotation
+  Eigen::Matrix3Xd p_feet(3, n);
+  p_feet.leftCols(p_stance.cols()) = p_stance;  // Assign first N columns
+  p_feet.rightCols(1) = p_swing;
+  p_feet.colwise() -= p_body;
+  Eigen::Vector3d n0_body = start.pose.rotation().col(2);
+  Eigen::Vector3d n_body = (p_feet * p_feet.transpose()).jacobiSvd(
+    Eigen::ComputeFullU | Eigen::ComputeFullV).matrixU().col(2);
+  if (n_body.dot(n0_body) < 0) {
+    n_body *= -1;
+  }
+  Eigen::Matrix3d R =
+    Eigen::Quaterniond::FromTwoVectors(n0_body, n_body).matrix();
+  if ((R * W_swing).contains(p_swing)) {
+    result.pose.prerotate(R);
+  }
+
+  result.pose.translation() = p_body;
+  result.footholds.at(swing).translation() = p_swing;
+  result.swing_foot = swing;
+  return result;
+}
+
+void FootstepPlanner::drawBox(const Polytope & box, double value)
+{
+  assert(box.A.rows() == 6 && box.A.cols() == 3);
+  Eigen::Isometry3d T = Eigen::Isometry3d::Identity();
+  if (!box.box) {
+    T.linear() = box.A.block(3, 0, 3, 3).transpose();
+  }
+  T.translation() = T.rotation() * (box.b.tail(3) - box.b.head(3)) / 2;
+  Eigen::Vector3d size = box.b.tail(3) + box.b.head(3);
+  if (size.minCoeff() <= 0) {
+    return;
+  }
+  PointCloud pc = terrain::box(T, size(0), size(1), size(2), 0.005);
+  CostCloud cc;
+  cc.resize(pc.size());
+  cc.getMatrixXfMap(4, 8, 0) = pc.getMatrixXfMap(4, 4, 0);
+  cc.getMatrixXfMap(1, 8, 4).setConstant(value);
+  *cost_ += cc;
+  c_.conservativeResize(c_.cols() + pc.size());
+  c_.tail(pc.size()).setConstant(value);
 }
 
 void FootstepPlanner::declareParameters()

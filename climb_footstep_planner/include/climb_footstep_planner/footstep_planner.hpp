@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <climb_kinematics/interfaces/kinematics_interface.hpp>
+#include <climb_util/geometry_utils.hpp>
 #include <climb_util/parameterized.hpp>
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
@@ -95,6 +96,8 @@ public:
 private:
   void computeNormals(std::vector<int> indices, double radius);
 
+  void drawBox(const geometry_utils::Polytope & box, double value = 0);
+
   std::shared_ptr<KinematicsInterface> robot_;
   Eigen::Vector3d gravity_;
   Eigen::Isometry3d viewpoint_;
@@ -104,11 +107,11 @@ private:
   CostCloud::Ptr cost_;
   std::vector<Stance> plan_;
   Eigen::Isometry3d goal_;
-  Eigen::MatrixXf p_;   // Position
-  Eigen::MatrixXf n_;   // Normal
-  Eigen::MatrixXf t_;   // Tangential
-  Eigen::MatrixXf k_;   // Curvature
-  Eigen::MatrixXf c_;   // Cost
+  Eigen::MatrixXd p_;   // Position
+  Eigen::MatrixXd n_;   // Normal
+  Eigen::MatrixXd t_;   // Tangential
+  Eigen::MatrixXd k_;   // Curvature
+  Eigen::VectorXd c_;   // Cost
   pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree_;
   Eigen::Vector3d workspace_min_limits_;
   Eigen::Vector3d workspace_max_limits_;
