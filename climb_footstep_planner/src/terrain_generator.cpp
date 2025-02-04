@@ -213,28 +213,32 @@ static Eigen::ArrayXXd perlin(int w, int h, int s)
   return noise * s;
 }
 
-static Eigen::ArrayXXd fractal(int w, int h)
+static Eigen::ArrayXXd fractal(int w, int h, double decay = 1.0)
 {
   Eigen::ArrayXXd noise = Eigen::ArrayXXd::Zero(w, h);
   int s = 8;
+  double amplitude = 1;
   while (s < w && s < h) {
-    noise += perlin(w, h, s);
+    noise += amplitude * perlin(w, h, s);
+    amplitude *= decay;
     s *= 2;
   }
   return noise;
 }
 
 PointCloud uneven(
-  Isometry3d pose, double xsize, double ysize, double amplitude, double res)
+  Isometry3d pose, double xsize, double ysize, double amplitude, double res,
+  double decay)
 {
   PointCloud uneven;
-  Eigen::ArrayXXd noise = fractal(ceil(xsize / res), ceil(ysize / res)) * res;
+  Eigen::ArrayXXd noise =
+    fractal(ceil(xsize / res), ceil(ysize / res), decay) * res;
+  noise = amplitude * noise / noise.abs().maxCoeff();
   uneven.reserve(noise.rows() * noise.cols());
   for (int i = 0; i < noise.rows(); i++) {
     for (int j = 0; j < noise.cols(); j++) {
       uneven.emplace_back(
-        PointXYZ(
-          i * res - xsize / 2, j * res - ysize / 2, noise(i, j) * amplitude));
+        PointXYZ(i * res - xsize / 2, j * res - ysize / 2, noise(i, j)));
     }
   }
   pcl::transformPointCloud(uneven, uneven, pose.matrix());
@@ -242,21 +246,27 @@ PointCloud uneven(
 }
 
 PointCloud unevenXY(
-  Vector3d origin, double xsize, double ysize, double amplitude, double res)
+  Vector3d origin, double xsize, double ysize, double amplitude, double res,
+  double decay)
 {
-  return uneven(tranform(origin, Axes::XYZ), xsize, ysize, amplitude, res);
+  return uneven(
+    tranform(origin, Axes::XYZ), xsize, ysize, amplitude, res, decay);
 }
 
 PointCloud unevenYZ(
-  Vector3d origin, double ysize, double zsize, double amplitude, double res)
+  Vector3d origin, double ysize, double zsize, double amplitude, double res,
+  double decay)
 {
-  return uneven(tranform(origin, Axes::YZX), ysize, zsize, amplitude, res);
+  return uneven(
+    tranform(origin, Axes::YZX), ysize, zsize, amplitude, res, decay);
 }
 
 PointCloud unevenZX(
-  Vector3d origin, double zsize, double xsize, double amplitude, double res)
+  Vector3d origin, double zsize, double xsize, double amplitude, double res,
+  double decay)
 {
-  return uneven(tranform(origin, Axes::ZXY), zsize, xsize, amplitude, res);
+  return uneven(
+    tranform(origin, Axes::ZXY), zsize, xsize, amplitude, res, decay);
 }
 
 }  // namespace terrain

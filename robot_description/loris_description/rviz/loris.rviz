@@ -381,7 +381,7 @@ Visualization Manager:
           Use rainbow: true
           Value: true
         - Alpha: 0.4000000059604645
-          Autocompute Intensity Bounds: true
+          Autocompute Intensity Bounds: false
           Autocompute Value Bounds:
             Max Value: 10
             Min Value: -10
@@ -393,11 +393,11 @@ Visualization Manager:
           Color Transformer: Intensity
           Decay Time: 0
           Enabled: true
-          Invert Rainbow: false
+          Invert Rainbow: true
           Max Color: 255; 255; 255
-          Max Intensity: 500
+          Max Intensity: 0.5
           Min Color: 0; 0; 0
-          Min Intensity: -500
+          Min Intensity: -1
           Name: Cost Map
           Position Transformer: XYZ
           Selectable: true
@@ -732,25 +732,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 3.4388177394866943
+      Distance: 4.644839763641357
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.1749215126037598
-        Y: -0.5315380692481995
-        Z: -0.6881441473960876
+        X: 1.2040507793426514
+        Y: -0.49573272466659546
+        Z: -0.6792417168617249
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6147947311401367
+      Pitch: 0.6747949719429016
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.2085793018341064
+      Yaw: 2.613579034805298
     Saved: ~
 Window Geometry:
   Displays:
@@ -768,5 +768,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1450
-  X: 474
-  Y: 321
+  X: 442
+  Y: 1369

@@ -47,3 +47,8 @@
       workspace_min_limits: [0.039, 0.176, -0.090]
       workspace_max_limits: [0.244, 0.255, 0.008]
       workspace_angular_tol: 0.05
+      curvature_limit: 0.05
+      curvature_radius: 0.05
+      incline_limit: 1.745
+      incline_radius: 0.1
+      incline_cost: 0.1

@@ -60,7 +60,7 @@ void FootstepPlanner::processCloud()
   pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
   ne.setInputCloud(map_);
   ne.setSearchMethod(kdtree_);
-  ne.setRadiusSearch(0.1);
+  ne.setRadiusSearch(incline_radius_);
   Eigen::Vector3d viewpoint = viewpoint_.translation();
   ne.setViewPoint(viewpoint(0), viewpoint(1), viewpoint(2));
   ne.compute(*normals_);
@@ -72,7 +72,7 @@ void FootstepPlanner::processCloud()
   pc.setInputCloud(map_);
   pc.setInputNormals(normals_);
   pc.setSearchMethod(kdtree_);
-  pc.setRadiusSearch(0.1);
+  pc.setRadiusSearch(curvature_radius_);
   pc.compute(*curvatures_);
   t_ = curvatures_->getMatrixXfMap().block(
     0, 0, 3, curvatures_->getMatrixXfMap().cols()).cast<double>();
@@ -81,8 +81,12 @@ void FootstepPlanner::processCloud()
 
   // Compute cost
   p_ = map_->getMatrixXfMap(3, 4, 0).cast<double>();
-  c_ = gravity_.transpose() * n_;       // Incline-based cost
-  // c_ = k_.colwise().sum();                        // Curvature-based cost
+  c_ = -gravity_.transpose() * n_;       // Incline-based cost
+  Eigen::Array<bool, Eigen::Dynamic, 1> n_mask =
+    c_.array() <= -cos(incline_limit_);
+  Eigen::Array<bool, Eigen::Dynamic, 1> k_mask =
+    k_.colwise().sum().array() <= curvature_limit_;
+  c_ = (n_mask && k_mask).select(c_, INFINITY);
   cost_->resize(map_->size());
   cost_->getMatrixXfMap(4, 8, 0) = map_->getMatrixXfMap(4, 4, 0);
   cost_->getMatrixXfMap(1, 8, 4).row(0) = c_.cast<float>();
@@ -196,6 +200,8 @@ FootstepPlanner::Stance FootstepPlanner::step(
   kdtree_->radiusSearch(p_search_pcl, radius, indices, distances);
   Eigen::VectorXi samples =
     Eigen::Map<Eigen::VectorXi>(indices.data(), indices.size());
+  Eigen::VectorXi valid = (c_(samples).array() < INFINITY).cast<int>();
+  samples = samples(EigenUtils::maskToIndex(valid)).eval();
   Eigen::Matrix3Xd p = p_(Eigen::all, samples);
 
   // Filter reachable footholds
@@ -227,7 +233,7 @@ FootstepPlanner::Stance FootstepPlanner::step(
     p, -direction, workspace_angular_tol_);
   distance.array() -= min_margin;
   Eigen::Index index;
-  (distance + c_(reachable) * 0.01).maxCoeff(&index);
+  (distance - c_(reachable) * incline_cost_).maxCoeff(&index);
   Eigen::Vector3d p_swing = p.col(index);
 
   // Update body pose
@@ -254,6 +260,9 @@ FootstepPlanner::Stance FootstepPlanner::step(
   if ((R * W_swing).contains(p_swing)) {
     result.pose.prerotate(R);
   }
+  Eigen::Vector3d n_swing = n_.col(reachable(index));
+  result.footholds.at(swing).linear() = Eigen::Quaterniond::FromTwoVectors(
+    Eigen::Vector3d{-1, 0, 0}, n_swing).matrix();
 
   result.pose.translation() = p_body;
   result.footholds.at(swing).translation() = p_swing;
@@ -300,6 +309,17 @@ void FootstepPlanner::declareParameters()
   declareParameter(
     "workspace_max_limits", std::vector<double>{0.0, 0.0, 0.0},
     "Upper bounds of front left end effector workspace in body frame");
+  declareParameter(
+    "curvature_limit", 1.0, "Maximum foothold curvature in 1/meters", 0.0);
+  declareParameter(
+    "curvature_radius", 0.05, "Radius for foothold curvature estimation", 0.0);
+  declareParameter(
+    "incline_limit", M_PI,
+    "Maximum foothold incline from the ground plane in radians", 0.0, M_PI);
+  declareParameter(
+    "incline_radius", 0.1, "Radius for foothold incline estimation", 0.0);
+  declareParameter(
+    "incline_cost", 0.0, "Penalty for incline relative to step distance", 0.0);
 }
 
 void FootstepPlanner::setParameter(
@@ -323,6 +343,16 @@ void FootstepPlanner::setParameter(
       result.successful = false;
       result.reason = "Parameter must be length 3";
     }
+  } else if (param.get_name() == "curvature_limit") {
+    curvature_limit_ = param.as_double();
+  } else if (param.get_name() == "curvature_radius") {
+    curvature_radius_ = param.as_double();
+  } else if (param.get_name() == "incline_limit") {
+    incline_limit_ = param.as_double();
+  } else if (param.get_name() == "incline_radius") {
+    incline_radius_ = param.as_double();
+  } else if (param.get_name() == "incline_cost") {
+    incline_cost_ = param.as_double();
   }
   robot_->setParameter(param, result);
 }

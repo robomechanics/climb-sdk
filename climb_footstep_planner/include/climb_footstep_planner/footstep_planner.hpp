@@ -117,6 +117,11 @@ private:
   Eigen::Vector3d workspace_max_limits_;
   double workspace_angular_tol_;
   double min_step_length_;
+  double curvature_limit_;
+  double curvature_radius_;
+  double incline_limit_;
+  double incline_radius_;
+  double incline_cost_;
 };
 
 #endif  // CLIMB_FOOTSTEP_PLANNER__FOOTSTEP_PLANNER_HPP_

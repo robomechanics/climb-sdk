@@ -217,8 +217,23 @@ void FootstepPlannerNode::simulateCallback(
     *point_cloud += terrain::unevenXY({0.5, 0, 0}, 2, 2, 0.6, res);
     viewpoint.translate(Eigen::Vector3d{0, 0, 1000});
     goal_.translate(Eigen::Vector3d{1, 0, 0});
+  } else if (request->data == "slag") {
+    *point_cloud += terrain::unevenYZ({0, 0, 0.5}, 2, 2, 0.15, res, 0.5);
+    transform.rotate(Ry.inverse());
+    viewpoint.translate(Eigen::Vector3d{-1000, 0, 0});
+    goal_.translate(Eigen::Vector3d{0, 0, 1});
+    goal_.rotate(Ry.inverse());
+  } else if (request->data == "tufa") {
+    *point_cloud += terrain::unevenYZ({0, 0, 0.5}, 2, 2, 0.1, res, 0);
+    transform.rotate(Ry.inverse());
+    viewpoint.translate(Eigen::Vector3d{-1000, 0, 0});
+    goal_.translate(Eigen::Vector3d{0, 0, 1});
+    goal_.rotate(Ry.inverse());
   } else if (request->data == "cliff") {
-    *point_cloud += terrain::unevenYZ({0, 0, 0.5}, 2, 2, 0.3, res);
+    Eigen::Isometry3d cliff = Eigen::Isometry3d::Identity();
+    cliff.rotate(Ry.inverse());
+    cliff.translate(Eigen::Vector3d{0.5, 0, 0});
+    *point_cloud += terrain::uneven(cliff, 2, 2, 0.3, res);
     transform.rotate(Ry.inverse());
     viewpoint.translate(Eigen::Vector3d{-1000, 0, 0});
     goal_.translate(Eigen::Vector3d{0, 0, 1});

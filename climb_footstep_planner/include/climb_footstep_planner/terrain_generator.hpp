@@ -90,15 +90,20 @@ PointCloud sphere(Vector3d origin, double radius, double res);
  * @param ysize Length of the heightmap
  * @param amplitude Vertical scale of the heightmap
  * @param res Resolution of the point cloud
+ * @param decay Amplitude decay factor with increasing spatial scale
  */
 PointCloud uneven(
-  Isometry3d pose, double xsize, double ysize, double amplitude, double res);
+  Isometry3d pose, double xsize, double ysize, double amplitude, double res,
+  double decay = 1.0);
 PointCloud unevenXY(
-  Vector3d origin, double xsize, double ysize, double amplitude, double res);
+  Vector3d origin, double xsize, double ysize, double amplitude, double res,
+  double decay = 1.0);
 PointCloud unevenYZ(
-  Vector3d origin, double ysize, double zsize, double amplitude, double res);
+  Vector3d origin, double ysize, double zsize, double amplitude, double res,
+  double decay = 1.0);
 PointCloud unevenZX(
-  Vector3d origin, double zsize, double xsize, double amplitude, double res);
+  Vector3d origin, double zsize, double xsize, double amplitude, double res,
+  double decay = 1.0);
 
 }  // namespace terrain
 #endif  // CLIMB_FOOTSTEP_PLANNER__TERRAIN_GENERATOR_HPP_
