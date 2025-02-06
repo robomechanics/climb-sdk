@@ -24,13 +24,7 @@ Eigen::Isometry3d applyTwist(
  * @return Transform after twist is applied
  */
 Eigen::Isometry3d applyChildTwist(
-  const Eigen::Isometry3d & transform, const Eigen::Vector<double, 6> & twist)
-{
-  Eigen::Vector<double, 6> twist_base;
-  twist_base.head<3>() = transform.rotation() * twist.head<3>();
-  twist_base.tail<3>() = transform.rotation() * twist.tail<3>();
-  return applyTwist(transform, twist_base);
-}
+  const Eigen::Isometry3d & transform, const Eigen::Vector<double, 6> & twist);
 
 /**
  * @brief Apply a twist to a transform in place
@@ -46,13 +40,7 @@ void applyTwistInPlace(
  * @param[in] twist Twist in the transform child frame
  */
 void applyChildTwistInPlace(
-  Eigen::Isometry3d & transform, const Eigen::Vector<double, 6> & twist)
-{
-  Eigen::Vector<double, 6> twist_base;
-  twist_base.head<3>() = transform.rotation() * twist.head<3>();
-  twist_base.tail<3>() = transform.rotation() * twist.tail<3>();
-  applyTwistInPlace(transform, twist_base);
-}
+  Eigen::Isometry3d & transform, const Eigen::Vector<double, 6> & twist);
 
 /**
  * @brief Convert a twist to an equivalent transform
@@ -80,6 +68,23 @@ Eigen::Vector<double, 6> getTwist(
  */
 Eigen::Vector<double, 6> getTwist(
   const Eigen::Isometry3d & transform, double magnitude = 0.0);
+
+/**
+ * @brief Rotate a twist by a rotation matrix
+ * @param[in] twist Twist in the original frame
+ * @param[in] rotation Rotation matrix
+ * @return Twist in the rotated frame
+ */
+Eigen::Vector<double, 6> rotateTwist(
+  const Eigen::Vector<double, 6> & twist, const Eigen::Matrix3d & rotation);
+
+/**
+ * @brief Rotate a twist by a rotation matrix
+ * @param[in,out] twist Twist in the original frame to modify
+ * @param[in] rotation Rotation matrix
+ */
+void rotateTwistInPlace(
+  Eigen::Vector<double, 6> & twist, const Eigen::Matrix3d & rotation);
 
 /**
  * @brief Get the skew-symmetric matrix of a vector

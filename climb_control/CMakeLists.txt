@@ -18,23 +18,32 @@ find_package(climb_util REQUIRED)
 find_package(climb_kinematics REQUIRED)
 find_package(climb_optimization REQUIRED)
 
-add_library(${PROJECT_NAME} SHARED
+add_library(${PROJECT_NAME}_estimation SHARED
   src/contact_estimator.cpp
   src/force_estimator.cpp
+)
+add_library(${PROJECT_NAME}_control SHARED
   src/force_controller.cpp
 )
-target_include_directories(${PROJECT_NAME} PUBLIC
+target_include_directories(${PROJECT_NAME}_estimation PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(${PROJECT_NAME} Eigen3::Eigen)
-ament_target_dependencies(${PROJECT_NAME} climb_util climb_kinematics
+target_include_directories(${PROJECT_NAME}_control PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(${PROJECT_NAME}_estimation Eigen3::Eigen)
+target_link_libraries(${PROJECT_NAME}_control Eigen3::Eigen)
+ament_target_dependencies(${PROJECT_NAME}_estimation climb_util climb_kinematics
+  climb_msgs geometry_msgs sensor_msgs)
+ament_target_dependencies(${PROJECT_NAME}_control climb_util climb_kinematics
   climb_optimization climb_msgs geometry_msgs sensor_msgs)
 
 add_executable(controller_node src/controller_node.cpp)
 ament_target_dependencies(controller_node rclcpp sensor_msgs geometry_msgs
   climb_msgs std_srvs)
-target_link_libraries(controller_node ${PROJECT_NAME})
+target_link_libraries(controller_node ${PROJECT_NAME}_estimation ${PROJECT_NAME}_control)
 
 install(TARGETS controller_node
   DESTINATION lib/${PROJECT_NAME}
@@ -43,7 +52,7 @@ install(TARGETS controller_node
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 ament_export_dependencies(climb_util climb_kinematics climb_optimization
   climb_msgs geometry_msgs sensor_msgs Eigen3)
-install(TARGETS ${PROJECT_NAME}
+install(TARGETS ${PROJECT_NAME}_estimation ${PROJECT_NAME}_control
   EXPORT export_${PROJECT_NAME}
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
@@ -60,7 +69,7 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 
   ament_add_gtest(${PROJECT_NAME}_test test/controller_test.cpp)
-  target_link_libraries(${PROJECT_NAME}_test ${PROJECT_NAME})
+  target_link_libraries(${PROJECT_NAME}_test ${PROJECT_NAME}_estimation ${PROJECT_NAME}_control)
 
   install(DIRECTORY test/resources/
     DESTINATION share/${PROJECT_NAME}/test/resources

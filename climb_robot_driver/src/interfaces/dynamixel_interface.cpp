@@ -197,7 +197,10 @@ void DynamixelInterface::setParameter(
 bool DynamixelInterface::enable(const std::vector<int> & ids)
 {
   for (const auto id : ids) {
-    error_status_[id] = ActuatorState::ERROR_NONE;
+    if (error_status_[id] != ActuatorState::ERROR_NONE) {
+      packet_handler_2_->reboot(port_handler_.get(), id);
+      error_status_[id] = ActuatorState::ERROR_NONE;
+    }
   }
   if (!write(ids, OPERATING_MODE_XM, {5}, 2.0)) {
     return false;
@@ -318,6 +321,9 @@ std::vector<uint8_t> DynamixelInterface::readError(const std::vector<int> & ids)
       code[i] = ActuatorState::ERROR_OVERLOAD;
     } else {
       code[i] = ActuatorState::ERROR_UNDEFINED;
+    }
+    if (error_status_[ids[i]] == ActuatorState::ERROR_NONE) {
+      error_status_[ids[i]] = code[i];
     }
   }
   return code;

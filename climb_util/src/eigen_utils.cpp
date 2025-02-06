@@ -16,12 +16,24 @@ Isometry3d applyTwist(const Isometry3d & transform, const Vector<double, 6> & tw
   return result;
 }
 
+Eigen::Isometry3d applyChildTwist(
+  const Eigen::Isometry3d & transform, const Eigen::Vector<double, 6> & twist)
+{
+  return applyTwist(transform, rotateTwist(twist, transform.rotation()));
+}
+
 void applyTwistInPlace(Isometry3d & transform, const Vector<double, 6> & twist)
 {
   transform.translation() += twist.head<3>();
   transform.linear() =
     AngleAxisd(twist.tail<3>().norm(), twist.tail<3>().normalized()) *
     transform.rotation();
+}
+
+void applyChildTwistInPlace(
+  Eigen::Isometry3d & transform, const Eigen::Vector<double, 6> & twist)
+{
+  applyTwistInPlace(transform, rotateTwist(twist, transform.rotation()));
 }
 
 Isometry3d getTransform(const Vector<double, 6> & twist)
@@ -58,6 +70,22 @@ Vector<double, 6> getTwist(const Isometry3d & transform, double magnitude)
     twist = twist.normalized() * std::min(twist.norm(), magnitude);
   }
   return twist;
+}
+
+Eigen::Vector<double, 6> rotateTwist(
+  const Eigen::Vector<double, 6> & twist, const Eigen::Matrix3d & rotation)
+{
+  Eigen::Vector<double, 6> rotated;
+  rotated.head<3>() = rotation * twist.head<3>();
+  rotated.tail<3>() = rotation * twist.tail<3>();
+  return rotated;
+}
+
+void rotateTwistInPlace(
+  Eigen::Vector<double, 6> & twist, const Eigen::Matrix3d & rotation)
+{
+  twist.head<3>() = rotation * twist.head<3>();
+  twist.tail<3>() = rotation * twist.tail<3>();
 }
 
 Eigen::Matrix3d getSkew(const Eigen::Vector3d & vector)

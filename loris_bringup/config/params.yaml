@@ -16,6 +16,7 @@
       microspine_max_force: 15.0
       clearance: 0.05
       effort_limit: 1.6
+      joint_step: 0.1
       workspace_min_limits: [0.039, 0.176, -0.090]
       workspace_max_limits: [0.244, 0.255, 0.008]
       joint_normalization: 0.01

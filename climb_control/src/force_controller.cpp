@@ -111,7 +111,9 @@ bool ForceController::update(
   // Body position bounds
   auto W_body = Polytope::createBox(3);
   for (const auto & contact : robot_->getContactFrames()) {
-    if (robot_->getContactType(contact) == ContactType::TAIL) {
+    if (robot_->getContactType(contact) == ContactType::TAIL ||
+      workspaces_.find(contact) == workspaces_.end())
+    {
       continue;
     }
     W_body.intersect(

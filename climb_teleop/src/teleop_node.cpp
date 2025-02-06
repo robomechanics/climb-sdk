@@ -3,6 +3,7 @@
 #include <fmt/core.h>
 #include <rclcpp/executors.hpp>
 
+#include <climb_util/eigen_utils.hpp>
 #include <climb_util/ros_utils.hpp>
 
 using std::placeholders::_1;
@@ -162,6 +163,7 @@ Response TeleopNode::controlCommandCallback(
   if (status == std::future_status::ready) {
     auto response = result.get();
     if (response->success) {
+      controller_enable_ = request->data;
       return Response{request->data ? "Control on" : "Control off", false};
     } else {
       return Response{response->message, false};
@@ -538,7 +540,10 @@ Response TeleopNode::takeStep(
         step_override_cmd_pub_->publish(command);
         return Response{"Retrying Step", true};
       } else {
-        command.offset = RosUtils::eigenToTwist(getTwist(key));
+        auto transform = lookupTransform("/map", robot_->getBodyFrame());
+        Eigen::Matrix3d rotation = RosUtils::transformToEigen(transform.transform).rotation();
+        Eigen::Vector<double, 6> twist = EigenUtils::rotateTwist(getTwist(key), rotation);
+        command.offset = RosUtils::eigenToTwist(twist);
         step_override_cmd_pub_->publish(command);
         return Response{"", true};
       }
