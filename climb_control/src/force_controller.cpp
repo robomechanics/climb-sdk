@@ -146,6 +146,7 @@ bool ForceController::update(
   margin_ = solver_->getSolution().tail(1)(0);
 
   // Compute end effector displacements
+  Eigen::MatrixXd Gs_stance = Gs;
   Eigen::VectorXd df = force_cmd_ - force;
   Eigen::VectorXd feedback = Eigen::VectorXd::Zero(m);
   Eigen::VectorXd feedforward = Eigen::VectorXd::Zero(m);
@@ -158,10 +159,14 @@ bool ForceController::update(
     } else {
       feedback.segment(row, m_i) = force_kp_ * df.segment(row, m_i);
     }
+    if (mode != ControllerCommand::MODE_STANCE) {
+      Gs_stance.block(0, row, 6, m_i).setZero();
+    }
     row += m_i;
   }
-  feedback -= Gs.transpose() *
-    Gs.transpose().completeOrthogonalDecomposition().pseudoInverse() * feedback;
+  Eigen::MatrixXd Gs_inverse =
+    Gs_stance.completeOrthogonalDecomposition().pseudoInverse();
+  feedback -= Gs_stance.transpose() * Gs_inverse.transpose() * feedback;
   feedforward += Gs.transpose() * twist * body_kp_;
   Eigen::VectorXd dx = feedback + feedforward;
 
@@ -191,19 +196,7 @@ bool ForceController::update(
     .cwiseMin((robot_->getJointPosition().array() + joint_max_error_).matrix())
     .cwiseMax((robot_->getJointPosition().array() - joint_max_error_).matrix());
   Eigen::VectorXd dx_actual = Jh * (position_cmd_ - q0);
-  row = 0;
-  for (const auto & frame : robot_->getContactFrames()) {
-    auto mode = end_effector_goals_.at(frame).mode;
-    auto m_i = robot_->getNumConstraints(frame);
-    if (mode != ControllerCommand::MODE_STANCE) {
-      dx_actual.segment(row, m_i).setZero();
-      Gs.block(0, row, 6, m_i).setZero();
-    }
-    row += m_i;
-  }
-  displacement_cmd_.segment(n, 6) =
-    Gs.transpose().completeOrthogonalDecomposition().pseudoInverse() *
-    dx_actual;
+  displacement_cmd_.segment(n, 6) = Gs_inverse.transpose() * dx_actual;
   effort_cmd_ = Jh.transpose() * force_cmd_ + N;
   return true;
 }
