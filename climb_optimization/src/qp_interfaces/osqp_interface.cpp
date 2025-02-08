@@ -87,49 +87,65 @@ bool OsqpInterface::update(
   const Eigen::VectorXd & lb,
   const Eigen::VectorXd & ub)
 {
-  if (!initialized_) {return solve(H, f, A, b, Aeq, beq, lb, ub);}
-  int n = f.size();
+  int n = std::max(H.cols(), f.size());
   int m = b.size();
   int meq = beq.size();
+  int mbound = lb.size();
+  if (!initialized_ ||
+    m + meq + mbound != workspace_.get()->data->m ||
+    n != workspace_.get()->data->n)
+  {
+    throw std::runtime_error(
+      "Problem structure has changed: use solve() instead of update()");
+  }
 
   // Merge constraints
-  Eigen::MatrixXd A_full(m + meq + n, n);
-  Eigen::VectorXd lb_full(m + meq + n);
-  Eigen::VectorXd ub_full(m + meq + n);
-  A_full << A, Aeq, Eigen::MatrixXd::Identity(n, n);
-  lb_full << Eigen::VectorXd::Constant(m + meq, -INFINITY), lb;
-  ub_full << b, beq, ub;
+  Eigen::MatrixXd A_full(m + meq + mbound, n);
+  Eigen::VectorXd lb_full(m + meq + mbound);
+  Eigen::VectorXd ub_full(m + meq + mbound);
+  int row = 0;
+  if (m) {
+    A_full.block(row, 0, m, n) = A;
+    lb_full.segment(row, m).setConstant(-INFINITY);
+    ub_full.segment(row, m) = b;
+    row += m;
+  }
+  if (meq) {
+    A_full.block(row, 0, meq, n) = Aeq;
+    lb_full.segment(row, meq) = beq;
+    ub_full.segment(row, meq) = beq;
+    row += meq;
+  }
+  if (mbound) {
+    A_full.block(row, 0, mbound, n) = Eigen::MatrixXd::Identity(n, n);
+    lb_full.segment(row, mbound) = lb;
+    ub_full.segment(row, mbound) = ub;
+  }
 
-  // Update data
-  if (H.size()) {
-    data_.P = matrixToOSQP(H.triangularView<Eigen::Upper>());
-  }
-  if (f.size()) {
-    data_.q = vectorToOSQP(f);
-  }
-  if (A.size()) {
-    data_.A = matrixToOSQP(A_full);
-    data_.l = vectorToOSQP(lb_full);
-    data_.u = vectorToOSQP(ub_full);
-  }
+  // Convert to OSQP format
+  auto P_new = matrixToOSQP(H.triangularView<Eigen::Upper>());
+  auto q_new = vectorToOSQP(f);
+  auto A_new = matrixToOSQP(A_full);
+  auto l_new = vectorToOSQP(lb_full);
+  auto u_new = vectorToOSQP(ub_full);
 
   // Update workspace
   if (H.size() && A.size()) {
     osqp_update_P_A(
       workspace_.get(),
-      data_.P.get()->x, OSQP_NULL, data_.P.get()->nzmax,
-      data_.A.get()->x, OSQP_NULL, data_.A.get()->nzmax);
-    osqp_update_bounds(workspace_.get(), data_.l.data(), data_.u.data());
+      P_new.get()->x, OSQP_NULL, P_new.get()->nzmax,
+      A_new.get()->x, OSQP_NULL, A_new.get()->nzmax);
+    osqp_update_bounds(workspace_.get(), l_new.data(), u_new.data());
   } else if (H.size()) {
     osqp_update_P(
-      workspace_.get(), data_.P.get()->x, OSQP_NULL, data_.P.get()->nzmax);
+      workspace_.get(), P_new.get()->x, OSQP_NULL, P_new.get()->nzmax);
   } else if (A.size()) {
     osqp_update_A(
-      workspace_.get(), data_.A.get()->x, OSQP_NULL, data_.A.get()->nzmax);
-    osqp_update_bounds(workspace_.get(), data_.l.data(), data_.u.data());
+      workspace_.get(), A_new.get()->x, OSQP_NULL, A_new.get()->nzmax);
+    osqp_update_bounds(workspace_.get(), l_new.data(), u_new.data());
   }
   if (f.size()) {
-    osqp_update_lin_cost(workspace_.get(), data_.q.data());
+    osqp_update_lin_cost(workspace_.get(), q_new.data());
   }
 
   // Solve problem

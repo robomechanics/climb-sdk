@@ -136,10 +136,11 @@ bool ForceController::update(
 
   // Solve the optimization problem
   bool success;
-  if (solver_->getInitialized()) {
-    success = solver_->update(problem);
-  } else {
+  if (problem_changed_) {
     success = solver_->solve(problem);
+    problem_changed_ = false;
+  } else {
+    success = solver_->update(problem);
   }
   if (!success) {
     return false;
@@ -173,7 +174,7 @@ bool ForceController::update(
   feedforward += Gs.transpose() * twist * body_kp_;
   Eigen::VectorXd dx = feedback + feedforward;
 
-  // Constraint body joint angle
+  // Constrain body joint angle
   MatrixXd Jh_augmented(m + joint_overrides_.size(), n);
   Jh_augmented << Jh, MatrixXd::Zero(joint_overrides_.size(), n);
   VectorXd dx_augmented(m + joint_overrides_.size());
@@ -223,6 +224,11 @@ void ForceController::setControllerCommand(const ControllerCommand & command)
       }
     }
     goal.setpoint = robot_->getWrenchBasis(frame).transpose() * setpoint;
+    if (end_effector_goals_.find(frame) == end_effector_goals_.end() ||
+      goal.mode != end_effector_goals_[frame].mode)
+    {
+      problem_changed_ = true;
+    }
     end_effector_goals_[frame] = goal;
   }
   joint_overrides_.clear();

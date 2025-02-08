@@ -65,7 +65,7 @@ public:
     const Eigen::MatrixXd & H,
     const Eigen::VectorXd & f,
     const Eigen::MatrixXd & A,
-    const Eigen::MatrixXd & b,
+    const Eigen::VectorXd & b,
     const Eigen::MatrixXd & Aeq,
     const Eigen::VectorXd & beq,
     const Eigen::VectorXd & lb,

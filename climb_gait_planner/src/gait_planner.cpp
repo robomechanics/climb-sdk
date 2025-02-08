@@ -187,7 +187,7 @@ ControllerCommand GaitPlanner::getCommand()
   double theta;
   for (const auto & [contact, footstep] : footsteps_) {
     basis = robot_->getWrenchBasis(contact);
-    switch (footstep.paused ? State::STOP : footstep.state) {
+    switch ((footstep.paused ? State::STOP : footstep.state)) {
       case State::STANCE:
         cmd.frame.push_back(contact);
         if (robot_->getContactType(contact) == ContactType::TAIL) {

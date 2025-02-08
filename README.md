@@ -6,11 +6,11 @@ A general-purpose codebase for robotic climbing, originally developed for the LO
 
 ### Ubuntu
 
-Climb-SDK has been tested with ROS2 Iron on Ubuntu 22.04. The following setup steps are required prior to installation.
+Climb-SDK has been tested with ROS2 Jazzy on Ubuntu 24.04. The following setup steps are required prior to installation.
 
-1. Install Ubuntu 22.04 ([Desktop](https://ubuntu.com/tutorials/install-ubuntu-desktop), [Dual Boot](https://help.ubuntu.com/community/WindowsDualBoot), or [WSL2](https://documentation.ubuntu.com/wsl/en/latest/guides/install-ubuntu-wsl2/))
-2. Install ROS2 Iron ([tutorial](https://docs.ros.org/en/iron/Installation.html))
-3. Create a colcon workspace ([tutorial](https://docs.ros.org/en/iron/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html))
+1. Install Ubuntu 24.04 ([Desktop](https://ubuntu.com/tutorials/install-ubuntu-desktop), [Dual Boot](https://help.ubuntu.com/community/WindowsDualBoot), or [WSL2](https://documentation.ubuntu.com/wsl/en/latest/guides/install-ubuntu-wsl2/))
+2. Install ROS2 Jazzy ([tutorial](https://docs.ros.org/en/jazzy/Installation.html))
+3. Create a colcon workspace ([tutorial](https://docs.ros.org/en/jazzy/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html))
 
 Once the required setup is complete, run the following commands to clone the repository, install dependencies, and build packages.
 

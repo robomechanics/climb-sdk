@@ -24,7 +24,7 @@ public:
     const Eigen::MatrixXd & Aeq,
     const Eigen::VectorXd & beq,
     const Eigen::VectorXd & lb,
-    const Eigen::VectorXd & ub);
+    const Eigen::VectorXd & ub) override;
 
   bool update(
     const Eigen::MatrixXd & H,
@@ -34,7 +34,7 @@ public:
     const Eigen::MatrixXd & Aeq,
     const Eigen::VectorXd & beq,
     const Eigen::VectorXd & lb,
-    const Eigen::VectorXd & ub);
+    const Eigen::VectorXd & ub) override;
 
   void declareParameters() override;
 

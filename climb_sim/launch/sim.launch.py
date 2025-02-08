@@ -8,58 +8,58 @@ Optional Launch Arguments:
 
 from launch import LaunchDescription
 from launch.actions import (
-    IncludeLaunchDescription,
     DeclareLaunchArgument,
+    IncludeLaunchDescription,
     RegisterEventHandler
 )
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
-    PathJoinSubstitution,
+    Command,
     LaunchConfiguration,
-    TextSubstitution,
-    Command
+    PathJoinSubstitution,
+    TextSubstitution
 )
-from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
+from launch_ros.substitutions import FindPackageShare
 
 # Find launch arguments
-robot = LaunchConfiguration("robot")
-urdf = LaunchConfiguration("urdf")
+robot = LaunchConfiguration('robot')
+urdf = LaunchConfiguration('urdf')
 
 # Find ROS packages
 gz_pkg = FindPackageShare('ros_gz_sim')
 sim_pkg = FindPackageShare('climb_sim')
 main_pkg = FindPackageShare('climb_main')
-robot_pkg = FindPackageShare([robot, TextSubstitution(text="_description")])
+robot_pkg = FindPackageShare([robot, TextSubstitution(text='_description')])
 
 # Find resource paths
-urdf_path = PathJoinSubstitution([robot_pkg, "urdf", urdf])
-params_path = PathJoinSubstitution([robot_pkg, "config", "gz_params.yaml"])
+urdf_path = PathJoinSubstitution([robot_pkg, 'urdf', urdf])
+params_path = PathJoinSubstitution([robot_pkg, 'config', 'gz_params.yaml'])
 
 # Generate URDF from XACRO
-description = Command(["xacro ", urdf_path])
+description = Command(['xacro ', urdf_path])
 description_param = ParameterValue(description, value_type=str)
 
 
 def generate_launch_description():
     # Declare launch arguments
     robot_arg = DeclareLaunchArgument(
-        "robot",
-        default_value="loris",
-        description="Name of the robot model"
+        'robot',
+        default_value='loris',
+        description='Name of the robot model'
     )
     urdf_arg = DeclareLaunchArgument(
-        "urdf",
-        default_value=[robot, TextSubstitution(text=".urdf.xacro")],
-        description="Robot description file in {robot}_description/urdf/"
+        'urdf',
+        default_value=[robot, TextSubstitution(text='.urdf.xacro')],
+        description='Robot description file in {robot}_description/urdf/'
     )
 
     # Launch Gazebo simulator
     gz_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            PathJoinSubstitution([gz_pkg, "launch", "gz_sim.launch.py"])),
+            PathJoinSubstitution([gz_pkg, 'launch', 'gz_sim.launch.py'])),
         launch_arguments={'gz_args': PathJoinSubstitution([
             sim_pkg,
             'worlds',
@@ -86,7 +86,7 @@ def generate_launch_description():
     state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
-        arguments=["--ros-args", "--log-level", "error"],
+        arguments=['--ros-args', '--log-level', 'error'],
         output='screen',
         parameters=[{'robot_description': description_param}]
     )

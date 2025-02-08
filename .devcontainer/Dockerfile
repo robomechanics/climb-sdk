@@ -1,4 +1,4 @@
-FROM osrf/ros:iron-desktop
+FROM osrf/ros:jazzy-desktop
 
 RUN apt-get -y update \
  && apt-get -y install \

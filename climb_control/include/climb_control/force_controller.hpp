@@ -177,6 +177,8 @@ private:
   Eigen::VectorXd effort_cmd_;
   // Commanded contact forces of end effectors on world
   Eigen::VectorXd force_cmd_;
+  // Flag indicating the optimization problem structure has changed
+  bool problem_changed_ = true;
   // Stability margin of the optimal solution
   double margin_ = -INFINITY;
   // Contact force feedback gain in m/N
