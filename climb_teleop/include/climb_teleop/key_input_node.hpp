@@ -59,13 +59,13 @@ private:
   // Input string
   std::string input_;
   // Index in input string
-  size_t index_;
+  size_t index_ = 0;
   // Buffer of previous inputs
   std::vector<std::string> history_;
   // Index in history buffer
-  size_t history_index_;
+  size_t history_index_ = 0;
   // Send every key press individually
-  bool realtime_;
+  bool realtime_ = false;
   // Key input service client
   rclcpp::Client<TeleopInput>::SharedPtr teleop_input_client_;
   // Async response subscriber

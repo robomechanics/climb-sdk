@@ -1,6 +1,7 @@
 #include "climb_optimization/qp_interfaces/qp_interface.hpp"
 
 QpInterface::QpInterface()
+: solution_(Eigen::VectorXd::Zero(0))
 {
 }
 

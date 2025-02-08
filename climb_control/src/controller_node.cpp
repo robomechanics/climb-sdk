@@ -7,13 +7,13 @@ using std::placeholders::_1;
 using std::placeholders::_2;
 
 ControllerNode::ControllerNode()
-: KinematicsNode("ControllerNode")
+: KinematicsNode("ControllerNode"),
+  contact_estimator_(std::make_unique<ContactEstimator>(robot_)),
+  force_estimator_(std::make_unique<ForceEstimator>(robot_)),
+  force_controller_(std::make_unique<ForceController>(robot_)),
+  gravity_covariance_(Eigen::Matrix3d::Identity()),
+  nominal_pose_(Eigen::Isometry3d::Identity())
 {
-  // Initialize kinematics model, estimators, and controller
-  contact_estimator_ = std::make_unique<ContactEstimator>(robot_);
-  force_estimator_ = std::make_unique<ForceEstimator>(robot_);
-  force_controller_ = std::make_unique<ForceController>(robot_);
-
   // Parameter to print debugging information for the controller
   declare_parameter("debug", false);
   // Parameter to set the nominal configuration for the controller
@@ -33,7 +33,6 @@ ControllerNode::ControllerNode()
   }
 
   // Initialize odometry
-  gravity_covariance_ = Eigen::Matrix3d::Identity();
   if (compute_odometry_) {
     TransformStamped map_to_odom;
     map_to_odom.header.frame_id = "/map";
@@ -102,9 +101,6 @@ void ControllerNode::update()
       Eigen::Vector3d normal = -nominal_pose.rotation().col(2);
       double distance = normal.dot(nominal_pose.translation());
       force_controller_->setGroundConstraint(normal, distance);
-      std::cout << "Normal: " << normal.transpose() << std::endl;
-      std::cout << "Distance: " << distance << std::endl;
-      std::cout << "Nominal pose: " << nominal_pose.translation().transpose() << std::endl;
     }
     TransformStamped goal_pose;
     goal_pose.header.frame_id = robot_->getBodyFrame();

@@ -3,9 +3,7 @@
 #include <climb_util/ros_utils.hpp>
 
 ContactEstimator::ContactEstimator(std::shared_ptr<KinematicsInterface> robot)
-: robot_(robot)
-{
-}
+: robot_(robot) {}
 
 void ContactEstimator::reset()
 {

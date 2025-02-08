@@ -108,8 +108,8 @@ public:
 
 protected:
   Eigen::VectorXd solution_;    // Solution of the last solve
-  double cost_;                 // Cost of the last solution
-  bool initialized_;            // True if the solver has been initialized
+  double cost_ = INFINITY;      // Cost of the last solution
+  bool initialized_ = false;    // True if the solver has been initialized
 };
 
 #endif  // CLIMB_OPTIMIZATION__QP_INTERFACES__QP_INTERFACE_HPP_

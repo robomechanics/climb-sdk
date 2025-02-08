@@ -219,9 +219,9 @@ public:
   Eigen::VectorXd beq;
   Eigen::VectorXd lb;
   Eigen::VectorXd ub;
-  int N;
-  int M;
-  int Meq;
+  int N = 0;
+  int M = 0;
+  int Meq = 0;
 
 private:
   struct Var

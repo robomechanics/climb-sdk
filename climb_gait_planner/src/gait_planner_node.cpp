@@ -10,11 +10,9 @@ using geometry_msgs::msg::Pose;
 using GoalHandle = rclcpp_action::ServerGoalHandle<FootstepCommand>;
 
 GaitPlannerNode::GaitPlannerNode()
-: KinematicsNode("GaitPlannerNode")
+: KinematicsNode("GaitPlannerNode"),
+  gait_planner_(std::make_unique<GaitPlanner>(robot_))
 {
-  // Initialize step planner
-  gait_planner_ = std::make_unique<GaitPlanner>(robot_);
-
   // Declare parameters
   for (const auto & p : gait_planner_->getParameters()) {
     declare_parameter(p.name, p.default_value, p.descriptor);

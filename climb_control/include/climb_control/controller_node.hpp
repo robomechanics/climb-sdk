@@ -113,17 +113,17 @@ private:
   // Override nominal pose setpoint with default (centered above feet)
   bool default_pose_ = true;
   // Flag to enable the controller
-  bool enabled_;
+  bool enabled_ = false;
   // Flag to use a dummy robot driver (publish joint efforts directly)
-  bool offline_;
+  bool offline_ = false;
   // Flag to use the current gravity estimate for contact force estimation
-  bool use_gravity_;
+  bool use_gravity_ = false;
   // Parameter to print debugging messages
-  bool debug_;
+  bool debug_ = false;
   // Parameter to publish odometry estimates using dead reckoning
-  bool compute_odometry_;
+  bool compute_odometry_ = false;
   // Parameter for maximum joint effort (declared by force controller)
-  double max_effort_;
+  double max_effort_ = 0.0;
 };
 
 #endif  // CLIMB_CONTROL__CONTROLLER_NODE_HPP_

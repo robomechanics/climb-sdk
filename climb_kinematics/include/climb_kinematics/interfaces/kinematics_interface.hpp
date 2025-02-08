@@ -510,9 +510,9 @@ protected:
   virtual bool initialize(std::string & error_message);
 
   bool initialized_ = false;      // Has robot description been loaded
-  size_t num_joints_;             // Number of joints
-  size_t num_contacts_;           // Number of contacts
-  size_t num_constraints_;        // Number of contact constraints
+  size_t num_joints_ = 0;         // Number of joints
+  size_t num_contacts_ = 0;       // Number of contacts
+  size_t num_constraints_ = 0;    // Number of contact constraints
 
   // URDF model
   urdf::Model urdf_model_;
@@ -548,7 +548,7 @@ protected:
   Eigen::VectorXd joint_eff_max_;   // Joint effort upper bound (Nm or N)
 
   // Inertial properties
-  double mass_;                     // Total mass (kg)
+  double mass_ = 0;                 // Total mass (kg)
 };
 
 #endif  // CLIMB_KINEMATICS__INTERFACES__KINEMATICS_INTERFACE_HPP_

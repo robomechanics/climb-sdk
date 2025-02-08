@@ -2,13 +2,10 @@
 
 QpProblem::QpProblem(std::vector<std::string> vars, std::vector<int> sizes)
 {
-  N = 0;
   for (size_t i = 0; i < vars.size(); i++) {
     vars_[vars[i]] = {sizes[i], N};
     N += sizes[i];
   }
-  M = 0;
-  Meq = 0;
   H = Eigen::MatrixXd::Zero(N, N);
   f = Eigen::VectorXd::Zero(N);
   A = Eigen::MatrixXd::Zero(M, N);

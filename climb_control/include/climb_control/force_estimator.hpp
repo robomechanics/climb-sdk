@@ -127,7 +127,7 @@ private:
   // Running total of past joint effort measurements
   Eigen::VectorXd effort_total_;
   // Number of valid effort measurements
-  int effort_count_;
+  int effort_count_ = 0;
 };
 
 #endif  // CLIMB_CONTROL__FORCE_ESTIMATOR_HPP_

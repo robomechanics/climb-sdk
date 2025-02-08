@@ -8,10 +8,7 @@ using geometry_msgs::msg::Wrench;
 
 GaitPlanner::GaitPlanner(std::shared_ptr<KinematicsInterface> robot)
 : robot_(robot), transform_(Eigen::Isometry3d::Identity()),
-  t_(0, 0, RCL_ROS_TIME), t0_(0, 0, RCL_ROS_TIME)
-{
-  declareParameters();
-}
+  t_(0, 0, RCL_ROS_TIME), t0_(0, 0, RCL_ROS_TIME) {}
 
 void GaitPlanner::reset()
 {

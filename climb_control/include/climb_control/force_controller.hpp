@@ -178,7 +178,7 @@ private:
   // Commanded contact forces of end effectors on world
   Eigen::VectorXd force_cmd_;
   // Stability margin of the optimal solution
-  double margin_;
+  double margin_ = -INFINITY;
   // Contact force feedback gain in m/N
   double force_kp_;
   // Body position feedback gain in m/m

@@ -1,6 +1,7 @@
 #ifndef CLIMB_TELEOP__KEY_INPUT_PARSER_HPP_
 #define CLIMB_TELEOP__KEY_INPUT_PARSER_HPP_
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <string>

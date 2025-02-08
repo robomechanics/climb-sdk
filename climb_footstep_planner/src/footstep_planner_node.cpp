@@ -12,9 +12,10 @@ using std::placeholders::_2;
 using climb_msgs::msg::Footstep;
 
 FootstepPlannerNode::FootstepPlannerNode()
-: KinematicsNode("FootstepPlannerNode")
+: KinematicsNode("FootstepPlannerNode"),
+  footstep_planner_(std::make_unique<FootstepPlanner>()),
+  goal_(Eigen::Isometry3d::Identity())
 {
-  footstep_planner_ = std::make_unique<FootstepPlanner>();
   for (const auto & p : footstep_planner_->getParameters()) {
     if (has_parameter(p.name)) {
       set_parameter(get_parameter(p.name));
@@ -23,7 +24,6 @@ FootstepPlannerNode::FootstepPlannerNode()
     }
   }
   declare_parameter("seed", 0);
-  goal_ = Eigen::Isometry3d::Identity();
   point_cloud_sub_ = create_subscription<PointCloud2>(
     "map_cloud", 1,
     std::bind(&FootstepPlannerNode::pointCloudCallback, this, _1));

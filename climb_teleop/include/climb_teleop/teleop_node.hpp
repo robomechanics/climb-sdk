@@ -272,7 +272,7 @@ private:
   // Most recent plan
   FootstepPlan::SharedPtr plan_;
   // Current step index of plan
-  size_t step_index_;
+  size_t step_index_ = 0;
   // Poses
   std::unordered_map<std::string, std::vector<double>> configurations_;
   // Joint setpoints
@@ -284,7 +284,7 @@ private:
   // Twist angular step in rad
   double angular_step_;
   // Controller enabled
-  bool controller_enable_;
+  bool controller_enable_ = false;
 };
 
 #endif  // CLIMB_TELEOP__TELEOP_NODE_HPP_

@@ -11,15 +11,20 @@
 using geometry_utils::Polytope;
 
 FootstepPlanner::FootstepPlanner()
-{
-  robot_ = std::make_unique<KdlInterface>();
-  map_ = std::make_shared<PointCloud>();
-  normals_ = std::make_shared<NormalCloud>();
-  curvatures_ = std::make_shared<CurvatureCloud>();
-  cost_ = std::make_shared<CostCloud>();
-  kdtree_ = std::make_shared<pcl::search::KdTree<pcl::PointXYZ>>(false);
-  gravity_ = Eigen::Vector3d(0.0, 0.0, 1.0);
-}
+: robot_(std::make_unique<KdlInterface>()),
+  gravity_(Eigen::Vector3d(0.0, 0.0, 1.0)),
+  viewpoint_(Eigen::Isometry3d::Identity()),
+  map_(std::make_shared<PointCloud>()),
+  normals_(std::make_shared<NormalCloud>()),
+  curvatures_(std::make_shared<CurvatureCloud>()),
+  cost_(std::make_shared<CostCloud>()),
+  goal_(Eigen::Isometry3d::Identity()),
+  p_(Eigen::MatrixXd::Zero(3, 0)),
+  n_(Eigen::MatrixXd::Zero(3, 0)),
+  t_(Eigen::MatrixXd::Zero(3, 0)),
+  k_(Eigen::MatrixXd::Zero(2, 0)),
+  c_(Eigen::VectorXd::Zero(0)),
+  kdtree_(std::make_shared<pcl::search::KdTree<pcl::PointXYZ>>(false)) {}
 
 bool FootstepPlanner::initialize(const std::string & robot_description, std::string & message)
 {

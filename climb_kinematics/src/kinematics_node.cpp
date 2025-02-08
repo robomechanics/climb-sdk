@@ -6,11 +6,9 @@ using std::placeholders::_1;
 
 KinematicsNode::KinematicsNode(
   const std::string & node_name, const rclcpp::NodeOptions & options)
-: Node(node_name, options)
+: Node(node_name, options),
+  robot_(std::make_shared<KdlInterface>())
 {
-  // Initialize kinematics model
-  robot_ = std::make_shared<KdlInterface>();
-
   // Subscribe to parameter changes
   param_handle_ = add_on_set_parameters_callback(
     std::bind(&KinematicsNode::parameterCallback, this, _1));

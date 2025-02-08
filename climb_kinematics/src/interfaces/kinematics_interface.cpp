@@ -1,8 +1,15 @@
 #include "climb_kinematics/interfaces/kinematics_interface.hpp"
 
 KinematicsInterface::KinematicsInterface()
-{
-}
+: joint_pos_(Eigen::VectorXd::Zero(0)),
+  joint_vel_(Eigen::VectorXd::Zero(0)),
+  joint_eff_(Eigen::VectorXd::Zero(0)),
+  joint_pos_min_(Eigen::VectorXd::Zero(0)),
+  joint_pos_max_(Eigen::VectorXd::Zero(0)),
+  joint_vel_min_(Eigen::VectorXd::Zero(0)),
+  joint_vel_max_(Eigen::VectorXd::Zero(0)),
+  joint_eff_min_(Eigen::VectorXd::Zero(0)),
+  joint_eff_max_(Eigen::VectorXd::Zero(0)) {}
 
 bool KinematicsInterface::loadRobotDescription(
   const std::string & description, std::string & error_message)
