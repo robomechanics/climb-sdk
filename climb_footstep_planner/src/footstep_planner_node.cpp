@@ -6,16 +6,26 @@
 #include <climb_msgs/msg/footstep.hpp>
 #include <climb_util/ros_utils.hpp>
 #include "climb_footstep_planner/terrain_generator.hpp"
+#include "climb_footstep_planner/planners/global_planner.hpp"
+#include "climb_footstep_planner/planners/local_planner.hpp"
+#include "climb_footstep_planner/planners/dummy_planner.hpp"
 
+typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 using std::placeholders::_1;
 using std::placeholders::_2;
 using climb_msgs::msg::Footstep;
 
 FootstepPlannerNode::FootstepPlannerNode()
 : KinematicsNode("FootstepPlannerNode"),
-  footstep_planner_(std::make_unique<FootstepPlanner>()),
   goal_(Eigen::Isometry3d::Identity())
 {
+  auto planner_desc = rcl_interfaces::msg::ParameterDescriptor();
+  planner_desc.description = "Name of planner to use";
+  planner_desc.read_only = true;
+  declare_parameter("planner", "local", planner_desc);
+  auto seed_desc = rcl_interfaces::msg::ParameterDescriptor();
+  seed_desc.description = "Seed for random number generator";
+  declare_parameter("seed", 0, seed_desc);
   for (const auto & p : footstep_planner_->getParameters()) {
     if (has_parameter(p.name)) {
       set_parameter(get_parameter(p.name));
@@ -23,12 +33,9 @@ FootstepPlannerNode::FootstepPlannerNode()
       declare_parameter(p.name, p.default_value, p.descriptor);
     }
   }
-  declare_parameter("seed", 0);
   point_cloud_sub_ = create_subscription<PointCloud2>(
     "map_cloud", 1,
     std::bind(&FootstepPlannerNode::pointCloudCallback, this, _1));
-  imu_sub_ = create_subscription<Imu>(
-    "/imu/data", 1, std::bind(&FootstepPlannerNode::imuCallback, this, _1));
   goal_sub_ = create_subscription<PoseStamped>(
     "goal", 1, [this](const PoseStamped::SharedPtr msg) {
       goal_ = RosUtils::poseToEigen(msg->pose);
@@ -37,23 +44,13 @@ FootstepPlannerNode::FootstepPlannerNode()
   goal_pub_ = create_publisher<PoseStamped>("goal", 1);
   plan_pub_ = create_publisher<FootstepPlan>("footstep_plan", 1);
   path_pubs_.push_back(create_publisher<Path>("body_path", 1));
+  graph_pub_ = create_publisher<Marker>("edge_graph", 1);
   plan_service_ = create_service<Trigger>(
     "plan", std::bind(&FootstepPlannerNode::planCallback, this, _1, _2));
   simulate_service_ = create_service<SetString>(
     "simulate",
     std::bind(&FootstepPlannerNode::simulateCallback, this, _1, _2));
   RCLCPP_INFO(get_logger(), "Footstep planner node initialized");
-}
-
-void FootstepPlannerNode::descriptionCallback(const String::SharedPtr msg)
-{
-  KinematicsNode::descriptionCallback(msg);
-  std::string error_message;
-  if (!footstep_planner_->initialize(msg->data, error_message)) {
-    RCLCPP_ERROR(
-      get_logger(),
-      "Failed to load robot description: %s", error_message.c_str());
-  }
 }
 
 void FootstepPlannerNode::pointCloudCallback(
@@ -66,14 +63,6 @@ void FootstepPlannerNode::pointCloudCallback(
   footstep_planner_->update(std::move(point_cloud), viewpoint);
 }
 
-void FootstepPlannerNode::imuCallback(const Imu::SharedPtr msg)
-{
-  Eigen::Isometry3d map_to_imu = RosUtils::transformToEigen(
-    lookupTransform("/map", "/" + msg->header.frame_id).transform);
-  footstep_planner_->updateGravity(
-    map_to_imu.rotation() * -RosUtils::vector3ToEigen(msg->linear_acceleration).normalized());
-}
-
 void FootstepPlannerNode::planCallback(
   const Trigger::Request::SharedPtr request [[maybe_unused]],
   Trigger::Response::SharedPtr response)
@@ -84,7 +73,7 @@ void FootstepPlannerNode::planCallback(
     response->message = message;
     return;
   }
-  FootstepPlanner::Stance start;
+  Step start;
   auto body_transform = lookupTransform("/map", robot_->getBodyFrame());
   auto map_frame = body_transform.header.frame_id;
   start.pose = RosUtils::transformToEigen(body_transform.transform);
@@ -93,11 +82,13 @@ void FootstepPlannerNode::planCallback(
     start.footholds[contact] = RosUtils::transformToEigen(
       lookupTransform(map_frame, contact).transform);
   }
+  start.cost = 0;
   map_frame = getPrefixedFrameId(map_frame);
-  auto plan = footstep_planner_->plan(start, goal_);
+  Plan plan = {start};
+  plan += footstep_planner_->plan(start, goal_);
 
   PointCloud2 cost_msg;
-  pcl::toROSMsg(*footstep_planner_->getCostCloud(), cost_msg);
+  pcl::toROSMsg(*footstep_planner_->getCostmap(), cost_msg);
   cost_msg.header.frame_id = map_frame;
   cost_msg.header.stamp = now();
   cost_pub_->publish(cost_msg);
@@ -153,6 +144,20 @@ void FootstepPlannerNode::planCallback(
     path_pubs_.at(i)->publish(path_msgs[contact_frames[i - 1]]);
   }
   path_pubs_.at(0)->publish(body_path_msg);
+  Marker marker;
+  marker.header.frame_id = map_frame;
+  marker.type = Marker::LINE_LIST;
+  marker.pose.orientation.w = 1;
+  auto graph = footstep_planner_->getGraph();
+  for (int i = 0; i < graph.cols(); ++i) {
+    marker.points.push_back(RosUtils::eigenToPoint(graph.col(i).head(3)));
+    marker.points.push_back(RosUtils::eigenToPoint(graph.col(i).tail(3)));
+  }
+  marker.color.a = 1;
+  marker.color.b = 1;
+  marker.scale.x = 0.01;
+  marker.header.stamp = now();
+  graph_pub_->publish(marker);
   response->success = true;
 }
 
@@ -161,7 +166,7 @@ void FootstepPlannerNode::simulateCallback(
   SetString::Response::SharedPtr response)
 {
   double res = 0.01;
-  PointCloud::Ptr point_cloud = std::make_unique<PointCloud>();
+  PointCloud::Ptr point_cloud = std::make_shared<PointCloud>();
   Eigen::Isometry3d transform = Eigen::Isometry3d::Identity();
   Eigen::Isometry3d viewpoint = Eigen::Isometry3d::Identity();
   Eigen::AngleAxisd Ry = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitY());
@@ -197,6 +202,14 @@ void FootstepPlannerNode::simulateCallback(
     transform.rotate(Ry.inverse());
     viewpoint.translate(Eigen::Vector3d{-1000, 0, 0});
     goal_.translate(Eigen::Vector3d{0, 0, 1});
+    goal_.rotate(Ry.inverse());
+  } else if (request->data == "bend") {
+    *point_cloud += terrain::planeYZ({0, 0.5, 0}, 2, 1, res);
+    *point_cloud += terrain::planeYZ({0, 1, 1}, 1, 1, res);
+    *point_cloud += terrain::planeYZ({0, 0.5, 2}, 2, 1, res);
+    transform.rotate(Ry.inverse());
+    viewpoint.translate(Eigen::Vector3d{-1000, 0, 0});
+    goal_.translate(Eigen::Vector3d{0, 0, 2});
     goal_.rotate(Ry.inverse());
   } else if (request->data == "corner2") {
     *point_cloud += terrain::planeYZ({0, 0, 0}, 1, 1, res);
@@ -275,7 +288,7 @@ void FootstepPlannerNode::simulateCallback(
   cloud_msg.header.frame_id = getPrefixedFrameId("/map");
   cloud_msg.header.stamp = now();
   cost_pub_->publish(cloud_msg);
-  footstep_planner_->update(std::move(point_cloud), viewpoint);
+  footstep_planner_->update(point_cloud, viewpoint);
 
   Eigen::Isometry3d odomToBody =
     RosUtils::transformToEigen(
@@ -297,6 +310,18 @@ rcl_interfaces::msg::SetParametersResult FootstepPlannerNode::parameterCallback(
   for (const auto & param : parameters) {
     if (param.get_name() == "seed") {
       seed_ = param.as_int();
+    } else if (param.get_name() == "planner") {
+      if (param.as_string() == "global") {
+        footstep_planner_ = std::make_unique<GlobalPlanner>(
+          robot_, std::make_unique<LocalPlanner>(robot_));
+      } else if (param.as_string() == "local") {
+        footstep_planner_ = std::make_unique<LocalPlanner>(robot_);
+      } else if (param.as_string() == "dummy") {
+        footstep_planner_ = std::make_unique<GlobalPlanner>(
+          robot_, std::make_unique<DummyPlanner>(robot_));
+      } else {
+        throw std::runtime_error("Unknown planner type: " + param.as_string());
+      }
     }
     footstep_planner_->setParameter(param, result);
   }

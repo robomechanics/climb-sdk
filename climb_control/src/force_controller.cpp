@@ -10,11 +10,7 @@ using geometry_utils::Polytope;
 ForceController::ForceController(std::shared_ptr<KinematicsInterface> robot)
 : robot_(robot),
   solver_(std::make_unique<OsqpInterface>()),
-  configuration_(Eigen::VectorXd::Zero(robot->getNumJoints())),
-  displacement_cmd_(Eigen::VectorXd::Zero(0)),
-  position_cmd_(Eigen::VectorXd::Zero(0)),
-  effort_cmd_(Eigen::VectorXd::Zero(0)),
-  force_cmd_(Eigen::VectorXd::Zero(0)) {}
+  configuration_(Eigen::VectorXd::Zero(robot->getNumJoints())) {}
 
 void ForceController::reset()
 {

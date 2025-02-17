@@ -53,3 +53,11 @@
       incline_limit: 1.745
       incline_radius: 0.1
       incline_cost: 0.1
+      planner: "global"
+      algorithm: "ait*"
+      search_radius: 0.2
+      global_incline_radius: 0.2
+      global_incline_cost: 0.1
+      runtime: 30.0
+      debug: True
+      vertices_only: True

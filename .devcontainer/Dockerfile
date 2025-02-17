@@ -21,6 +21,7 @@ RUN apt-get -y update \
     ros-$ROS_DISTRO-imu-filter-madgwick \
     ros-$ROS_DISTRO-rtabmap-ros \
     ros-$ROS_DISTRO-robot-localization \
+    ros-$ROS_DISTRO-ompl \
  && rm -rf /var/lib/apt/lists/*
 
 COPY docker_config.sh /tmp/docker_config.sh

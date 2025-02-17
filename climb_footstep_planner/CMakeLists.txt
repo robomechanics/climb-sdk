@@ -15,16 +15,19 @@ find_package(std_srvs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(climb_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(pcl_ros REQUIRED)
 find_package(pcl_conversions REQUIRED)
+find_package(ompl REQUIRED)
 find_package(climb_util REQUIRED)
 find_package(climb_kinematics REQUIRED)
 # find_package(climb_control REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
-  src/footstep_planner.cpp
+  src/planners/local_planner.cpp
+  src/planners/global_planner.cpp
   src/terrain_generator.cpp
 )
 ament_target_dependencies(${PROJECT_NAME} climb_util climb_kinematics
@@ -33,11 +36,13 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(${PROJECT_NAME} Eigen3::Eigen)
+target_link_libraries(${PROJECT_NAME} Eigen3::Eigen /opt/ros/jazzy/lib/x86_64-linux-gnu/libompl.so)
+include_directories(/opt/ros/jazzy/include/ompl-1.6)
 
 add_executable(footstep_planner_node src/footstep_planner_node.cpp)
 ament_target_dependencies(footstep_planner_node rclcpp climb_msgs nav_msgs
-  sensor_msgs geometry_msgs std_msgs std_srvs tf2_ros pcl_ros pcl_conversions)
+  sensor_msgs geometry_msgs std_msgs visualization_msgs std_srvs tf2_ros
+  pcl_ros pcl_conversions)
 target_link_libraries(footstep_planner_node ${PROJECT_NAME})
 
 install(TARGETS

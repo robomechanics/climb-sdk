@@ -29,6 +29,8 @@ Visualization Manager:
   Displays:
     - Class: rviz_default_plugins/TF
       Enabled: false
+      Filter (blacklist): ""
+      Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
         All Enabled: true
@@ -373,7 +375,6 @@ Visualization Manager:
           Topic:
             Depth: 1
             Durability Policy: Volatile
-            Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /rtabmap/cloud_map
@@ -407,7 +408,6 @@ Visualization Manager:
           Topic:
             Depth: 1
             Durability Policy: Volatile
-            Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /loris/cost_cloud
@@ -485,7 +485,6 @@ Visualization Manager:
           Topic:
             Depth: 5
             Durability Policy: Volatile
-            Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /rtabmap/odom_local_map
@@ -684,6 +683,19 @@ Visualization Manager:
             Reliability Policy: Reliable
             Value: /loris/foothold_path_5
           Value: true
+        - Class: rviz_default_plugins/Marker
+          Enabled: true
+          Name: Search Graph
+          Namespaces:
+            {}
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /loris/edge_graph
+          Value: true
       Enabled: true
       Name: Plan
   Enabled: true
@@ -768,5 +780,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1450
-  X: 442
-  Y: 1369
+  X: 410
+  Y: 1337
