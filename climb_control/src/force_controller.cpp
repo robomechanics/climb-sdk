@@ -58,12 +58,7 @@ bool ForceController::update(
   problem.addLinearCost("margin", -1);
 
   // Static equilibrium constraint
-  problem.addEqualityConstraint(
-    {"force"}, {Gs.topRows(3)}, -fext.head(3));
-  problem.addEqualityConstraint(
-    {"force", "com"},
-    {Gs.bottomRows(3), EigenUtils::getSkew(-fext.head(3))},
-    -fext.tail(3));
+  problem.addEqualityConstraint({"force"}, {Gs}, -fext);
 
   // Joint torque limits
   problem.addInequalityConstraint(
@@ -234,6 +229,17 @@ void ForceController::setControllerCommand(const ControllerCommand & command)
       joint_overrides_[index] = command.overrides.position[i];
     }
   }
+}
+
+std::vector<std::string> ForceController::getStanceFrames() const
+{
+  std::vector<std::string> frames;
+  for (const auto & [frame, goal] : end_effector_goals_) {
+    if (goal.mode == ControllerCommand::MODE_STANCE) {
+      frames.push_back(frame);
+    }
+  }
+  return frames;
 }
 
 void ForceController::setGroundConstraint(

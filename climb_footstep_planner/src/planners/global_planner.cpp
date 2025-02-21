@@ -157,7 +157,7 @@ public:
     }
     auto v1 = stateToVertex(s1);
     auto v2 = stateToVertex(s2);
-    
+
     auto edge = std::make_pair(v1, v2);
     if (vertices_->find(v1) == vertices_->end()) {
       throw ompl::Exception(

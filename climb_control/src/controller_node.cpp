@@ -93,9 +93,18 @@ void ControllerNode::update()
       auto ground = contact_estimator_->getGroundPlane();
       force_controller_->setGroundConstraint(ground.normal, ground.distance);
       nominal_pose = Eigen::Isometry3d::Identity();
-      nominal_pose.translation() = ground.origin;
-      // nominal_pose.linear() = Eigen::Quaterniond::FromTwoVectors(
-      //   -Eigen::Vector3d::UnitZ(), ground.normal).toRotationMatrix();
+      Eigen::Vector3d stance_mean = Eigen::Vector3d::Zero();
+      auto stance_frames = force_controller_->getStanceFrames();
+      for (const auto & frame : stance_frames) {
+        stance_mean += robot_->getTransform(frame).translation();
+      }
+      stance_mean /= stance_frames.size();
+      Eigen::Vector3d g = rotation * gravity_;
+      nominal_pose.translation() = stance_mean;
+      nominal_pose.translation() +=
+        g * (ground.origin - stance_mean).dot(g) / g.squaredNorm();
+      nominal_pose.linear() = Eigen::Quaterniond::FromTwoVectors(
+        -Eigen::Vector3d::UnitZ(), ground.normal).toRotationMatrix();
     } else {
       nominal_pose = map_to_body * nominal_pose_;
       Eigen::Vector3d normal = -nominal_pose.rotation().col(2);

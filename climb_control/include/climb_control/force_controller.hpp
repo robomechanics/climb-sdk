@@ -53,6 +53,12 @@ public:
   void setControllerCommand(const ControllerCommand & command);
 
   /**
+   * @brief Get the list of frames in stance mode
+   * @return Vector of frame names
+   */
+  std::vector<std::string> getStanceFrames() const;
+
+  /**
    * @brief Set the obstacle constraint to maintain clearance between the body
    * frame and the estimated ground plane.
    * @param[in] normal Normal vector of the ground plane in the body frame
