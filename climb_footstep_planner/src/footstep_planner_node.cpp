@@ -169,7 +169,9 @@ void FootstepPlannerNode::simulateCallback(
   PointCloud::Ptr point_cloud = std::make_shared<PointCloud>();
   Eigen::Isometry3d transform = Eigen::Isometry3d::Identity();
   Eigen::Isometry3d viewpoint = Eigen::Isometry3d::Identity();
+  Eigen::AngleAxisd Rx = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitX());
   Eigen::AngleAxisd Ry = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitY());
+  Eigen::AngleAxisd Rz = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitZ());
   goal_ = Eigen::Isometry3d::Identity();
   if (seed_) {
     std::srand(seed_);
@@ -251,6 +253,18 @@ void FootstepPlannerNode::simulateCallback(
     viewpoint.translate(Eigen::Vector3d{-1000, 0, 0});
     goal_.translate(Eigen::Vector3d{0, 0, 1});
     goal_.rotate(Ry.inverse());
+  } else if (request->data == "silo") {
+    *point_cloud += terrain::cylinderZ({0.5, 0, 0.5}, 0.5, 2, res);
+    transform.rotate(Ry.inverse());
+    viewpoint.translate(Eigen::Vector3d{-1000, 1000, 0.5});
+    goal_.translate(Eigen::Vector3d{0.5, 0.5, 1});
+    goal_.rotate(Rz.inverse());
+    goal_.rotate(Ry.inverse());
+  } else if (request->data == "tube") {
+    *point_cloud += terrain::cylinderX({0.5, 0.5, 0}, 0.5, 2, res);
+    transform.rotate(Rx);
+    viewpoint.translate(Eigen::Vector3d{-1000, 0, 1000});
+    goal_.translate(Eigen::Vector3d{1, 0.5, 0.5});
   } else {
     response->success = false;
     response->message = "Environment not found";

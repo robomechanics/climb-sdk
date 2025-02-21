@@ -55,6 +55,7 @@ struct Plan
   auto end() {return steps.end();}
   auto begin() const {return steps.cbegin();}
   auto end() const {return steps.cend();}
+  void pop_back() {steps.pop_back();}
   const Step & front() const {return steps.front();}
   const Step & back() const {return steps.back();}
   Step & front() {return steps.front();}

@@ -287,8 +287,13 @@ Plan GlobalPlanner::plan(const Step & start, const Eigen::Isometry3d & goal)
   VertexMap vertices;
   EdgeMap edges;
   vertices.emplace(stateToVertex(start_state.get()), start);
-  si->setMotionValidator(std::make_shared<LocalPlannerMotionValidator>(
+  if (algorithm_ == "ait*") {
+    si->setMotionValidator(std::make_shared<LocalPlannerMotionValidator>(
       si, local_planner_.get(), &vertices, &edges, search_radius_));
+  } else {
+    si->setMotionValidator(std::make_shared<LocalPlannerMotionValidator>(
+      si, local_planner_.get(), &vertices, &edges, INFINITY));
+  }
   auto opt = std::make_shared<InclineCostIntegralObjective>(
     si, map_, viewpoint_, gravity_, global_incline_radius_,
     global_incline_cost_);
@@ -320,6 +325,11 @@ Plan GlobalPlanner::plan(const Step & start, const Eigen::Isometry3d & goal)
       auto s2 = stateToVertex(ss.getSolutionPath().getState(i + 1));
       auto edge = std::make_pair(s1, s2);
       if (edges.find(edge) != edges.end()) {
+        if (plan.size() && edges.at(edge).size() &&
+          plan.back().swing_foot == edges.at(edge).front().swing_foot)
+        {
+          plan.pop_back();
+        }
         plan += edges.at(edge);
       }
     }
