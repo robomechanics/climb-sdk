@@ -77,6 +77,15 @@ void FootstepPlannerNode::planCallback(
   auto body_transform = lookupTransform("/map", robot_->getBodyFrame());
   auto map_frame = body_transform.header.frame_id;
   start.pose = RosUtils::transformToEigen(body_transform.transform);
+  if (goal_.isApprox(Eigen::Isometry3d::Identity())) {
+    goal_ = start.pose;
+    goal_.translate(Eigen::Vector3d{1, 0, 0});
+    PoseStamped goal_msg;
+    goal_msg.header.frame_id = "/map";
+    goal_msg.pose = RosUtils::eigenToPose(goal_);
+    goal_msg.header.stamp = now();
+    goal_pub_->publish(goal_msg);
+  }
   start.joint_positions = robot_->getJointPosition();
   for (const auto & contact : robot_->getContactFrames()) {
     start.footholds[contact] = RosUtils::transformToEigen(
@@ -291,7 +300,7 @@ void FootstepPlannerNode::simulateCallback(
     }
   }
   offset /= count;
-  transform = transform * Eigen::Translation3d(0, 0, -offset);
+  transform = transform * Eigen::Translation3d(0, 0, -offset + 0.015);
 
   PoseStamped goal_msg;
   goal_msg.header.frame_id = "/map";

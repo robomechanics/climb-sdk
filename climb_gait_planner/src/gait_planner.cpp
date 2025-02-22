@@ -119,7 +119,7 @@ void GaitPlanner::update(
         break;
       case State::LIFT:       // Raise foot above step height (in body frame)
         displacement = EigenUtils::getTwist(origin, ee_pose);
-        if (displacement(2) > step_height_) {
+        if (displacement(2) > step_height_ || (t_ - footstep.t0).seconds() > lift_timeout_) {
           footstep.state = State::SWING;
         } else if (!auto_advance_ && force.norm() > snag_threshold_) {
           footstep.state = State::SNAG;
@@ -140,7 +140,7 @@ void GaitPlanner::update(
       case State::PLACE:      // Lower foot until contact is detected
         displacement = EigenUtils::getTwist(ee_pose, foothold);
         if ((!auto_advance_ && force[0] > contact_threshold_) ||
-          (auto_advance_ && displacement(2) >= 0))
+          (auto_advance_ && displacement(2) >= foothold_offset_))
         {
           footstep.state = State::ENGAGE;
           footstep.foothold = transform_ * ee_pose;
@@ -318,6 +318,12 @@ void GaitPlanner::declareParameters()
   declareParameter(
     "angular_scaling", 1.0,
     "Scaling factor for angular components in rad/m and N/Nm", 0.0);
+  declareParameter(
+    "lift_timeout", 2.0,
+    "Maximum time to lift foot before continuing in s", 0.0);
+  declareParameter(
+    "foothold_offset", 0.0,
+    "Height offset for simulated foot placement in m", 0.0);
 }
 
 void GaitPlanner::setParameter(
@@ -367,6 +373,10 @@ void GaitPlanner::setParameter(
     retry_distance_ = param.as_double();
   } else if (param.get_name() == "angular_scaling") {
     angular_scaling_ = param.as_double();
+  } else if (param.get_name() == "lift_timeout") {
+    lift_timeout_ = param.as_double();
+  } else if (param.get_name() == "foothold_offset") {
+    foothold_offset_ = param.as_double();
   } else {
     result.successful = false;
     result.reason = "Parameter not found";

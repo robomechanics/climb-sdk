@@ -221,6 +221,8 @@ private:
   double foothold_tolerance_;
   double retry_distance_;
   double angular_scaling_;
+  double lift_timeout_;
+  double foothold_offset_;
 };
 
 #endif  // CLIMB_GAIT_PLANNER__GAIT_PLANNER_HPP_

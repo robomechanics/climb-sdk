@@ -88,9 +88,7 @@ Step LocalPlanner::planStep(
   Step step = start;
   step.swing_foot = "";
   Eigen::Vector3d p0_body = start.pose.translation();
-  Eigen::Vector3d direction = goal.translation() - p0_body;
-  double goal_distance = direction.norm();
-  direction /= goal_distance;
+  Eigen::Vector3d direction = (goal.translation() - p0_body).normalized();
   // TODO: Temporarily hardcoded workspaces for each end effector
   auto W_1 = Polytope::createBox(
     workspace_min_limits_, workspace_max_limits_);
@@ -155,10 +153,12 @@ Step LocalPlanner::planStep(
   p = p_(Eigen::all, reachable);
   // Filter footholds closer to the goal
   Eigen::Vector3d stance_sum = p_stance.rowwise().sum();
+  Eigen::Vector3d start_centroid = (stance_sum + start.footholds.at(swing).translation()) / n;
+  double goal_distance = (goal.translation() - start_centroid).norm();
   Eigen::VectorXd dist =
     ((p / n).colwise() + (stance_sum / n - goal.translation())).colwise().norm();
   Eigen::VectorXi closer = (dist.array() < std::max(
-    goal_distance - min_step_length_ / n, min_step_length_ / n)).cast<int>();
+      goal_distance - min_step_length_ / n, min_step_length_ / n)).cast<int>();
   reachable = reachable(EigenUtils::maskToIndex(closer)).eval();
   p = p_(Eigen::all, reachable);
   // No reachable footholds found
@@ -221,6 +221,16 @@ Step LocalPlanner::planStep(
   Eigen::Vector3d n_swing = n_.col(reachable(index));
   step.footholds.at(swing).linear() = Eigen::Quaterniond::FromTwoVectors(
     Eigen::Vector3d{-1, 0, 0}, n_swing).matrix();
+
+  // Compute ground clearance
+  pcl::PointXYZ p_body_pcl{p_body.cast<float>().x(), p_body.cast<float>().y(),
+    p_body.cast<float>().z()};
+  indices.clear();
+  distances.clear();
+  kdtree_->radiusSearch(p_body_pcl, 0.1, indices, distances);
+  Eigen::Matrix3Xd ground = p_(Eigen::all, indices);
+  double clearance = (n_body.transpose() * ground).maxCoeff() - p_body.dot(n_body);
+  p_body += clearance * n_body;
 
   step.pose.translation() = p_body;
   step.footholds.at(swing).translation() = p_swing;

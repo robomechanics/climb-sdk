@@ -41,19 +41,19 @@ struct EdgeHash
 typedef std::unordered_map<Vertex, Step, VertexHash> VertexMap;
 typedef std::unordered_map<std::pair<Vertex, Vertex>, Plan, EdgeHash> EdgeMap;
 
-Vertex stateToVertex(const ob::State *state)
+Vertex stateToVertex(const ob::State * state)
 {
   auto values = state->as<ob::RealVectorStateSpace::StateType>()->values;
   return {values[0], values[1], values[2]};
 }
 
-Eigen::Vector3d stateToVector(const ob::State *state)
+Eigen::Vector3d stateToVector(const ob::State * state)
 {
   auto values = state->as<ob::RealVectorStateSpace::StateType>()->values;
   return Eigen::Vector3d(values[0], values[1], values[2]);
 }
 
-void setState(ob::State *state, const Eigen::Vector3d & vector)
+void setState(ob::State * state, const Eigen::Vector3d & vector)
 {
   auto values = state->as<ob::RealVectorStateSpace::StateType>()->values;
   values[0] = vector.x();
@@ -64,12 +64,12 @@ void setState(ob::State *state, const Eigen::Vector3d & vector)
 class PointCloudSampler : public ob::StateSampler
 {
 public:
-  PointCloudSampler(const ob::StateSpace *si, PointCloud::Ptr cloud)
+  PointCloudSampler(const ob::StateSpace * si, PointCloud::Ptr cloud)
   : StateSampler(si), cloud_(cloud)
   {
   }
 
-  void sampleUniform(ob::State *state) override
+  void sampleUniform(ob::State * state) override
   {
     int sample = rng_.uniformInt(0, cloud_->size() - 1);
     double * values =
@@ -83,13 +83,13 @@ public:
   void sampleUniformNear(ob::State *, const ob::State *, const double) override
   {
     throw ompl::Exception(
-      "PointCloudStateSampler::sampleUniformNear", "not implemented");
+            "PointCloudStateSampler::sampleUniformNear", "not implemented");
   }
 
   void sampleGaussian(ob::State *, const ob::State *, const double) override
   {
     throw ompl::Exception(
-      "PointCloudStateSampler::sampleGaussian", "not implemented");
+            "PointCloudStateSampler::sampleGaussian", "not implemented");
   }
 
 protected:
@@ -151,7 +151,7 @@ public:
     vertices_(vertices), edges_(edges) {}
 
   bool checkMotion(
-    const ob::State *s1, const ob::State *s2) const override
+    const ob::State * s1, const ob::State * s2) const override
   {
     auto v1 = stateToVertex(s1);
     auto v2 = stateToVertex(s2);
@@ -159,7 +159,7 @@ public:
     auto edge = std::make_pair(v1, v2);
     if (vertices_->find(v1) == vertices_->end()) {
       throw ompl::Exception(
-        "LocalPlannerMotionValidator::checkMotion", "start state not found");
+              "LocalPlannerMotionValidator::checkMotion", "start state not found");
     }
     if (edges_->find(edge) == edges_->end()) {
       auto start = vertices_->at(v1);
@@ -179,7 +179,7 @@ public:
     std::pair<ob::State *, double> &) const override
   {
     throw ompl::Exception(
-      "LocalPlannerMotionValidator::checkMotion", "not implemented");
+            "LocalPlannerMotionValidator::checkMotion", "not implemented");
   }
 
 private:
@@ -207,7 +207,7 @@ public:
     incline_ = gravity.transpose() * normals;
   }
 
-  ob::Cost stateCost(const ob::State *state) const override
+  ob::Cost stateCost(const ob::State * state) const override
   {
     auto values = state->as<ob::RealVectorStateSpace::StateType>()->values;
     auto point = pcl::PointXYZ(values[0], values[1], values[2]);
@@ -238,7 +238,7 @@ private:
 };
 
 ob::Cost costToGoHeuristic(
-  const ob::State *state, const ob::Goal *goal)
+  const ob::State * state, const ob::Goal * goal)
 {
   auto p1 = stateToVector(state);
   ob::State * goal_state = goal->getSpaceInformation()->allocState();
@@ -292,8 +292,9 @@ Plan GlobalPlanner::plan(const Step & start, const Eigen::Isometry3d & goal)
   computeNormals(normals, global_incline_radius_);
   orientNormals(normals);
   vertices.emplace(stateToVertex(start_state.get()), start);
-  si->setMotionValidator(std::make_shared<LocalPlannerMotionValidator>(
-    si, local_planner_.get(), &vertices, &edges));
+  si->setMotionValidator(
+    std::make_shared<LocalPlannerMotionValidator>(
+      si, local_planner_.get(), &vertices, &edges));
   auto opt = std::make_shared<InclineCostIntegralObjective>(
     si, &edges, map_, normals, gravity_, global_incline_cost_, search_radius_);
   opt->setCostToGoHeuristic(&costToGoHeuristic);
@@ -372,13 +373,17 @@ void GlobalPlanner::declareParameters()
   }
   declareParameter("algorithm", "rrt*", "Base planning algorithm");
   declareParameter("runtime", 10.0, "Maximum planning time in seconds", 0.0);
-  declareParameter("search_radius", 1.0,
+  declareParameter(
+    "search_radius", 1.0,
     "Maximum distance to connect neighbors in search graph", 0.0);
-  declareParameter("global_incline_radius", 0.2,
+  declareParameter(
+    "global_incline_radius", 0.2,
     "Radius for robot-scale incline estimation", 0.0);
-  declareParameter("global_incline_cost", 1.0,
+  declareParameter(
+    "global_incline_cost", 1.0,
     "Penalty for robot-scale incline relative to Euclidean distance");
-  declareParameter("vertices_only", false,
+  declareParameter(
+    "vertices_only", false,
     "Hide intermediate steps between global planner vertices");
 }
 
