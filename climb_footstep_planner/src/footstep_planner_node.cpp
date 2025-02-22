@@ -124,6 +124,8 @@ void FootstepPlannerNode::planCallback(
         path_msgs[contact] = Path();
         path_msgs[contact].header.frame_id = map_frame;
         path_msgs[contact].header.stamp = now();
+      } else if (contact != stance.swing_foot) {
+        continue;
       }
       PoseStamped ps;
       ps.header.frame_id = map_frame;

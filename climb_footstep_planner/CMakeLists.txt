@@ -26,6 +26,7 @@ find_package(climb_kinematics REQUIRED)
 # find_package(climb_control REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
+  src/planners/planner.cpp
   src/planners/local_planner.cpp
   src/planners/global_planner.cpp
   src/terrain_generator.cpp

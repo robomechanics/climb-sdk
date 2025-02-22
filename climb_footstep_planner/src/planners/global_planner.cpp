@@ -146,16 +146,13 @@ class LocalPlannerMotionValidator : public ob::MotionValidator
 public:
   LocalPlannerMotionValidator(
     const ob::SpaceInformationPtr & si, Planner * local_planner,
-    VertexMap * vertices, EdgeMap * edges, double radius)
+    VertexMap * vertices, EdgeMap * edges)
   : MotionValidator(si), local_planner_(local_planner),
-    vertices_(vertices), edges_(edges), radius_(radius) {}
+    vertices_(vertices), edges_(edges) {}
 
   bool checkMotion(
     const ob::State *s1, const ob::State *s2) const override
   {
-    if ((stateToVector(s1) - stateToVector(s2)).norm() > radius_) {
-      return false;
-    }
     auto v1 = stateToVertex(s1);
     auto v2 = stateToVertex(s2);
 
@@ -189,51 +186,55 @@ private:
   Planner * local_planner_;
   VertexMap * vertices_;
   EdgeMap * edges_;
-  double radius_;
 };
 
 class InclineCostIntegralObjective : public ob::StateCostIntegralObjective
 {
 public:
   InclineCostIntegralObjective(
-    const ob::SpaceInformationPtr & si, const PointCloud::Ptr cloud,
-    const Eigen::Isometry3d & viewpoint, const Eigen::Vector3d & gravity,
-    double radius, double incline_cost)
+    const ob::SpaceInformationPtr & si, const EdgeMap * edges,
+    const PointCloud::Ptr cloud, const Eigen::Matrix3Xd & normals,
+    const Eigen::Vector3d & gravity, double incline_cost, double search_radius)
   : StateCostIntegralObjective(si),
     cloud_(cloud),
-    viewpoint_(viewpoint.translation()),
     gravity_(gravity),
-    radius_(radius),
+    edges_(edges),
     incline_cost_(incline_cost),
+    search_radius_(search_radius),
     kdtree_(std::make_shared<pcl::search::KdTree<pcl::PointXYZ>>(false))
   {
     kdtree_->setInputCloud(cloud_);
+    incline_ = gravity.transpose() * normals;
   }
 
   ob::Cost stateCost(const ob::State *state) const override
   {
     auto values = state->as<ob::RealVectorStateSpace::StateType>()->values;
     auto point = pcl::PointXYZ(values[0], values[1], values[2]);
-    pcl::Indices indices;
-    std::vector<float> distance;
-    kdtree_->radiusSearch(point, radius_, indices, distance);
-    Eigen::Vector4f plane;
-    float curvature;
-    pcl::computePointNormal(*cloud_, indices, plane, curvature);
-    Eigen::Vector3d normal = plane.head(3).cast<double>();
-    if (normal.dot(viewpoint_ - point.getVector3fMap().cast<double>()) < 0) {
-      normal *= -1;
+    pcl::Indices indices(1);
+    std::vector<float> distance(1);
+    kdtree_->nearestKSearch(point, 1, indices, distance);
+    double incline = incline_[indices.front()];
+    return ob::Cost(incline_cost_ * (incline + 1) + 1);
+  }
+
+  ob::Cost motionCostHeuristic(
+    const ob::State * s1, const ob::State * s2) const override
+  {
+    if ((stateToVector(s1) - stateToVector(s2)).norm() > search_radius_) {
+      return ob::Cost(INFINITY);
     }
-    return ob::Cost(incline_cost_ * (normal.dot(gravity_) + 1) + 1);
+    return motionCost(s1, s2);
   }
 
 private:
   PointCloud::Ptr cloud_;
-  Eigen::Vector3d viewpoint_;
   Eigen::Vector3d gravity_;
-  double radius_;
+  const EdgeMap * edges_;
   double incline_cost_;
+  double search_radius_;
   pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree_;
+  Eigen::VectorXd incline_;
 };
 
 ob::Cost costToGoHeuristic(
@@ -287,17 +288,14 @@ Plan GlobalPlanner::plan(const Step & start, const Eigen::Isometry3d & goal)
   auto si = ss.getSpaceInformation();
   VertexMap vertices;
   EdgeMap edges;
+  Eigen::Matrix3Xd normals;
+  computeNormals(normals, global_incline_radius_);
+  orientNormals(normals);
   vertices.emplace(stateToVertex(start_state.get()), start);
-  if (algorithm_ == "ait*") {
-    si->setMotionValidator(std::make_shared<LocalPlannerMotionValidator>(
-      si, local_planner_.get(), &vertices, &edges, search_radius_));
-  } else {
-    si->setMotionValidator(std::make_shared<LocalPlannerMotionValidator>(
-      si, local_planner_.get(), &vertices, &edges, INFINITY));
-  }
+  si->setMotionValidator(std::make_shared<LocalPlannerMotionValidator>(
+    si, local_planner_.get(), &vertices, &edges));
   auto opt = std::make_shared<InclineCostIntegralObjective>(
-    si, map_, viewpoint_, gravity_, global_incline_radius_,
-    global_incline_cost_);
+    si, &edges, map_, normals, gravity_, global_incline_cost_, search_radius_);
   opt->setCostToGoHeuristic(&costToGoHeuristic);
   ss.setOptimizationObjective(opt);
   ob::PlannerPtr planner;

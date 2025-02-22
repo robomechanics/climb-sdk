@@ -43,12 +43,6 @@ private:
   void processCloud();
 
   /**
-   * @brief Reorient normals based on current viewpoint
-   * @param[in, out] normals Normals to reorient
-   */
-  void orientNormals(Eigen::Matrix3Xd & normals);
-
-  /**
    * @brief Draw a box in the cost map for visualization purposes
    * @param box Box geometry
    * @param value Cost value assigned to the box

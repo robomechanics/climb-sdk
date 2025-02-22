@@ -136,6 +136,32 @@ public:
   virtual Eigen::Matrix<double, 6, Eigen::Dynamic> getGraph() {return graph_;}
 
 protected:
+  /**
+   * @brief Compute surface normals for the current map and viewpoint
+   * @param[out] normals Normal vectors
+   * @param radius Radius for normal estimation
+   */
+  void computeNormals(Eigen::Matrix3Xd & normals, double radius);
+
+  /**
+   * @brief Compute principal curvatures for the current map and viewpoint
+   * @param[out] tangents Direction of maximum curvature
+   * @param[out] curvatures Principle curvature values
+   * @param normals Normal vectors
+   * @param radius Radius for curvature estimation
+   */
+  void computeCurvatures(
+    Eigen::Matrix3Xd & tangents, Eigen::Matrix2Xd & curvatures,
+    const Eigen::Matrix3Xd & normals, double radius);
+
+  /**
+   * @brief Align normals with their neighbors, starting at the closest point
+   * to the viewpoint
+   * @param[in, out] normals Normals to reorient
+   * @param neighbors Number of nearest neighbors to consider
+   */
+  void orientNormals(Eigen::Matrix3Xd & normals, int neighbors = 5);
+
   std::shared_ptr<KinematicsInterface> robot_;
   Eigen::Isometry3d viewpoint_;
   Eigen::Matrix<double, 6, Eigen::Dynamic> graph_;

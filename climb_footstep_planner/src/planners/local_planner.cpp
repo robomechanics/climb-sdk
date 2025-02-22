@@ -8,8 +8,6 @@
 #include "climb_footstep_planner/terrain_generator.hpp"
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
-typedef pcl::PointCloud<pcl::Normal> NormalCloud;
-typedef pcl::PointCloud<pcl::PrincipalCurvatures> CurvatureCloud;
 typedef pcl::PointCloud<pcl::PointXYZI> CostCloud;
 using geometry_utils::Polytope;
 
@@ -30,30 +28,9 @@ void LocalPlanner::update(
 void LocalPlanner::processCloud()
 {
   // Compute normals
-  auto normals = std::make_shared<NormalCloud>();
-  pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
-  ne.setInputCloud(map_);
-  ne.setSearchMethod(kdtree_);
-  ne.setRadiusSearch(incline_radius_);
-  Eigen::Vector3d viewpoint = viewpoint_.translation();
-  ne.setViewPoint(viewpoint(0), viewpoint(1), viewpoint(2));
-  ne.compute(*normals);
-  n_ = normals->getMatrixXfMap(3, 8, 0).cast<double>().eval();
-  orientNormals(n_);
-
-  // Compute curvature
-  auto curvatures = std::make_shared<CurvatureCloud>();
-  pcl::PrincipalCurvaturesEstimation<
-    pcl::PointXYZ, pcl::Normal, pcl::PrincipalCurvatures> pc;
-  pc.setInputCloud(map_);
-  pc.setInputNormals(normals);
-  pc.setSearchMethod(kdtree_);
-  pc.setRadiusSearch(curvature_radius_);
-  pc.compute(*curvatures);
-  t_ = curvatures->getMatrixXfMap().block(
-    0, 0, 3, curvatures->getMatrixXfMap().cols()).cast<double>().eval();
-  k_ = curvatures->getMatrixXfMap().block(
-    3, 0, 2, curvatures->getMatrixXfMap().cols()).cast<double>().eval();
+  computeNormals(n_, incline_radius_);
+  orientNormals(n_, flip_normals_nn_);
+  computeCurvatures(t_, k_, n_, curvature_radius_);
 
   // Compute cost
   p_ = map_->getMatrixXfMap(3, 4, 0).cast<double>();
@@ -68,42 +45,6 @@ void LocalPlanner::processCloud()
   costmap_->getMatrixXfMap(1, 8, 4).row(0) = c_.cast<float>();
 
   processed_cloud = true;
-}
-
-void LocalPlanner::orientNormals(Eigen::Matrix3Xd & normals)
-{
-  if (flip_normals_nn_ == 0) {
-    return;
-  }
-  Eigen::Vector3f viewpoint = viewpoint_.translation().cast<float>();
-  std::vector<int> indices = {0};
-  std::vector<float> distances = {0};
-  kdtree_->nearestKSearch(
-    {viewpoint(0), viewpoint(1), viewpoint(2)}, 1, indices, distances);
-  std::vector<int> queue = {indices.front()};
-  std::vector<bool> visited(map_->size(), false);
-  visited[queue.back()] = true;
-  indices.resize(flip_normals_nn_);
-  distances.resize(flip_normals_nn_);
-  for (int i = 0; i < normals.cols(); ++i) {
-    if (queue.size() == 0) {
-      std::cout << "Explored " << i << " points" << std::endl;
-      break;
-    }
-    int p = queue.back();
-    queue.pop_back();
-    kdtree_->nearestKSearch(p, flip_normals_nn_, indices, distances);
-    for (const auto & q : indices) {
-      if (visited[q]) {
-        continue;
-      }
-      visited[q] = true;
-      queue.push_back(q);
-      if (normals.col(p).dot(normals.col(q)) < 0) {
-        normals.col(q) *= -1;
-      }
-    }
-  }
 }
 
 Plan LocalPlanner::plan(const Step & start, const Eigen::Isometry3d & goal)
