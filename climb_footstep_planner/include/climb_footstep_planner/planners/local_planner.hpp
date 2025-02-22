@@ -2,6 +2,9 @@
 #define CLIMB_FOOTSTEP_PLANNER__PLANNERS__LOCAL_PLANNER_HPP_
 
 #include <pcl/search/kdtree.h>
+#include <string>
+#include <memory>
+#include <unordered_map>
 
 #include <climb_util/geometry_utils.hpp>
 #include "climb_footstep_planner/planners/planner.hpp"
@@ -9,7 +12,7 @@
 class LocalPlanner : public Planner
 {
 public:
-  LocalPlanner(std::shared_ptr<KinematicsInterface> robot);
+  explicit LocalPlanner(std::shared_ptr<KinematicsInterface> robot);
 
   void update(
     const pcl::PointCloud<pcl::PointXYZ>::Ptr map_cloud,

@@ -3,6 +3,8 @@
 
 #include <Eigen/Geometry>
 #include <pcl/common/common.h>
+#include <initializer_list>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -28,10 +30,12 @@ struct Plan
 {
   Plan()
   : cost(0) {}
-  Plan(const Step & step)
-  : cost(step.cost)
+  Plan(std::initializer_list<Step> steps)
+  : cost(0)
   {
-    steps.push_back(step);
+    for (const auto & step : steps) {
+      push_back(step);
+    }
   }
   void push_back(const Step & step)
   {
@@ -70,7 +74,7 @@ struct Plan
 class Planner : public Parameterized
 {
 public:
-  Planner(std::shared_ptr<KinematicsInterface> robot)
+  explicit Planner(std::shared_ptr<KinematicsInterface> robot)
   : robot_(robot),
     costmap_(std::make_shared<pcl::PointCloud<pcl::PointXYZI>>()) {}
 

@@ -1,7 +1,7 @@
 #include "climb_footstep_planner/planners/global_planner.hpp"
 
-#include <unordered_map>
-#include <tuple>
+#include <pcl/features/normal_3d.h>
+#include <pcl/search/kdtree.h>
 #include <ompl/base/ScopedState.h>
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
@@ -9,8 +9,8 @@
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <ompl/geometric/planners/informedtrees/AITstar.h>
-#include <pcl/features/normal_3d.h>
-#include <pcl/search/kdtree.h>
+#include <unordered_map>
+#include <tuple>
 
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
@@ -99,7 +99,7 @@ protected:
 class PointCloudStateSpace : public ob::RealVectorStateSpace
 {
 public:
-  PointCloudStateSpace(PointCloud::Ptr cloud)
+  explicit PointCloudStateSpace(PointCloud::Ptr cloud)
   : RealVectorStateSpace(3), cloud_(cloud), density_(getDensity(cloud)) {}
 
   ob::StateSamplerPtr allocDefaultStateSampler() const override
@@ -126,10 +126,11 @@ private:
     std::vector<int> indices;
     std::vector<float> distances;
     kdtree.setInputCloud(cloud);
+    samples = std::min(samples, static_cast<int>(cloud->size()));
     for (int i = 0; i < samples; ++i) {
       indices.clear();
       distances.clear();
-      int sample = rand() % cloud->size();
+      int sample = i * cloud->size() / samples;
       kdtree.radiusSearch(sample, radius, indices, distances);
       count += indices.size();
     }

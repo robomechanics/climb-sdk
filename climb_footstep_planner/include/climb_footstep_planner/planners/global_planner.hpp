@@ -1,6 +1,8 @@
 #ifndef CLIMB_FOOTSTEP_PLANNER__PLANNERS__GLOBAL_PLANNER_HPP_
 #define CLIMB_FOOTSTEP_PLANNER__PLANNERS__GLOBAL_PLANNER_HPP_
 
+#include <memory>
+#include <string>
 #include <climb_footstep_planner/planners/planner.hpp>
 
 class GlobalPlanner : public Planner

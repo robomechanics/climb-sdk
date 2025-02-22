@@ -1,12 +1,13 @@
 #ifndef CLIMB_FOOTSTEP_PLANNER__PLANNERS__DUMMY_PLANNER_HPP_
-#define CLIMB_FOOTSTEP_PLANNER__PLANNERS__LOCAL_PLANNER_HPP_
+#define CLIMB_FOOTSTEP_PLANNER__PLANNERS__DUMMY_PLANNER_HPP_
 
+#include <memory>
 #include "climb_footstep_planner/planners/planner.hpp"
 
 class DummyPlanner : public Planner
 {
 public:
-  DummyPlanner(std::shared_ptr<KinematicsInterface> robot)
+  explicit DummyPlanner(std::shared_ptr<KinematicsInterface> robot)
   : Planner(robot) {}
 
   Plan plan(const Step & start, const Eigen::Isometry3d & goal) override
@@ -26,4 +27,4 @@ public:
     const Parameter &, SetParametersResult &) override {}
 };
 
-#endif  // CLIMB_FOOTSTEP_PLANNER__PLANNERS__LOCAL_PLANNER_HPP_
+#endif  // CLIMB_FOOTSTEP_PLANNER__PLANNERS__DUMMY_PLANNER_HPP_
