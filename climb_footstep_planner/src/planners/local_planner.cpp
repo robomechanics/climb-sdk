@@ -39,6 +39,7 @@ void LocalPlanner::processCloud()
   ne.setViewPoint(viewpoint(0), viewpoint(1), viewpoint(2));
   ne.compute(*normals);
   n_ = normals->getMatrixXfMap(3, 8, 0).cast<double>().eval();
+  orientNormals(n_);
 
   // Compute curvature
   auto curvatures = std::make_shared<CurvatureCloud>();
@@ -67,6 +68,42 @@ void LocalPlanner::processCloud()
   costmap_->getMatrixXfMap(1, 8, 4).row(0) = c_.cast<float>();
 
   processed_cloud = true;
+}
+
+void LocalPlanner::orientNormals(Eigen::Matrix3Xd & normals)
+{
+  if (flip_normals_nn_ == 0) {
+    return;
+  }
+  Eigen::Vector3f viewpoint = viewpoint_.translation().cast<float>();
+  std::vector<int> indices = {0};
+  std::vector<float> distances = {0};
+  kdtree_->nearestKSearch(
+    {viewpoint(0), viewpoint(1), viewpoint(2)}, 1, indices, distances);
+  std::vector<int> queue = {indices.front()};
+  std::vector<bool> visited(map_->size(), false);
+  visited[queue.back()] = true;
+  indices.resize(flip_normals_nn_);
+  distances.resize(flip_normals_nn_);
+  for (int i = 0; i < normals.cols(); ++i) {
+    if (queue.size() == 0) {
+      std::cout << "Explored " << i << " points" << std::endl;
+      break;
+    }
+    int p = queue.back();
+    queue.pop_back();
+    kdtree_->nearestKSearch(p, flip_normals_nn_, indices, distances);
+    for (const auto & q : indices) {
+      if (visited[q]) {
+        continue;
+      }
+      visited[q] = true;
+      queue.push_back(q);
+      if (normals.col(p).dot(normals.col(q)) < 0) {
+        normals.col(q) *= -1;
+      }
+    }
+  }
 }
 
 Plan LocalPlanner::plan(const Step & start, const Eigen::Isometry3d & goal)
@@ -299,6 +336,9 @@ void LocalPlanner::declareParameters()
     "incline_cost", 0.0, "Penalty for incline relative to step distance", 0.0);
   declareParameter(
     "debug", false, "Display debugging information");
+  declareParameter(
+    "flip_normals_nn", 0,
+    "Nearest neighbors for reorientating normal vectors (0 to disable)", 0);
 }
 
 void LocalPlanner::setParameter(
@@ -334,5 +374,7 @@ void LocalPlanner::setParameter(
     incline_cost_ = param.as_double();
   } else if (param.get_name() == "debug") {
     debug_ = param.as_bool();
+  } else if (param.get_name() == "flip_normals_nn") {
+    flip_normals_nn_ = param.as_int();
   }
 }

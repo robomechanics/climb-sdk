@@ -43,16 +43,22 @@ private:
   void processCloud();
 
   /**
+   * @brief Reorient normals based on current viewpoint
+   * @param[in, out] normals Normals to reorient
+   */
+  void orientNormals(Eigen::Matrix3Xd & normals);
+
+  /**
    * @brief Draw a box in the cost map for visualization purposes
    * @param box Box geometry
    * @param value Cost value assigned to the box
    */
   void drawBox(const geometry_utils::Polytope & box, double value = 0);
 
-  Eigen::MatrixXd p_;   // Position
-  Eigen::MatrixXd n_;   // Normal
-  Eigen::MatrixXd t_;   // Tangential
-  Eigen::MatrixXd k_;   // Curvature
+  Eigen::Matrix3Xd p_;   // Position
+  Eigen::Matrix3Xd n_;   // Normal
+  Eigen::Matrix3Xd t_;   // Tangential
+  Eigen::Matrix2Xd k_;   // Curvature
   Eigen::VectorXd c_;   // Cost
   pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree_;
   bool processed_cloud = false;
@@ -66,6 +72,7 @@ private:
   double incline_radius_;
   double incline_cost_;
   bool debug_;
+  int flip_normals_nn_;
   std::unordered_map<std::string, double> timers_;
 };
 
