@@ -29,11 +29,11 @@
   <xacro:property name="wrist_joint" value="$(arg wrist_joint)" />
 
   <!-- Camera mounting height (m from body origin to pitch axis) -->
-  <xacro:arg name="camera_height" default="0.28" />
+  <xacro:arg name="camera_height" default="0.24" />
   <xacro:property name="camera_height" value="$(arg camera_height)" />
 
   <!-- Camera mounting pitch (deg downward from horizontal) -->
-  <xacro:arg name="camera_pitch" default="25" />
+  <xacro:arg name="camera_pitch" default="20" />
   <xacro:property name="camera_pitch" value="$(arg camera_pitch)" />
 
   <!-- Gripper angle offsets (deg outward from centerline) -->

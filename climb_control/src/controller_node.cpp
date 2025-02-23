@@ -238,18 +238,10 @@ void ControllerNode::jointCallback(const JointState::SharedPtr msg)
 
 void ControllerNode::imuCallback(const Imu::SharedPtr msg)
 {
-  TransformStamped transform;
-  try {
-    transform = lookupTransform("/map", "/" + msg->header.frame_id);
-  } catch (const tf2::TransformException &) {
-    return;
-  }
-  Eigen::Matrix3d rotation = RosUtils::quaternionToEigen(
-    transform.transform.rotation).toRotationMatrix();
-  gravity_ = -rotation * RosUtils::vector3ToEigen(msg->linear_acceleration);
+  gravity_ = -Eigen::Vector3d::UnitZ() * 9.81;
+  // TODO: use orientation covariance
   Eigen::Matrix<double, 3, 3, Eigen::RowMajor> covariance(
     msg->linear_acceleration_covariance.data());
-  gravity_covariance_ = rotation * covariance * rotation.transpose();
   use_gravity_ = true;
 }
 
