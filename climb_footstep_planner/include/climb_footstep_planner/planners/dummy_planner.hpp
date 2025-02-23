@@ -15,8 +15,8 @@ public:
     Step step = start;
     step.pose = goal;
     step.cost = (start.pose.translation() - goal.translation()).norm();
-    if (step.cost > 0.1) {
-      return {};
+    if (step.cost > 0.2) {
+      step.cost = INFINITY;
     }
     return {step};
   }

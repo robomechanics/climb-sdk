@@ -50,12 +50,13 @@ bool ForceController::update(
     robot_->getGravitationalVector(fext.head(3) / robot_->getMass());
   VectorXd twist = EigenUtils::getTwist(pose);  // Nominal body twist (6 x 1)
 
-  QpProblem problem({"force", "com", "margin"}, {m, 3, 1});
+  QpProblem problem({"force", "com", "margin", "clearance"}, {m, 3, 1, 1});
 
   // Cost function
   problem.addQuadraticCost("force", joint_normalization_, {});
   problem.addQuadraticCost("com", body_normalization_, twist.head(3));
   problem.addLinearCost("margin", -1);
+  problem.addLinearCost("clearance", -1);
 
   // Static equilibrium constraint
   problem.addEqualityConstraint({"force"}, {Gs}, -fext);
@@ -113,17 +114,10 @@ bool ForceController::update(
     W_body.intersect(
       robot_->getTransform(contact).translation() - workspaces_.at(contact));
   }
-  if (W_body.box) {
-    // Ensure body workspace is non-empty
-    for (int i = 0; i < 3; i++) {
-      if (W_body.b(i) + W_body.b(i + 3) < 0) {
-        double avg = (-W_body.b(i) + W_body.b(i + 3)) / 2;
-        W_body.b(i) = -avg;
-        W_body.b(i + 3) = avg;
-      }
-    }
-  }
-  problem.addInequalityConstraint({"com"}, {W_body.A}, W_body.b);
+  problem.addInequalityConstraint(
+    {"com", "clearance"},
+    {W_body.A, MatrixXd::Ones(W_body.b.size(), 1)}, W_body.b);
+  problem.addInequalityConstraint({"clearance"}, {MatrixXd::Ones(1, 1)}, 0);
 
   // Solve the optimization problem
   bool success;
@@ -138,7 +132,8 @@ bool ForceController::update(
   }
   force_cmd_ = solver_->getSolution().head(m);
   twist.head(3) = solver_->getSolution().segment(m, 3);
-  margin_ = solver_->getSolution().tail(1)(0);
+  margin_ = solver_->getSolution().tail(2)(0);
+  violation_ = -solver_->getSolution().tail(2)(1);
 
   // Compute end effector displacements
   Eigen::MatrixXd Gs_stance = Gs;

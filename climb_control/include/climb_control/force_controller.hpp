@@ -138,6 +138,12 @@ public:
    */
   double getMargin() const {return margin_;}
 
+  /**
+   * @brief Get the body workspace/obstacle constraint violation
+   * @return Body workspace/obstacle constraint violation
+   */
+  double getViolation() const {return violation_;}
+
   void declareParameters() override;
 
   void setParameter(
@@ -187,6 +193,8 @@ private:
   bool problem_changed_ = true;
   // Stability margin of the optimal solution
   double margin_ = -INFINITY;
+  // Body workspace/obstacle constraint violation
+  double violation_ = 0;
   // Contact force feedback gain in m/N
   double force_kp_;
   // Body position feedback gain in m/m
