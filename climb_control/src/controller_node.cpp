@@ -90,21 +90,29 @@ void ControllerNode::update()
     // Update controller
     Eigen::Isometry3d nominal_pose;
     if (default_pose_) {
+      // Orientation
       auto ground = contact_estimator_->getGroundPlane();
-      force_controller_->setGroundConstraint(ground.normal, ground.distance);
       nominal_pose = Eigen::Isometry3d::Identity();
+      nominal_pose.linear() = Eigen::Quaterniond::FromTwoVectors(
+        -Eigen::Vector3d::UnitZ(), ground.normal).toRotationMatrix();
+      // Ground clearance
+      force_controller_->setGroundConstraint(ground.normal, ground.distance);
       Eigen::Vector3d stance_mean = Eigen::Vector3d::Zero();
       auto stance_frames = force_controller_->getStanceFrames();
       for (const auto & frame : stance_frames) {
         stance_mean += robot_->getTransform(frame).translation();
       }
       stance_mean /= stance_frames.size();
-      Eigen::Vector3d g = rotation * gravity_;
+      Eigen::Vector3d g = rotation * gravity_.normalized();
       nominal_pose.translation() = stance_mean;
-      nominal_pose.translation() +=
-        g * (ground.origin - stance_mean).dot(g) / g.squaredNorm();
-      nominal_pose.linear() = Eigen::Quaterniond::FromTwoVectors(
-        -Eigen::Vector3d::UnitZ(), ground.normal).toRotationMatrix();
+      nominal_pose.translation() += g * (ground.origin - stance_mean).dot(g);
+      // Align heading
+      g = nominal_pose.rotation().transpose() * g;
+      if (std::abs(g.z()) < std::cos(0.2)) {
+        double psi = std::atan2(-g.y(), -g.x());
+        nominal_pose.linear() =
+          Eigen::AngleAxisd(psi, Eigen::Vector3d::UnitZ()) * nominal_pose.linear();
+      }
     } else {
       nominal_pose = map_to_body * nominal_pose_;
       Eigen::Vector3d normal = -nominal_pose.rotation().col(2);

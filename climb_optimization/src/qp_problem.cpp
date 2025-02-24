@@ -102,3 +102,20 @@ void QpProblem::addBounds(
   lb.segment(i, n) = lb.segment(i, n).cwiseMax(lb_in);
   ub.segment(i, n) = ub.segment(i, n).cwiseMin(ub_in);
 }
+
+std::string QpProblem::description() const
+{
+  auto ss = std::stringstream();
+  ss << "H = [" << H << "];" << std::endl;
+  ss << "f = [" << f.transpose() << "]';" << std::endl;
+  ss << "A = [" << A << "];" << std::endl;
+  ss << "b = [" << b.transpose() << "]';" << std::endl;
+  ss << "Aeq = [" << Aeq << "];" << std::endl;
+  ss << "beq = [" << beq.transpose() << "]';" << std::endl;
+  ss << "lb = [" << lb.transpose() << "]';" << std::endl;
+  ss << "ub = [" << ub.transpose() << "]';" << std::endl;
+  for (const auto & [name, var] : vars_) {
+    ss << name << " = " << var.index + 1 << ":" << var.index + var.size << ";" << std::endl;
+  }
+  return ss.str();
+}

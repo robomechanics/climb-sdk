@@ -128,10 +128,15 @@ bool ForceController::update(
     success = solver_->update(problem);
   }
   if (!success) {
+    std::cerr << problem.description() << std::endl;
+    std::cerr << "x = [" << solver_->getSolution().transpose() << "]';" << std::endl;
     return false;
   }
   force_cmd_ = solver_->getSolution().head(m);
   twist.head(3) = solver_->getSolution().segment(m, 3);
+  twist.head(3) /= std::max(twist.head(3).norm() / body_step_, 1.0);
+  twist.tail(3) /= std::max(twist.tail(3).norm() / body_step_, 1.0);
+
   margin_ = solver_->getSolution().tail(2)(0);
   violation_ = -solver_->getSolution().tail(2)(1);
 

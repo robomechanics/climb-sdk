@@ -211,6 +211,11 @@ public:
       var, lb_in * ones(vars_.at(var).size), ub_in * ones(vars_.at(var).size));
   }
 
+  /**
+   * Problem description (MATLAB format)
+   */
+  std::string description() const;
+
   Eigen::MatrixXd H;
   Eigen::VectorXd f;
   Eigen::MatrixXd A;

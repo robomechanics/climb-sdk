@@ -156,6 +156,14 @@ private:
     const std::vector<std::string> & tokens);
 
   /**
+   * @brief Adjust the camera alignment (map to odom)
+   * @param tokens The command tokens
+   * @return The response message
+   */
+  KeyInputParser::Response alignCommandCallback(
+    const std::vector<std::string> & tokens);
+
+  /**
    * @brief Convert key press into a twist
    * @param key The key character (linear: wasdqe, angular: WASDQE)
    * @return The twist vector (linear, angular)
@@ -229,6 +237,12 @@ private:
    */
   void controlEndEffector(
     const std::string & contact, const Eigen::Vector<double, 6> & twist);
+
+  /**
+   * @brief Rotate the map frame by a given angular velocity
+   * @param twist Twist of odom with respect to map
+   */
+  void alignMap(const Eigen::Vector<double, 6> & twist);
 
   /**
    * @brief Execute a footstep command

@@ -117,6 +117,9 @@ void TeleopNode::addCommands()
   key_input_parser_.defineCommand(
     "simulate STRING",
     std::bind(&TeleopNode::simulateCommandCallback, this, _1));
+  key_input_parser_.defineCommand(
+    "align",
+    std::bind(&TeleopNode::alignCommandCallback, this, _1));
 }
 
 void TeleopNode::keyCallback(
@@ -338,6 +341,22 @@ Response TeleopNode::simulateCommandCallback(
     "Footstep planner node is not responding", false};
 }
 
+Response TeleopNode::alignCommandCallback(
+  const std::vector<std::string> & tokens [[maybe_unused]])
+{
+  key_input_parser_.setInputCallback(
+    [this](char key) {
+      if (key == ' ') {
+        return Response{"Stopped", false};
+      }
+      alignMap(getTwist(key));
+      return Response{"", true};
+    });
+  auto response = fmt::format(
+    "Align with w/a/s/d/q/e keys, press space to stop");
+  return Response{response, true};
+}
+
 Eigen::Vector<double, 6> TeleopNode::getTwist(char key) const
 {
   Eigen::Vector<double, 6> twist = Eigen::Vector<double, 6>::Zero();
@@ -491,6 +510,19 @@ void TeleopNode::controlEndEffector(
   command.overrides.name.push_back("spine_joint");
   command.overrides.position.push_back(0.0);
   controller_cmd_pub_->publish(command);
+}
+
+void TeleopNode::alignMap(const Eigen::Vector<double, 6> & twist)
+{
+  auto transform = lookupTransform("/map", "/odom");
+  auto T = RosUtils::transformToEigen(transform.transform);
+  EigenUtils::applyTwistInPlace(T, twist);
+  geometry_msgs::msg::TransformStamped msg;
+  msg.header.stamp = now();
+  msg.header.frame_id = "/map";
+  msg.child_frame_id = "/odom";
+  msg.transform = RosUtils::eigenToTransform(T);
+  sendTransform(msg);
 }
 
 Response TeleopNode::takeStep(
