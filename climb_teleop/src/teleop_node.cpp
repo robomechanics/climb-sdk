@@ -306,7 +306,7 @@ Response TeleopNode::executeCommandCallback(
           if (result.result->success) {
             msg.message = "Completed step";
             if (result.result->success) {
-              if (++step_index_ < plan_->steps.size()) {
+              if (++step_index_ < plan_->steps.size() && false) {
                 auto response = executeCommandCallback({});
                 msg.message = response.message;
                 msg.realtime = response.realtime;

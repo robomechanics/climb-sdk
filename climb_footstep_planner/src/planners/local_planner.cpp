@@ -240,6 +240,7 @@ Step LocalPlanner::planStep(
 
 void LocalPlanner::drawBox(const Polytope & box, double value)
 {
+  return;
   assert(box.A.rows() == 6 && box.A.cols() == 3);
   Eigen::Isometry3d T = Eigen::Isometry3d::Identity();
   if (!box.box) {

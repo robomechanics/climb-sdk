@@ -65,15 +65,15 @@ void ControllerNode::update()
   Eigen::Isometry3d map_to_body = RosUtils::transformToEigen(
     lookupTransform(robot_->getBodyFrame(), "/map").transform);
   Eigen::Matrix3d rotation = map_to_body.rotation();
-  auto frames = contact_estimator_->update(rotation * gravity_);
+  auto frames = contact_estimator_->update(gravity_);
   robot_->updateContactFrames(frames);
 
   // Estimate contact forces
   Eigen::VectorXd forces;
   if (use_gravity_) {
     forces = force_estimator_->update(
-      rotation * gravity_,
-      rotation * gravity_covariance_ * rotation.transpose());
+      gravity_,
+      gravity_covariance_);
   } else {
     forces = force_estimator_->update();
   }
@@ -89,7 +89,7 @@ void ControllerNode::update()
   if (enabled_) {
     // Update controller
     Eigen::Isometry3d nominal_pose;
-    if (default_pose_) {
+    if (default_pose_ || true) {
       // Orientation
       auto ground = contact_estimator_->getGroundPlane();
       nominal_pose = Eigen::Isometry3d::Identity();
@@ -103,7 +103,7 @@ void ControllerNode::update()
         stance_mean += robot_->getTransform(frame).translation();
       }
       stance_mean /= stance_frames.size();
-      Eigen::Vector3d g = rotation * gravity_.normalized();
+      Eigen::Vector3d g = gravity_.normalized();
       nominal_pose.translation() = stance_mean;
       nominal_pose.translation() += g * (ground.origin - stance_mean).dot(g);
       // Align heading
@@ -246,7 +246,19 @@ void ControllerNode::jointCallback(const JointState::SharedPtr msg)
 
 void ControllerNode::imuCallback(const Imu::SharedPtr msg)
 {
-  gravity_ = -Eigen::Vector3d::UnitZ() * 9.81;
+  // gravity_ = -Eigen::Vector3d::UnitZ() * 9.81;
+  // Compute gravity vector from msg orientation
+  TransformStamped transform;
+  try {
+    transform = lookupTransform("base_link", "/camera_imu_optical_frame");
+  } catch (tf2::TransformException &) {
+    std::cerr << "Failed to lookup transform" << std::endl;
+    return;
+  }
+  Eigen::Quaterniond cam_to_body = RosUtils::quaternionToEigen(
+    transform.transform.rotation);
+  Eigen::Quaterniond q = RosUtils::quaternionToEigen(msg->orientation);
+  gravity_ = cam_to_body * q.inverse() * Eigen::Vector3d::UnitZ() * -9.81;
   // TODO: use orientation covariance
   Eigen::Matrix<double, 3, 3, Eigen::RowMajor> covariance(
     msg->linear_acceleration_covariance.data());

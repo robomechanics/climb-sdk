@@ -153,6 +153,9 @@ bool OsqpInterface::update(
   solution_ = osqpToVector(
     workspace_.get()->solution->x, workspace_.get()->data->n);
   cost_ = workspace_.get()->info->obj_val;
+  if (workspace_.get()->info->status_val != OSQP_SOLVED) {
+    std::cerr << "OSQP error: " << workspace_.get()->info->status << std::endl;
+  }
   return workspace_.get()->info->status_val == OSQP_SOLVED;
 }
 

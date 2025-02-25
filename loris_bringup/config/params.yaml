@@ -15,33 +15,37 @@
       debug: False
       microspine_max_force: 15.0
       clearance: 0.05
-      effort_limit: 1.6
+      effort_limit: 1.5
       joint_step: 0.1
+      body_step: 1.0
       workspace_min_limits: [0.039, 0.176, -0.090]
       workspace_max_limits: [0.244, 0.255, 0.008]
       joint_normalization: 0.01
-      body_normalization: 100.0
+      body_normalization: 0.001
       default_configuration: "climb"
-      force_kp: 0.0001
+      force_kp: 0.0005
       body_kp: 0.1
       joint_max_error: 0.1
       gravity_estimate: [-9.81, 0.0, 0.0]
+      max_iter: 1000
+      compute_odometry: True
   gait_planner:
     ros__parameters:
       step_height: 0.05
       step_length: 0.1
-      swing_velocity: 0.002
+      swing_velocity: 0.005
       engage_force: [3.0, 0.0, -5.0, 0.0, 0.0, 0.0]
       engage_tolerance: 1.0
-      disengage_force: [-3.0, 3.0, 3.0, 0.0, 0.0, 0.0]
+      disengage_force: [-4.0, 4.0, 4.0, 0.0, 0.0, 0.0]
       disengage_frequency: 0.25
       disengage_tolerance: 2.0
       contact_threshold: 5.0
-      snag_threshold: 5.0
+      snag_threshold: 8.0
       foothold_tolerance: 0.01
       retry_distance: 0.1
       angular_scaling: 0.1
       auto_advance: False
+      foothold_offset: -0.015
   footstep_planner:
     ros__parameters:
       seed: 0
@@ -53,7 +57,7 @@
       incline_limit: 1.745
       incline_radius: 0.1
       incline_cost: 0.1
-      planner: "global"
+      planner: "local"
       algorithm: "ait*"
       search_radius: 0.2
       global_incline_radius: 0.2

@@ -37,8 +37,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(${PROJECT_NAME} Eigen3::Eigen /opt/ros/jazzy/lib/x86_64-linux-gnu/libompl.so)
-include_directories(/opt/ros/jazzy/include/ompl-1.6)
+target_link_libraries(${PROJECT_NAME} Eigen3::Eigen /opt/ros/iron/lib/x86_64-linux-gnu/libompl.so)
+include_directories(/opt/ros/iron/include/ompl-1.6)
 
 add_executable(footstep_planner_node src/footstep_planner_node.cpp)
 ament_target_dependencies(footstep_planner_node rclcpp climb_msgs nav_msgs
