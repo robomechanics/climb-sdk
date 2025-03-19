@@ -128,8 +128,6 @@ bool ForceController::update(
     success = solver_->update(problem);
   }
   if (!success) {
-    std::cerr << problem.description() << std::endl;
-    std::cerr << "x = [" << solver_->getSolution().transpose() << "]';" << std::endl;
     return false;
   }
   force_cmd_ = solver_->getSolution().head(m);

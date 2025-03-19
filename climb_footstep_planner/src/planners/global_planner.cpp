@@ -333,13 +333,26 @@ Plan GlobalPlanner::plan(const Step & start, const Eigen::Isometry3d & goal)
         plan += edges.at(edge);
       }
     }
-    std::cout << "Plan Cost = " << plan.cost << std::endl;
+    std::cout << "Plan Step Length: " << plan.size() << " steps" << std::endl;
+    double dist = 0;
+    double incline = 0;
+    for (size_t i = 0; i < plan.size() - 1; ++i) {
+      double d = (plan[i].pose.translation() - plan[i + 1].pose.translation()).norm();
+      dist += d;
+      double incline1 = plan[i].pose.rotation().col(2).dot(gravity_) + 1;
+      double incline2 = plan[i + 1].pose.rotation().col(2).dot(gravity_) + 1;
+      incline += d * (incline1 + incline2) / 2;
+    }
+    incline /= dist;
+    std::cout << "Plan Total Distance: " << dist << " m" << std::endl;
+    std::cout << "Plan Average Incline Angle: " <<
+      acos(1 - incline) * 180 / M_PI << " deg" << std::endl;
   } else {
     std::cout << "No solution found." << std::endl;
     plan.cost = INFINITY;
   }
   size_t i = 0;
-  graph_.resize(6, vertices_only_ ? edges.size() : 0);
+  graph_.conservativeResize(6, i + (vertices_only_ ? edges.size() : 0));
   for (const auto & [edge, plan] : edges) {
     if (vertices_only_) {
       graph_.col(i) <<

@@ -180,8 +180,9 @@ void FootstepPlannerNode::simulateCallback(
   PointCloud::Ptr point_cloud = std::make_shared<PointCloud>();
   Eigen::Isometry3d transform = Eigen::Isometry3d::Identity();
   Eigen::Isometry3d viewpoint = Eigen::Isometry3d::Identity();
-  Eigen::AngleAxisd Rx = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitX());
   Eigen::AngleAxisd Ry = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitY());
+  Eigen::AngleAxisd R_slope =
+    Eigen::AngleAxisd(M_PI * 0.4, Eigen::Vector3d::UnitY());
   Eigen::AngleAxisd Rz = Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitZ());
   goal_ = Eigen::Isometry3d::Identity();
   if (seed_) {
@@ -243,14 +244,8 @@ void FootstepPlannerNode::simulateCallback(
     *point_cloud += terrain::unevenXY({0.5, 0, 0}, 2, 2, 0.6, res);
     viewpoint.translate(Eigen::Vector3d{0, 0, 1000});
     goal_.translate(Eigen::Vector3d{1, 0, 0});
-  } else if (request->data == "slag") {
-    *point_cloud += terrain::unevenYZ({0, 0, 0.5}, 2, 2, 0.15, res, 0.5);
-    transform.rotate(Ry.inverse());
-    viewpoint.translate(Eigen::Vector3d{-1000, 0, 0});
-    goal_.translate(Eigen::Vector3d{0, 0, 1});
-    goal_.rotate(Ry.inverse());
-  } else if (request->data == "tufa") {
-    *point_cloud += terrain::unevenYZ({0, 0, 0.5}, 2, 2, 0.1, res, 0);
+  } else if (request->data == "footholds") {
+    *point_cloud += terrain::unevenYZ({0, 0, 0.5}, 2, 2, 0.05, res / 2, 0.5);
     transform.rotate(Ry.inverse());
     viewpoint.translate(Eigen::Vector3d{-1000, 0, 0});
     goal_.translate(Eigen::Vector3d{0, 0, 1});
@@ -264,6 +259,15 @@ void FootstepPlannerNode::simulateCallback(
     viewpoint.translate(Eigen::Vector3d{-1000, 0, 0});
     goal_.translate(Eigen::Vector3d{0, 0, 1});
     goal_.rotate(Ry.inverse());
+  } else if (request->data == "slope") {
+    Eigen::Isometry3d cliff = Eigen::Isometry3d::Identity();
+    cliff.rotate(R_slope.inverse());
+    cliff.translate(Eigen::Vector3d{1.0, 0, 0});
+    *point_cloud += terrain::uneven(cliff, 3, 2, 0.3, res);
+    transform.rotate(R_slope.inverse());
+    viewpoint.translate(Eigen::Vector3d{-1000, 0, 0});
+    goal_.translate(Eigen::Vector3d{0, 0, 2});
+    goal_.rotate(R_slope.inverse());
   } else if (request->data == "silo") {
     *point_cloud += terrain::cylinderZ({0.5, 0, 0.5}, 0.5, 2, res);
     transform.rotate(Ry.inverse());
@@ -272,10 +276,11 @@ void FootstepPlannerNode::simulateCallback(
     goal_.rotate(Rz.inverse());
     goal_.rotate(Ry.inverse());
   } else if (request->data == "tube") {
-    *point_cloud += terrain::cylinderX({0.5, 0.5, 0}, 0.5, 2, res);
-    transform.rotate(Rx);
+    *point_cloud += terrain::cylinderY({0.5, -1.0, 0}, 0.5, 3, res);
+    transform.rotate(Ry.inverse());
     viewpoint.translate(Eigen::Vector3d{-1000, 0, 1000});
-    goal_.translate(Eigen::Vector3d{1, 0.5, 0.5});
+    goal_.translate(Eigen::Vector3d{0.0, -2.0, 0.0});
+    goal_.rotate(Ry.inverse());
   } else {
     response->success = false;
     response->message = "Environment not found";

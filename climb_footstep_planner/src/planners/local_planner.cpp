@@ -228,9 +228,11 @@ Step LocalPlanner::planStep(
   indices.clear();
   distances.clear();
   kdtree_->radiusSearch(p_body_pcl, 0.1, indices, distances);
-  Eigen::Matrix3Xd ground = p_(Eigen::all, indices);
-  double clearance = (n_body.transpose() * ground).maxCoeff() - p_body.dot(n_body);
-  p_body += clearance * n_body;
+  if (indices.size() > 0) {
+    Eigen::Matrix3Xd ground = p_(Eigen::all, indices);
+    double clearance = (n_body.transpose() * ground).maxCoeff() - p_body.dot(n_body);
+    p_body += clearance * n_body;
+  }
 
   step.pose.translation() = p_body;
   step.footholds.at(swing).translation() = p_swing;

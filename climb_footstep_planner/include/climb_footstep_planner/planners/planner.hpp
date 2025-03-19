@@ -53,6 +53,7 @@ struct Plan
     Plan result = *this;
     return result += plan;
   }
+  const Step & operator[](int index) const {return steps[index];}
   size_t size() const {return steps.size();}
   bool empty() const {return steps.empty();}
   auto begin() {return steps.begin();}
