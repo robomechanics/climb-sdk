@@ -40,7 +40,7 @@ protected:
       "left_contact", "right_contact"}, result);
     robot_->setParameter(
       "contact_types", std::vector<std::string> {
-      "microspine", "microspine"}, result);
+      "friction", "friction"}, result);
     robot_->setParameter(
       "wrist_types", std::vector<std::string> {
       "fixed", "fixed"}, result);
