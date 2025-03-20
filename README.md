@@ -2,6 +2,8 @@
 
 A general-purpose codebase for robotic climbing, originally developed for the LORIS robot ([paper](https://www.ri.cmu.edu/publications/loris-a-lightweight-free-climbing-robot-for-extreme-terrain-exploration/), [video](https://youtu.be/GjRrLqlI0yM)).
 
+![The LORIS robot following a planned path across a horizontal tube](doc/tube.gif)
+
 ## Installation
 
 ### Ubuntu
@@ -76,11 +78,49 @@ ros2 launch loris_bringup climber_control.launch.py
 ros2 launch loris_bringup climber_plan.launch.py
 ```
 
+The `camera` argument can be set to `false` to disable the camera (e.g. for offline simulation).
+
+```
+ros2 launch loris_bringup climber_plan.launch.py camera:=false
+```
+
 `sim.launch.py` in the `climb_sim` package launches a Gazebo simulation of the robot.
 
 ```
 ros2 launch climb_sim sim.launch.py
 ```
+
+### Command Interface
+
+The base launch file opens an `xterm` window for sending commands to the robot. The same command interface can be opened in an existing terminal by launching a `KeyInputNode`.
+
+```
+ros2 run climb_teleop key_input_node
+```
+
+A list of available commands can be found by entering `help`. Use the right arrow key for autocompletion and the up and down arrows to reuse previous commands. The following commands are currently supported.
+
+| Command Syntax              | Description                                         | Example Usage                 |
+| --------------------------- | --------------------------------------------------- | ----------------------------- |
+| `help`                      | Display a list of available commands                | `help`                        |
+| `enable`                    | Enable all motors and clear error status            | `enable`                      |
+| `disable`                   | Disable all motors                                  | `disable`                     |
+| `set JOINT position VALUE`  | Set a given joint position to an angle in radians   | `set tail_joint position 0.1` |
+| `set JOINT velocity VALUE`  | Set a given joint velocity limit in radians/second  | `set tail_joint velocity 0.2` |
+| `set JOINT effort VALUE`    | Set a given joint effort limit in Newton meters     | `set tail_joint effort 1.0`   |
+| `move JOINT`                | Manually control a joint with the keyboard          | `move tail_joint`             |
+| `control on`                | Turn on force control                               | `control on`                  |
+| `control off      `         | Turn off force control                              | `control on`                  |
+| `goto CONFIGURATION`        | Move the robot to a preset configuration            | `goto stand`                  |
+| `twist CONTACT`             | Manually control an end effector with the keyboard  | `twist gripper_1`             |
+| `twist BODY`                | Manually control the body frame with the keyboard   | `twist base_link`             |
+| `step CONTACT`              | Take a step with the given end effector             | `step gripper_1`              |
+| `simulate ENVIRONMENT`      | Simulate a predefined environment                   | `simulate bend`               |
+| `plan`                      | Plan a route to the current goal pose               | `plan`                        |
+| `execute`                   | Execute the most recent planned route               | `execute`                     |
+| `align`                     | Move the robot state estimate relative to the world | `align`                       |
+
+## Troubleshooting
 
 ### Serial Port Pass-Through
 
@@ -105,3 +145,13 @@ Finally, bind the port and attach it to the running WSL2 distribution. The bindi
 usbipd bind --busid <busid>
 usbipd attach --wsl --busid <busid>
 ```
+
+### Reducing Dynamixel Motor Latency
+
+Set the USB port latency to 1 ms.
+
+```
+echo 1 | sudo tee /sys/bus/usb-serial/devices/ttyUSB0/latency_timer
+```
+
+Set the `Return Delay Time` parameter of each Dynamixel motor to zero.

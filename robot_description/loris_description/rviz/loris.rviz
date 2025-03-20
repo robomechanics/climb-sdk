@@ -3,8 +3,7 @@ Panels:
     Help Height: 85
     Name: Displays
     Property Tree Widget:
-      Expanded:
-        - /Plan1
+      Expanded: ~
       Splitter Ratio: 0.5
     Tree Height: 1047
   - Class: rviz_common/Selection
@@ -24,7 +23,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Cost Map
+    SyncSource: ""
 Visualization Manager:
   Class: ""
   Displays:
@@ -62,144 +61,6 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        body_front:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        body_rear:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        camera:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        camera_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        camera_mount:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        gripper_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        gripper_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        gripper_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        gripper_4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        lower_limb_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        lower_limb_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        lower_limb_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        lower_limb_4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        mast:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        shoulder_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        shoulder_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        shoulder_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        shoulder_4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        tail:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        tail_tip:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        upper_limb_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        upper_limb_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        upper_limb_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        upper_limb_4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        wrist_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        wrist_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        wrist_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        wrist_4:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Mass Properties:
         Inertia: false
         Mass: false
@@ -781,5 +642,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 2548
-  X: -32
-  Y: -32
+  X: -26
+  Y: -5
