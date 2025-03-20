@@ -2,7 +2,7 @@
 
 A general-purpose codebase for robotic climbing, originally developed for the LORIS robot ([paper](https://www.ri.cmu.edu/publications/loris-a-lightweight-free-climbing-robot-for-extreme-terrain-exploration/), [video](https://youtu.be/GjRrLqlI0yM)).
 
-![The LORIS robot following a planned path across a horizontal tube](doc/tube.gif)
+![The LORIS robot following a planned path across a horizontal tube](doc/Tube.gif)
 
 ## Installation
 
@@ -60,6 +60,23 @@ To streamline development, Climb-SDK can be integrated with [Visual Studio Code]
 
 ## Usage
 
+### Quick Start
+
+To quickly get the project running offline, run the following command from a terminal.
+
+```
+ros2 launch loris_bringup climber_plan.launch.py camera:=false
+```
+
+In the `xterm` window that opens, enter the following commands:
+
+1. `simulate tube` (after the RViz window opens)
+2. `control on`
+3. `plan`
+4. `execute` (after the planned path appears)
+
+### Launch Files
+
 `climber_base.launch.py` launches the hardware stack and user interface. This enables joint-level control of the robot.
 
 ```
@@ -115,7 +132,7 @@ A list of available commands can be found by entering `help`. Use the right arro
 | `twist CONTACT`             | Manually control an end effector with the keyboard  | `twist gripper_1`             |
 | `twist BODY`                | Manually control the body frame with the keyboard   | `twist base_link`             |
 | `step CONTACT`              | Take a step with the given end effector             | `step gripper_1`              |
-| `simulate ENVIRONMENT`      | Simulate a predefined environment                   | `simulate bend`               |
+| `simulate ENVIRONMENT`      | Simulate a predefined environment                   | `simulate tube`               |
 | `plan`                      | Plan a route to the current goal pose               | `plan`                        |
 | `execute`                   | Execute the most recent planned route               | `execute`                     |
 | `align`                     | Move the robot state estimate relative to the world | `align`                       |
