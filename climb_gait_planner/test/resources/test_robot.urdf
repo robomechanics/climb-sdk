@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<robot name="test_robot">
+  <link name="base_link" />
+  <joint name="base_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="body" />
+  </joint>
+  <link name="body">
+    <visual>
+      <geometry>
+        <box size=".8 1.6 .8" />
+      </geometry>
+    </visual>
+    <inertial>
+      <mass value="2"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+    </inertial>
+  </link>
+  <link name="left_thigh">
+    <visual>
+      <origin xyz="0 0 -.5" rpy="0 0 0" />
+      <geometry>
+        <box size=".4 .4 1" />
+      </geometry>
+    </visual>
+  </link>
+  <link name="right_thigh">
+    <visual>
+      <origin xyz="0 0 -.5" rpy="0 0 0" />
+      <geometry>
+        <box size=".4 .4 1" />
+      </geometry>
+    </visual>
+  </link>
+  <joint name="left_hip" type="revolute">
+    <parent link="body" />
+    <child link="left_thigh" />
+    <origin xyz="0 1 0" rpy="0 0 0" />
+    <axis xyz="0 -1 0" />
+    <limit effort="10" lower="-1.57" upper="1.57" velocity="1"/>
+  </joint>
+  <joint name="right_hip" type="revolute">
+    <parent link="body" />
+    <child link="right_thigh" />
+    <origin xyz="0 -1 0" rpy="0 0 0" />
+    <axis xyz="0 -1 0" />
+    <limit effort="10" lower="-1.57" upper="1.57" velocity="1"/>
+  </joint>
+  <link name="left_leg">
+    <visual>
+      <origin xyz="0 0 -.5" rpy="0 0 0" />
+      <geometry>
+        <box size=".4 .4 1" />
+      </geometry>
+    </visual>
+  </link>
+  <link name="right_leg">
+    <visual>
+      <origin xyz="0 0 -.5" rpy="0 0 0" />
+      <geometry>
+        <box size=".4 .4 1" />
+      </geometry>
+    </visual>
+  </link>
+  <joint name="left_knee" type="revolute">
+    <parent link="left_thigh" />
+    <child link="left_leg" />
+    <origin xyz="0 0 -1" rpy="0 0 0" />
+    <axis xyz="0 -1 0" />
+    <limit effort="10" lower="-1.57" upper="1.57" velocity="1"/>
+  </joint>
+  <joint name="right_knee" type="revolute">
+    <parent link="right_thigh" />
+    <child link="right_leg" />
+    <origin xyz="0 0 -1" rpy="0 0 0" />
+    <axis xyz="0 -1 0" />
+    <limit effort="10" lower="-1.57" upper="1.57" velocity="1"/>
+  </joint>
+  <link name="left_foot">
+    <visual>
+      <geometry>
+        <sphere radius=".4" />
+      </geometry>
+    </visual>
+    <inertial>
+      <mass value="1"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+    </inertial>
+  </link>
+  <link name="right_foot">
+    <visual>
+      <geometry>
+        <sphere radius=".4" />
+      </geometry>
+    </visual>
+    <inertial>
+      <mass value="1"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+    </inertial>
+  </link>
+  <joint name="left_ankle" type="fixed">
+    <parent link="left_leg" />
+    <child link="left_foot" />
+    <origin xyz="0 0 -1" rpy="0 0 0" />
+  </joint>
+  <joint name="right_ankle" type="fixed">
+    <parent link="right_leg" />
+    <child link="right_foot" />
+    <origin xyz="0 0 -1" rpy="0 0 0" />
+  </joint>
+  <link name="left_contact">
+  </link>
+  <link name="right_contact">
+  </link>
+  <joint name="left_contact_joint" type="fixed">
+    <parent link="left_foot" />
+    <child link="left_contact" />
+  </joint>
+  <joint name="right_contact_joint" type="fixed">
+    <parent link="right_foot" />
+    <child link="right_contact" />
+  </joint>
+</robot>

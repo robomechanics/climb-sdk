@@ -1,0 +1,19 @@
+# A command to take a step while providing real-time feedback until completion
+
+climb_msgs/Footstep footstep        # Desired step
+---
+bool success                        # If step completed successfully
+string message                      # Error message if step was not successful
+---
+uint8 STATE_STANCE = 0              # Not actively stepping (step completed)
+uint8 STATE_DISENGAGE = 1           # Disengaging from surface
+uint8 STATE_LIFT = 2                # Moving away from surface
+uint8 STATE_SWING = 3               # Moving to new foothold
+uint8 STATE_PLACE = 4               # Moving towards surface surface
+uint8 STATE_ENGAGE = 5              # Engaging with surface
+uint8 STATE_SNAG = 6                # Unexpected contact with surface
+uint8 STATE_SLIP = 7                # Unexpected loss of contact with surface
+uint8 STATE_RETRY = 8               # Failed to engage with surface
+uint8 STATE_STOP = 9                # Freeze end effector in place
+
+uint8 state                         # Current phase of the step

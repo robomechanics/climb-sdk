@@ -1,0 +1,19 @@
+{
+  "name": "Climb-SDK",
+  "dockerComposeFile": [
+    "docker-compose.yml"
+  ],
+  "service": "ros2",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools-extension-pack",
+        "ms-iot.vscode-ros",
+        "twxs.cmake",
+        "github.copilot"
+      ]
+    }
+  }
+}

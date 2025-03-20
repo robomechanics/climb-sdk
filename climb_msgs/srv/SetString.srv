@@ -1,0 +1,4 @@
+string data                     # The string to set
+---
+bool success                    # If command was carried out successfully
+string message                  # Error message if command was not successful

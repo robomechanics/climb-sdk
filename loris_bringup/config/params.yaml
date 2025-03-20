@@ -1,0 +1,66 @@
+/**:
+  robot_state_publisher:
+    ros__parameters:
+      ignore_timestamp: False
+      publish_frequency: 20.0
+  robot_driver:
+    ros__parameters:
+      joint_update_freq: 20.0
+      actuator_update_freq: 1.0
+      initial_position: [0.0, 0.0, 0.0, 0.0, -0.5, -0.5, -0.5, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2]
+  controller:
+    ros__parameters:
+      joint_effort_filter_window: 3
+      verbose: False
+      debug: False
+      microspine_max_force: 15.0
+      clearance: 0.05
+      effort_limit: 4.1
+      joint_step: 0.1
+      workspace_min_limits: [0.039, 0.176, -0.090]
+      workspace_max_limits: [0.244, 0.255, 0.008]
+      joint_normalization: 0.01
+      body_normalization: 1.0
+      default_configuration: "climb"
+      force_kp: 0.0001
+      body_kp: 0.1
+      joint_max_error: 0.1
+      gravity_estimate: [-9.81, 0.0, 0.0]
+      min_incline: 0.2
+  gait_planner:
+    ros__parameters:
+      step_height: 0.05
+      step_length: 0.1
+      swing_velocity: 0.005
+      engage_force: [3.0, 0.0, -5.0, 0.0, 0.0, 0.0]
+      engage_tolerance: 1.0
+      disengage_force: [-3.0, 3.0, 3.0, 0.0, 0.0, 0.0]
+      disengage_frequency: 0.25
+      disengage_tolerance: 2.0
+      contact_threshold: 5.0
+      snag_threshold: 5.0
+      foothold_tolerance: 0.01
+      retry_distance: 0.1
+      angular_scaling: 0.1
+      foothold_offset: -0.015
+      auto_advance: True
+  footstep_planner:
+    ros__parameters:
+      seed: 0
+      workspace_min_limits: [0.039, 0.180, -0.090]
+      workspace_max_limits: [0.244, 0.255, 0.008]
+      workspace_angular_tol: 0.0
+      curvature_limit: 0.1
+      curvature_radius: 0.025
+      incline_limit: 3.14
+      incline_radius: 0.025
+      incline_cost: 0.1
+      flip_normals_nn: 5
+      planner: "global"
+      algorithm: "ait*"
+      search_radius: 1000.0
+      global_incline_radius: 0.2
+      global_incline_cost: 1.0
+      runtime: 30.0
+      debug: False
+      vertices_only: True

@@ -1,0 +1,468 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MIT License
+
+  Copyright (c) 2024 Paul Nadan, Robomechanics Lab, Carnegie Mellon University
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  THE SOFTWARE.
+-->
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="loris">
+  <!-- Represent wrist as floating joint, fixed joint, or 3 revolute joints -->
+  <xacro:arg name="wrist_joint" default="revolute" />
+  <xacro:property name="wrist_joint" value="$(arg wrist_joint)" />
+
+  <!-- Camera mounting height (m from body origin to pitch axis) -->
+  <xacro:arg name="camera_height" default="0.24" />
+  <xacro:property name="camera_height" value="$(arg camera_height)" />
+
+  <!-- Camera mounting pitch (deg downward from horizontal) -->
+  <xacro:arg name="camera_pitch" default="20" />
+  <xacro:property name="camera_pitch" value="$(arg camera_pitch)" />
+
+  <!-- Gripper angle offsets (deg outward from centerline) -->
+  <xacro:arg name="gripper_offset" default="45" />
+  <xacro:arg name="gripper_offset_1" default="$(arg gripper_offset)" />
+  <xacro:arg name="gripper_offset_2" default="$(arg gripper_offset)" />
+  <xacro:arg name="gripper_offset_3" default="$(arg gripper_offset)" />
+  <xacro:arg name="gripper_offset_4" default="$(arg gripper_offset)" />
+  <xacro:property name="gripper_offset_1" value="$(arg gripper_offset_1)" />
+  <xacro:property name="gripper_offset_2" value="$(arg gripper_offset_2)" />
+  <xacro:property name="gripper_offset_3" value="$(arg gripper_offset_3)" />
+  <xacro:property name="gripper_offset_4" value="$(arg gripper_offset_4)" />
+
+  <!-- Actuator Limits (Nm and rad/s) -->
+  <xacro:arg name="effort" default="4.1" />
+  <xacro:arg name="velocity" default="4.8" />
+  <xacro:property name="effort" value="$(arg effort)" />
+  <xacro:property name="velocity" value="$(arg velocity)" />
+
+  <!-- Mesh directories -->
+  <xacro:property name="visual" value="package://loris_description/meshes" />
+  <xacro:property name="collision" value="package://loris_description/meshes" />
+
+  <!-- Material Properties -->
+  <material name="body_material">
+    <color rgba="1 1 1 1" />
+  </material>
+  <material name="shoulder_material">
+    <color rgba="0.25 0.25 0.25 1" />
+  </material>
+  <material name="upper_limb_material">
+    <color rgba="0.75 0.75 0.75 1" />
+  </material>
+  <material name="lower_limb_material">
+    <color rgba="0.75 0.75 0.75 1" />
+  </material>
+  <material name="gripper_material">
+    <color rgba="0.25 0.25 0.25 1" />
+  </material>
+  <material name="tail_material">
+    <color rgba="0.25 0.25 0.25 1" />
+  </material>
+  <material name="mast_material">
+    <color rgba="0.25 0.25 0.25 1" />
+  </material>
+  <material name="camera_material">
+    <color rgba="1 1 1 1" />
+  </material>
+
+  <!-- Unit Conversion -->
+  <xacro:property name="deg" value="${pi/180}" />
+
+  <!-- Normalized Inertia Macro -->
+  <xacro:macro name="inertial"
+    params="mass:=0 ixx:=0 ixy:=0 ixz:=0 iyy:=0 iyz:=0 izz:=0">
+    <mass value="${mass}" />
+    <inertia
+      ixx="${mass * ixx}"
+      ixy="${mass * ixy}"
+      ixz="${mass * ixz}"
+      iyy="${mass * iyy}"
+      iyz="${mass * iyz}"
+      izz="${mass * izz}" />
+  </xacro:macro>
+
+  <!-- Base frame -->
+  <link name="base_link" />
+  <joint name="base_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="body_front" />
+  </joint>
+
+  <!-- Body Front -->
+  <link name="body_front">
+    <inertial>
+      <origin xyz="0.0811 -0.0004 0.0072" />
+      <xacro:inertial mass="0.7926"
+        ixx="0.0016647" iyy="0.0020354" izz="0.0033419" />
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="${visual}/body_front.STL" />
+      </geometry>
+      <material name="body_material" />
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="${collision}/body_front.STL" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Body Rear -->
+  <link name="body_rear">
+    <inertial>
+      <origin xyz="0.0811 -0.0004 0.0044" />
+      <xacro:inertial mass="0.9625"
+        ixx="0.0016647" iyy="0.0020354" izz="0.0033419" />
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="${visual}/body_rear.STL" />
+      </geometry>
+      <material name="body_material" />
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="${collision}/body_rear.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="spine_joint" type="revolute">
+    <origin xyz="0 0 0" rpy="0 0 ${180 * deg}" />
+    <parent link="body_front" />
+    <child link="body_rear" />
+    <axis xyz="0 1 0" />
+    <limit lower="${-60 * deg}" upper="${60 * deg}"
+      effort="${effort}" velocity="${velocity}" />
+  </joint>
+
+  <!-- Tail -->
+  <link name="tail">
+    <inertial>
+      <origin xyz="0.1885 0 0.0044" />
+      <xacro:inertial mass="0.0789"
+        ixx="0.0001595" iyy="0.0112361" izz="0.0113556" />
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="${visual}/tail.STL" />
+      </geometry>
+      <material name="tail_material" />
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="${collision}/tail.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="tail_joint" type="revolute">
+    <origin xyz="0.1657 0 0" />
+    <parent link="body_rear" />
+    <child link="tail" />
+    <axis xyz="0 1 0" />
+    <limit lower="${-80 * deg}" upper="${80 * deg}"
+      effort="${effort}" velocity="${velocity}" />
+  </joint>
+  <link name="tail_tip" />
+  <joint name="tail_tip_joint" type="fixed">
+    <parent link="tail"/>
+    <child link="tail_tip"/>
+    <origin xyz="0.3500 0 0" rpy="0 1.5708 0"/>
+  </joint>
+
+  <!-- Camera -->
+  <link name="mast">
+    <inertial>
+      <origin xyz="0 0 ${camera_height/2}" />
+      <xacro:property name="mast_radius" value="0.004" />
+      <xacro:inertial mass="${camera_height * 0.044}"
+        ixx="${mast_radius**2/4 + camera_height**2/12}"
+        iyy="${mast_radius**2/4 + camera_height**2/12}"
+        izz="${mast_radius**2/2}" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 ${camera_height/2}" />
+      <geometry>
+        <cylinder radius="${mast_radius}" length="${camera_height + 0.04}" />
+      </geometry>
+      <material name="mast_material" />
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${camera_height/2}" />
+      <geometry>
+        <cylinder radius="${mast_radius}" length="${camera_height + 0.04}" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="mast_joint" type="fixed">
+    <origin xyz="0.0247 0 0" />
+    <parent link="body_front" />
+    <child link="mast" />
+  </joint>
+  <link name="camera_mount">
+    <inertial>
+      <origin xyz="0.0029 0 0.0024" rpy="0 0 0" />
+      <xacro:inertial mass="0.0024"
+        ixx="0.0000292" iyy="0.0000517" izz="0.0000583" />
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="${visual}/camera_mount.STL" />
+      </geometry>
+      <material name="camera_material" />
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="${collision}/camera_mount.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="camera_mast_joint" type="fixed">
+    <origin xyz="0 0 ${camera_height}" />
+    <parent link="mast" />
+    <child link="camera_mount" />
+  </joint>
+  <link
+    name="camera">
+    <inertial>
+      <origin xyz="0.0167 0.0009 0" />
+      <xacro:inertial mass="0.0498"
+        ixx="0.0005511" iyy="0.0000849" izz="0.0005560" />
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="${visual}/camera.STL" />
+      </geometry>
+      <material name="camera_material" />
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="${collision}/camera.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="camera_pitch_joint" type="fixed">
+    <origin xyz="0.0120 0 0" rpy="0 ${camera_pitch * deg} 0" />
+    <parent link="camera_mount" />
+    <child link="camera" />
+  </joint>
+  <link name="camera_link" />
+  <joint name="camera_link_joint" type="fixed">
+    <origin xyz="0.0164 0.0175 0" />
+    <parent link="camera" />
+    <child link="camera_link" />
+  </joint>
+
+  <!-- Limb Macro -->
+  <!--
+    id: Limb ID
+    parent: Parent link name
+    xyz: Shoulder joint origin (m)
+    rpy: Shoulder joint orientation (rad)
+    reflect: Mirror limb geometry (1 or -1)
+    reverse: Reverse shoulder joint direction (1 or -1)
+    offset: Gripper angle offset (deg)
+  -->
+  <xacro:macro name="limb"
+    params="id parent xyz rpy reflect:=1 reverse:=1 offset:=0">
+    <!-- Shoulder -->
+    <link name="shoulder_${id}">
+      <inertial>
+        <origin xyz="0.0150 ${0.0003 * reflect} 0" />
+        <xacro:inertial mass="0.0972"
+          ixx="0.0002074" iyy="0.0002419" izz="0.0002794" />
+      </inertial>
+      <visual>
+        <geometry>
+          <mesh filename="${visual}/shoulder.STL" scale="1 ${reflect} 1" />
+        </geometry>
+        <material name="shoulder_material" />
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="${collision}/shoulder.STL" />
+        </geometry>
+      </collision>
+    </link>
+    <joint name="shoulder_joint_${id}" type="revolute">
+      <origin xyz="${xyz}" rpy="${rpy}" />
+      <parent link="${parent}" />
+      <child link="shoulder_${id}" />
+      <axis xyz="0 0 ${-reverse}" />
+      <limit lower="${-70 * deg}" upper="${70 * deg}"
+        effort="${effort}" velocity="${velocity}" />
+    </joint>
+
+    <!-- Upper Limb -->
+    <link name="upper_limb_${id}">
+      <inertial>
+        <origin xyz="0.0945 ${-0.0022 * reflect} -0.0081" />
+        <xacro:inertial mass="0.1167"
+          ixx="0.0002884" iyy="0.0002858" izz="0.0002806" />
+      </inertial>
+      <visual>
+        <geometry>
+          <mesh filename="${visual}/upper_limb.STL" scale="1 ${reflect} 1" />
+        </geometry>
+        <material name="upper_limb_material" />
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="${collision}/upper_limb.STL" />
+        </geometry>
+      </collision>
+    </link>
+    <joint name="wing_joint_${id}" type="revolute">
+      <origin xyz="0.0297 0 0" />
+      <parent link="shoulder_${id}" />
+      <child link="upper_limb_${id}" />
+      <axis xyz="0 1 0" />
+      <limit lower="${-70 * deg}" upper="${90 * deg}"
+        effort="${effort}" velocity="${velocity}" />
+    </joint>
+
+    <!-- Lower Limb -->
+    <link name="lower_limb_${id}">
+      <inertial>
+        <origin xyz="0.0386 ${-0.0047 * reflect} -0.0043" />
+        <xacro:inertial mass="0.0417"
+          ixx="0.0002225" iyy="0.0003255" izz="0.0003530" />
+      </inertial>
+      <visual>
+        <geometry>
+          <mesh filename="${visual}/lower_limb.STL" scale="1 ${reflect} 1" />
+        </geometry>
+        <material name="lower_limb_material" />
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="${collision}/lower_limb.STL" />
+        </geometry>
+      </collision>
+    </link>
+    <joint name="knee_joint_${id}" type="revolute">
+      <origin xyz="0.1113 0 -0.0228" rpy="0 ${90 * deg} 0" />
+      <parent link="upper_limb_${id}" />
+      <child link="lower_limb_${id}" />
+      <axis xyz="0 1 0" />
+      <limit lower="${-90 * deg}" upper="${60 * deg}"
+        effort="${effort}" velocity="${velocity}" />
+    </joint>
+
+    <!-- Wrist -->
+    <link name="wrist_${id}" />
+    <joint name="wrist_joint_${id}" type="fixed">
+      <origin xyz="0.0860 ${-0.0040 * reflect} -0.0276"
+        rpy="${(90 * deg - offset) * reverse} ${30 * deg} 0" />
+      <parent link="lower_limb_${id}" />
+      <child link="wrist_${id}" />
+    </joint>
+
+    <!-- Gripper -->
+    <link name="gripper_${id}">
+      <inertial>
+        <!-- Offset gripper center of mass to ensure correct resting angle -->
+        <origin xyz="0.0045
+          ${0.0150 * sin(offset) * reverse}
+          ${-0.0150 * cos(offset)}" />
+        <xacro:inertial mass="0.0700"
+          ixx="0.0007082" iyy="0.0002180" izz="0.0005308" />
+      </inertial>
+      <visual>
+        <geometry>
+          <mesh filename="${visual}/gripper.STL" scale="1 ${reflect} 1" />
+        </geometry>
+        <material name="gripper_material" />
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="${collision}/gripper.STL" />
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Wrist Ball Joint (Floating Joint) -->
+    <xacro:if value="${wrist_joint == 'floating'}">
+      <joint name="gripper_joint_${id}" type="floating">
+        <parent link="wrist_${id}" />
+        <child link="gripper_${id}" />
+      </joint>
+    </xacro:if>
+
+    <!-- Wrist Ball Joint (Fixed Joint) -->
+    <xacro:if value="${wrist_joint == 'fixed'}">
+      <joint name="gripper_joint_${id}" type="fixed">
+        <parent link="wrist_${id}" />
+        <child link="gripper_${id}" />
+      </joint>
+    </xacro:if>
+
+    <!-- Wrist Ball Joint (3-Axis Joint) -->
+    <xacro:if value="${wrist_joint == 'revolute'}">
+      <link name="wrist_yaw_${id}">
+        <inertial>
+          <xacro:inertial mass="0.0001"
+            ixx="0.0000001" iyy="0.0000001" izz="0.0000001" />
+        </inertial>
+      </link>
+      <joint name="wrist_yaw_joint_${id}" type="continuous">
+        <parent link="wrist_${id}" />
+        <child link="wrist_yaw_${id}" />
+        <axis xyz="1 0 0" />
+      </joint>
+      <link name="wrist_pitch_${id}">
+        <inertial>
+          <xacro:inertial mass="0.0001"
+            ixx="0.0000001" iyy="0.0000001" izz="0.0000001" />
+        </inertial>
+      </link>
+      <joint name="wrist_pitch_joint_${id}" type="revolute">
+        <parent link="wrist_yaw_${id}" />
+        <child link="wrist_pitch_${id}" />
+        <axis xyz="0 1 0" />
+        <limit lower="${-35 * deg}" upper="${35 * deg}"
+          effort="0" velocity="0" />
+      </joint>
+      <joint name="wrist_roll_joint_${id}" type="revolute">
+        <parent link="wrist_pitch_${id}" />
+        <child link="gripper_${id}" />
+        <axis xyz="0 0 1" />
+        <limit lower="${-35 * deg}" upper="${35 * deg}"
+          effort="0" velocity="0"/>
+      </joint>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Limbs -->
+  <xacro:limb id="1"
+    xyz="0.1415 0.0818 0" rpy="0 0 ${90 * deg}" parent="body_front"
+    reflect="1" reverse="1" offset="${gripper_offset_1 * deg}" />
+  <xacro:limb id="2"
+    xyz="0.1415 -0.0818 0" rpy="0 0 ${-90 * deg}" parent="body_front"
+    reflect="-1" reverse="-1" offset="${gripper_offset_2 * deg}" />
+  <xacro:limb id="3"
+    xyz="0.1415 -0.0818 0" rpy="0 0 ${-90 * deg}" parent="body_rear"
+    reflect="-1" reverse="1" offset="${gripper_offset_3 * deg}" />
+  <xacro:limb id="4"
+    xyz="0.1415 0.0818 0" rpy="0 0 ${90 * deg}" parent="body_rear"
+    reflect="1" reverse="-1" offset="${gripper_offset_4 * deg}" />
+</robot>

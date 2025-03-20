@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>climb_teleop</name>
+  <version>0.0.0</version>
+  <description>User interface for control of a climbing robot</description>
+  <maintainer email="pnadan@cmu.edu">Paul Nadan</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <build_depend>rclcpp</build_depend>
+  <build_depend>rclcpp_action</build_depend>
+  <build_depend>eigen</build_depend>
+  <build_depend>keyboard_handler</build_depend>
+  <build_depend>climb_util</build_depend>
+  <build_depend>climb_kinematics</build_depend>
+
+  <depend>climb_msgs</depend>
+  <depend>std_srvs</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_index_cpp</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

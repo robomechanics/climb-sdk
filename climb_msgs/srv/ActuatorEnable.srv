@@ -1,0 +1,13 @@
+# Enable or disable a set of actuators
+#
+# Either id or joint may be provided but not both. If neither is provided, 
+# the command will be applied to all actuators.
+#
+# Enabling an actuator clears any previous error status.
+
+uint8[] id                      # The unique id of each actuator to command
+string[] joint                  # The name of each joint to command
+bool enable                     # If actuators should be enabled or disabled
+---
+bool success                    # If command was carried out successfully
+string message                  # Error message if command was not successful
